@@ -11,6 +11,15 @@ class Recurso(BaseModel):
     latitude: float
     longitude: float
 
+class Ocorrencia(BaseModel):
+        titulo: str
+        descricao: str
+        tipo: str
+        estado: str
+        ilha: str
+        latitude: float
+        longitude: float
+
 app = FastAPI(
     title="Centro de Operações e Simulacros"
 )
@@ -80,3 +89,55 @@ def criar_recurso(recurso: Recurso):
         )
         conn.commit()
     return {"mensagem": "Recurso criado com localização"}
+
+@app.get("/ocorrencias")
+def listar_ocorrencias():
+    with engine.connect() as conn:
+        resultado = conn.execute(text("""
+            SELECT
+                id,
+                titulo,
+                descricao,
+                tipo,
+                estado,
+                ilha,
+                ST_Y(localizacao) AS latitude,
+                ST_X(localizacao) AS longitude,
+                criado_em
+            FROM ocorrencias
+        """))
+
+        dados = []
+        for linha in resultado:
+            dados.append(dict(linha._mapping))
+
+        return dados
+    
+    @app.post("/ocorrencias")
+    def criar_ocorrencia(ocorrencia: Ocorrencia):
+        with engine.connect() as conn:
+            conn.execute(
+            text("""
+                INSERT INTO ocorrencias (titulo, descricao, tipo, estado, ilha, localizacao)
+                VALUES (
+                    :titulo,
+                    :descricao,
+                    :tipo,
+                    :estado,
+                    :ilha,
+                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+                )
+            """),
+            {
+                "titulo": ocorrencia.titulo,
+                "descricao": ocorrencia.descricao,
+                "tipo": ocorrencia.tipo,
+                "estado": ocorrencia.estado,
+                "ilha": ocorrencia.ilha,
+                "latitude": ocorrencia.latitude,
+                "longitude": ocorrencia.longitude
+            }
+        )
+        conn.commit()
+
+    return {"mensagem": "Ocorrência criada com sucesso"}
