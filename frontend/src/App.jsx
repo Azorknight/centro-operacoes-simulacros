@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker, Tooltip, useMapEvents } from 'react-leaflet'
 
 function AdicionarRecurso() {
   useMapEvents({
@@ -78,6 +78,7 @@ function AdicionarOcorrencia() {
 function App() {
   const [recursos, setRecursos] = useState([])
   const [ocorrencias, setOcorrencias] = useState([])
+  const [bases, setBases] = useState([])
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/recursos')
@@ -87,7 +88,21 @@ function App() {
     fetch('http://127.0.0.1:8000/ocorrencias')
       .then(res => res.json())
       .then(data => setOcorrencias(data))
+
+    fetch('http://127.0.0.1:8000/bases')
+      .then(res => res.json())
+      .then(data => setBases(data))
   }, [])
+
+  function mudarEstado(id, novoEstado) {
+  fetch(`http://127.0.0.1:8000/recursos/${id}/estado`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ estado: novoEstado })
+  }).then(() => {
+    window.location.reload()
+  })
+}
 
   return (
     <>
@@ -104,7 +119,14 @@ function App() {
         }}
       >
         <strong>Centro de Operações e Simulacros</strong>
+        <br /><br />
+
+        Disponíveis: {recursos.filter(r => r.estado === 'disponivel').length}
         <br />
+        Em missão: {recursos.filter(r => r.estado === 'em_missao').length}
+
+        <br /><br />
+
         Click esquerdo: criar recurso
         <br />
         CTRL + Click esquerdo: criar ocorrência
@@ -125,23 +147,88 @@ function App() {
 
         {recursos.map((r) =>
           r.latitude && r.longitude ? (
-            <Marker key={r.id} position={[r.latitude, r.longitude]}>
+            <Marker
+              key={r.id}
+              position={[r.latitude, r.longitude]}
+              draggable={true}
+              eventHandlers={{
+                dragend: (e) => {
+                  const lat = e.target.getLatLng().lat
+                  const lng = e.target.getLatLng().lng
+
+                  fetch(`http://127.0.0.1:8000/recursos/${r.id}/posicao`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      latitude: lat,
+                      longitude: lng
+                    })
+                  }).then(() => {
+                    window.location.reload()
+                  })
+                }
+              }}
+            >
               <Popup>
                 {r.nome} <br />
                 {r.tipo} <br />
-                {r.estado}
+                Estado: {r.estado} <br /><br />
+
+                <button onClick={() => mudarEstado(r.id, 'em_missao')}>
+                  Em missão
+                </button>
+                <br />
+                <button onClick={() => mudarEstado(r.id, 'disponivel')}>
+                  Disponível
+                </button>
+                <br />
+                <button onClick={() => {
+                  const ocorrenciaId = prompt('ID da ocorrência:')
+                  if (ocorrenciaId) {
+                    fetch(`http://127.0.0.1:8000/recursos/${r.id}/atribuir-ocorrencia/${ocorrenciaId}`, {
+                      method: 'PUT'
+                    }).then(() => {
+                      window.location.reload()
+                    })
+                  }
+                }}>
+                  Atribuir a ocorrência
+                </button>
               </Popup>
+              <Tooltip permanent direction="top">
+                {r.nome}
+              </Tooltip>
             </Marker>
           ) : null
         )}
 
         {ocorrencias.map((o) =>
           o.latitude && o.longitude ? (
-            <CircleMarker key={o.id} center={[o.latitude, o.longitude]} radius={10}>
+            <CircleMarker
+              key={o.id}
+              center={[o.latitude, o.longitude]}
+              radius={10}
+              pathOptions={{ color: 'red' }}
+            >
               <Popup>
                 {o.titulo} <br />
                 {o.tipo} <br />
                 {o.estado}
+              </Popup>
+            </CircleMarker>
+          ) : null
+        )}
+        {bases.map((b) =>
+          b.latitude && b.longitude ? (
+            <CircleMarker
+              key={b.id}
+              center={[b.latitude, b.longitude]}
+              radius={12}
+              pathOptions={{ color: 'blue' }}
+            >
+              <Popup>
+                {b.nome} <br />
+                {b.tipo}
               </Popup>
             </CircleMarker>
           ) : null

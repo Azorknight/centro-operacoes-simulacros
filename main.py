@@ -87,6 +87,15 @@ def criar_recurso(recurso: Recurso):
                 "longitude": recurso.longitude
             }
         )
+        conn.execute(
+    text("""
+        INSERT INTO timeline_eventos (tipo, descricao)
+        VALUES ('recurso', :descricao)
+    """),
+    {
+        "descricao": f"Recurso criado: {recurso.nome} ({recurso.tipo})"
+    }
+)
         conn.commit()
     return {"mensagem": "Recurso criado com localização"}
 
@@ -112,11 +121,12 @@ def listar_ocorrencias():
             dados.append(dict(linha._mapping))
 
         return dados
-    
-    @app.post("/ocorrencias")
-    def criar_ocorrencia(ocorrencia: Ocorrencia):
-        with engine.connect() as conn:
-            conn.execute(
+
+
+@app.post("/ocorrencias")
+def criar_ocorrencia(ocorrencia: Ocorrencia):
+    with engine.connect() as conn:
+        conn.execute(
             text("""
                 INSERT INTO ocorrencias (titulo, descricao, tipo, estado, ilha, localizacao)
                 VALUES (
@@ -138,6 +148,142 @@ def listar_ocorrencias():
                 "longitude": ocorrencia.longitude
             }
         )
+
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao)
+                VALUES ('ocorrencia', :descricao)
+            """),
+            {
+                "descricao": f"Ocorrência criada: {ocorrencia.titulo}"
+            }
+        )
+
         conn.commit()
 
     return {"mensagem": "Ocorrência criada com sucesso"}
+
+@app.get("/timeline")
+def listar_timeline():
+    with engine.connect() as conn:
+        resultado = conn.execute(text("""
+            SELECT id, tipo, descricao, criado_em
+            FROM timeline_eventos
+            ORDER BY criado_em DESC
+        """))
+
+        dados = []
+        for linha in resultado:
+            dados.append(dict(linha._mapping))
+
+        return dados
+    
+@app.put("/recursos/{recurso_id}/estado")
+def atualizar_estado(recurso_id: int, dados: dict):
+    with engine.connect() as conn:
+        conn.execute(
+            text("""
+                UPDATE recursos
+                SET estado = :estado
+                WHERE id = :id
+            """),
+            {
+                "estado": dados["estado"],
+                "id": recurso_id
+            }
+        )
+
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao)
+                VALUES ('estado', :descricao)
+            """),
+            {
+                "descricao": f"Recurso {recurso_id} mudou estado para {dados['estado']}"
+            }
+        )
+
+        conn.commit()
+
+    return {"mensagem": "Estado atualizado"}
+
+@app.put("/recursos/{recurso_id}/posicao")
+def atualizar_posicao(recurso_id: int, dados: dict):
+    with engine.connect() as conn:
+        conn.execute(
+            text("""
+                UPDATE recursos
+                SET localizacao = ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+                WHERE id = :id
+            """),
+            {
+                "latitude": dados["latitude"],
+                "longitude": dados["longitude"],
+                "id": recurso_id
+            }
+        )
+
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao)
+                VALUES ('movimento', :descricao)
+            """),
+            {
+                "descricao": f"Recurso {recurso_id} movido"
+            }
+        )
+
+        conn.commit()
+
+    return {"mensagem": "Posição atualizada"}
+
+@app.get("/bases")
+def listar_bases():
+    with engine.connect() as conn:
+        resultado = conn.execute(text("""
+            SELECT
+                id,
+                nome,
+                tipo,
+                ilha,
+                ST_Y(localizacao) AS latitude,
+                ST_X(localizacao) AS longitude,
+                criado_em
+            FROM bases
+        """))
+
+        dados = []
+        for linha in resultado:
+            dados.append(dict(linha._mapping))
+
+        return dados
+    
+    @app.put("/recursos/{recurso_id}/atribuir-ocorrencia/{ocorrencia_id}")
+    def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
+        with engine.begin() as conn:
+            conn.execute(
+            text("""
+                UPDATE recursos
+                SET ocorrencia_id = :ocorrencia_id,
+                    estado = 'em_missao'
+                WHERE id = :recurso_id
+            """),
+            {
+                "ocorrencia_id": ocorrencia_id,
+                "recurso_id": recurso_id
+            }
+        )
+
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id)
+                VALUES ('missao', :descricao, :recurso_id, :ocorrencia_id)
+            """),
+            {
+                "descricao": f"Recurso {recurso_id} atribuído à ocorrência {ocorrencia_id}",
+                "recurso_id": recurso_id,
+                "ocorrencia_id": ocorrencia_id
+            }
+        )
+
+    return {"mensagem": "Recurso atribuído à ocorrência"}
