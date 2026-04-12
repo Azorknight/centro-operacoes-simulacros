@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, Tooltip, useMapEvents } from 'react-leaflet'
+import { Polyline } from 'react-leaflet'
 
 function AdicionarRecurso() {
   useMapEvents({
@@ -233,6 +234,22 @@ function App() {
             </CircleMarker>
           ) : null
         )}
+        {recursos.map((r) => {
+          if (!r.ocorrencia_id) return null
+
+          const ocorrencia = ocorrencias.find(o => o.id === r.ocorrencia_id)
+          if (!ocorrencia || !r.latitude || !r.longitude) return null
+
+          return (
+            <Polyline
+              key={r.id}
+              positions={[
+                [r.latitude, r.longitude],
+                [ocorrencia.latitude, ocorrencia.longitude]
+              ]}
+            />
+          )
+        })}
       </MapContainer>
     </>
   )

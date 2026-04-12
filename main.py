@@ -48,16 +48,17 @@ from database import engine
 def listar_recursos():
     with engine.connect() as conn:
         resultado = conn.execute(text("""
-    SELECT 
-        id,
-        nome,
-        tipo,
-        estado,
-        ilha,
-        ST_Y(localizacao) AS latitude,
-        ST_X(localizacao) AS longitude,
-        criado_em
-    FROM recursos
+        SELECT 
+            id,
+            nome,
+            tipo,
+            estado,
+            ilha,
+            ocorrencia_id,
+            ST_Y(localizacao) AS latitude,
+            ST_X(localizacao) AS longitude,
+            criado_em
+        FROM recursos
 """))
         dados = []
         for linha in resultado:
@@ -258,32 +259,44 @@ def listar_bases():
 
         return dados
     
-    @app.put("/recursos/{recurso_id}/atribuir-ocorrencia/{ocorrencia_id}")
-    def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
+@app.put("/recursos/{recurso_id}/atribuir-ocorrencia/{ocorrencia_id}")
+def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
+    print(">>> A executar atribuir_ocorrencia")
+
+    try:
         with engine.begin() as conn:
+            print(">>> Atualizar recurso")
+
             conn.execute(
-            text("""
-                UPDATE recursos
-                SET ocorrencia_id = :ocorrencia_id,
-                    estado = 'em_missao'
-                WHERE id = :recurso_id
-            """),
-            {
-                "ocorrencia_id": ocorrencia_id,
-                "recurso_id": recurso_id
-            }
-        )
+                text("""
+                    UPDATE recursos
+                    SET ocorrencia_id = :ocorrencia_id,
+                        estado = 'em_missao'
+                    WHERE id = :recurso_id
+                """),
+                {
+                    "ocorrencia_id": ocorrencia_id,
+                    "recurso_id": recurso_id
+                }
+            )
 
-        conn.execute(
-            text("""
-                INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id)
-                VALUES ('missao', :descricao, :recurso_id, :ocorrencia_id)
-            """),
-            {
-                "descricao": f"Recurso {recurso_id} atribuído à ocorrência {ocorrencia_id}",
-                "recurso_id": recurso_id,
-                "ocorrencia_id": ocorrencia_id
-            }
-        )
+            print(">>> Inserir timeline")
 
-    return {"mensagem": "Recurso atribuído à ocorrência"}
+            conn.execute(
+                text("""
+                    INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id)
+                    VALUES ('missao', :descricao, :recurso_id, :ocorrencia_id)
+                """),
+                {
+                    "descricao": f"Recurso {recurso_id} atribuído à ocorrência {ocorrencia_id}",
+                    "recurso_id": recurso_id,
+                    "ocorrencia_id": ocorrencia_id
+                }
+            )
+
+        print(">>> OK")
+        return {"mensagem": "Recurso atribuído à ocorrência"}
+
+    except Exception as e:
+        print(">>> ERRO:", e)
+        return {"erro": str(e)}
