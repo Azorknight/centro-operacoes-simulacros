@@ -300,3 +300,57 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
     except Exception as e:
         print(">>> ERRO:", e)
         return {"erro": str(e)}
+    
+@app.get("/ordens")
+def listar_ordens():
+    with engine.connect() as conn:
+        resultado = conn.execute(text("""
+            SELECT id, titulo, descricao, estado, recurso_id, ocorrencia_id, criado_em
+            FROM ordens
+            ORDER BY criado_em DESC
+        """))
+
+        dados = []
+        for linha in resultado:
+            dados.append(dict(linha._mapping))
+
+        return dados
+
+class Ordem(BaseModel):
+    titulo: str
+    descricao: str
+    estado: str
+    recurso_id: int | None = None
+    ocorrencia_id: int | None = None
+
+
+@app.post("/ordens")
+def criar_ordem(ordem: Ordem):
+    with engine.connect() as conn:
+        conn.execute(
+            text("""
+                INSERT INTO ordens (titulo, descricao, estado, recurso_id, ocorrencia_id)
+                VALUES (:titulo, :descricao, :estado, :recurso_id, :ocorrencia_id)
+            """),
+            {
+                "titulo": ordem.titulo,
+                "descricao": ordem.descricao,
+                "estado": ordem.estado,
+                "recurso_id": ordem.recurso_id,
+                "ocorrencia_id": ordem.ocorrencia_id
+            }
+        )
+
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao)
+                VALUES ('ordem', :descricao)
+            """),
+            {
+                "descricao": f"Ordem criada: {ordem.titulo}"
+            }
+        )
+
+        conn.commit()
+
+    return {"mensagem": "Ordem criada com sucesso"}

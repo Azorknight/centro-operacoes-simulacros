@@ -109,3 +109,7 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+.ordem-ativa {
+  filter: hue-rotate(60deg);
+}

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, Tooltip, useMapEvents } from 'react-leaflet'
 import { Polyline } from 'react-leaflet'
+import L from 'leaflet'
+import { useRef } from 'react'
 
 function AdicionarRecurso() {
   useMapEvents({
@@ -81,6 +83,9 @@ function App() {
   const [ocorrencias, setOcorrencias] = useState([])
   const [bases, setBases] = useState([])
   const [timeline, setTimeline] = useState([])
+  const [ordens, setOrdens] = useState([])
+
+  const mapRef = useRef()
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/recursos')
@@ -98,6 +103,10 @@ function App() {
     fetch('http://127.0.0.1:8000/timeline')
       .then(res => res.json())
       .then(data => setTimeline(data))
+
+    fetch('http://127.0.0.1:8000/ordens')
+      .then(res => res.json())
+      .then(data => setOrdens(data))
   }, [])
 
   function mudarEstado(id, novoEstado) {
@@ -156,15 +165,66 @@ function App() {
           })}
       </div>
 
+      <div
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          zIndex: 1000,
+          background: 'white',
+          padding: '10px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          width: '250px'
+        }}
+      >
+        <strong>Recursos</strong>
+        <br />
+        {recursos.map(r => (
+          <div key={r.id}>
+            {r.nome} ({r.estado})
+          </div>
+        ))}
+
+        <br />
+        <strong>Ocorrências</strong>
+        <br />
+        {ocorrencias.map(o => (
+        <div
+          key={o.id}
+          style={{ cursor: 'pointer' }}
+          onClick={() => {
+            if (o.latitude && o.longitude && mapRef.current) {
+              mapRef.current.setView([o.latitude, o.longitude], 13)
+            }
+          }}
+        >
+          {o.titulo}
+        </div>
+      ))}
+
+        <br />
+        <strong>Ordens</strong>
+        <br />
+        {ordens.map(o => (
+          <div key={o.id}>
+            {o.titulo}
+          </div>
+        ))}
+      </div>
+
       <MapContainer
         center={[38.65, -27.22]}
         zoom={10}
         style={{ height: '100vh', width: '100%' }}
+        ref={mapRef}
       >
-        <TileLayer
-          attribution='&copy; Esri'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-        />
+          <TileLayer
+            attribution='&copy; Esri'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+          />
 
         <AdicionarRecurso />
         <AdicionarOcorrencia />
@@ -175,6 +235,11 @@ function App() {
               key={r.id}
               position={[r.latitude, r.longitude]}
               draggable={true}
+              icon={
+                ordens.some(o => o.recurso_id === r.id && o.estado === 'emitida')
+                  ? new L.Icon.Default({ className: 'ordem-ativa' })
+                  : new L.Icon.Default()
+              }
               eventHandlers={{
                 dragend: (e) => {
                   const lat = e.target.getLatLng().lat
@@ -218,6 +283,28 @@ function App() {
                 }}>
                   Atribuir a ocorrência
                 </button>
+                <br /><br />
+                  <button onClick={() => {
+                    const titulo = prompt('Título da ordem:')
+                    const descricao = prompt('Descrição:')
+                    const ocorrenciaId = prompt('ID da ocorrência (opcional):')
+
+                    fetch('http://127.0.0.1:8000/ordens', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        titulo,
+                        descricao,
+                        estado: 'emitida',
+                        recurso_id: r.id,
+                        ocorrencia_id: ocorrenciaId ? parseInt(ocorrenciaId) : null
+                      })
+                    }).then(() => {
+                      window.location.reload()
+                    })
+                  }}>
+                    Criar ordem
+                  </button>
               </Popup>
               <Tooltip permanent direction="top">
                 {r.nome}
