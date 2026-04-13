@@ -80,6 +80,7 @@ function App() {
   const [recursos, setRecursos] = useState([])
   const [ocorrencias, setOcorrencias] = useState([])
   const [bases, setBases] = useState([])
+  const [timeline, setTimeline] = useState([])
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/recursos')
@@ -93,6 +94,10 @@ function App() {
     fetch('http://127.0.0.1:8000/bases')
       .then(res => res.json())
       .then(data => setBases(data))
+
+    fetch('http://127.0.0.1:8000/timeline')
+      .then(res => res.json())
+      .then(data => setTimeline(data))
   }, [])
 
   function mudarEstado(id, novoEstado) {
@@ -131,6 +136,24 @@ function App() {
         Click esquerdo: criar recurso
         <br />
         CTRL + Click esquerdo: criar ocorrência
+
+        <br /><br />
+          <strong>Timeline</strong>
+          <br />
+          {timeline.slice(0, 5).map((t) => {
+            let color = 'black'
+
+            if (t.tipo === 'recurso') color = 'blue'
+            if (t.tipo === 'ocorrencia') color = 'red'
+            if (t.tipo === 'movimento') color = 'green'
+            if (t.tipo === 'missao') color = 'purple'
+
+            return (
+              <div key={t.id} style={{ color }}>
+                {t.tipo}: {t.descricao}
+              </div>
+            )
+          })}
       </div>
 
       <MapContainer
