@@ -87,7 +87,7 @@ function App() {
 
   const mapRef = useRef()
 
-  useEffect(() => {
+    useEffect(() => {
     fetch('http://127.0.0.1:8000/recursos')
       .then(res => res.json())
       .then(data => setRecursos(data))
@@ -210,7 +210,27 @@ function App() {
         <br />
         {ordens.map(o => (
           <div key={o.id}>
-            {o.titulo}
+            {o.titulo} ({o.estado})
+            <br />
+            <button onClick={() => {
+              fetch(`http://127.0.0.1:8000/ordens/${o.id}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: 'executada' })
+              }).then(() => window.location.reload())
+            }}>
+              Executar
+            </button>
+            <button onClick={() => {
+              fetch(`http://127.0.0.1:8000/ordens/${o.id}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: 'concluida' })
+              }).then(() => window.location.reload())
+            }}>
+              Concluir
+            </button>
+            <br /><br />
           </div>
         ))}
       </div>
@@ -229,15 +249,36 @@ function App() {
         <AdicionarRecurso />
         <AdicionarOcorrencia />
 
-        {recursos.map((r) =>
-          r.latitude && r.longitude ? (
+        {recursos.map((r) => {
+          if (!r.latitude || !r.longitude) return null
+
+          const ordem = ordens
+          .filter(o => o.recurso_id === r.id)
+          .sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em))[0]
+
+          let iconClass = ''
+
+          if (ordem?.estado === 'emitida') iconClass = 'ordem-emitida'
+          if (ordem?.estado === 'executada') iconClass = 'ordem-executada'
+
+          return (
             <Marker
               key={r.id}
               position={[r.latitude, r.longitude]}
               draggable={true}
               icon={
-                ordens.some(o => o.recurso_id === r.id && o.estado === 'emitida')
-                  ? new L.Icon.Default({ className: 'ordem-ativa' })
+                ordem?.estado === 'emitida'
+                  ? new L.Icon({
+                      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+                      iconSize: [32, 32],
+                      iconAnchor: [16, 32]
+                    })
+                  : ordem?.estado === 'executada'
+                  ? new L.Icon({
+                      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
+                      iconSize: [32, 32],
+                      iconAnchor: [16, 32]
+                    })
                   : new L.Icon.Default()
               }
               eventHandlers={{
@@ -283,35 +324,37 @@ function App() {
                 }}>
                   Atribuir a ocorrência
                 </button>
-                <br /><br />
-                  <button onClick={() => {
-                    const titulo = prompt('Título da ordem:')
-                    const descricao = prompt('Descrição:')
-                    const ocorrenciaId = prompt('ID da ocorrência (opcional):')
 
-                    fetch('http://127.0.0.1:8000/ordens', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        titulo,
-                        descricao,
-                        estado: 'emitida',
-                        recurso_id: r.id,
-                        ocorrencia_id: ocorrenciaId ? parseInt(ocorrenciaId) : null
-                      })
-                    }).then(() => {
-                      window.location.reload()
+                <br /><br />
+                <button onClick={() => {
+                  const titulo = prompt('Título da ordem:')
+                  const descricao = prompt('Descrição:')
+                  const ocorrenciaId = prompt('ID da ocorrência (opcional):')
+
+                  fetch('http://127.0.0.1:8000/ordens', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      titulo,
+                      descricao,
+                      estado: 'emitida',
+                      recurso_id: r.id,
+                      ocorrencia_id: ocorrenciaId ? parseInt(ocorrenciaId) : null
                     })
-                  }}>
-                    Criar ordem
-                  </button>
+                  }).then(() => {
+                    window.location.reload()
+                  })
+                }}>
+                  Criar ordem
+                </button>
               </Popup>
+
               <Tooltip permanent direction="top">
                 {r.nome}
               </Tooltip>
             </Marker>
-          ) : null
-        )}
+          )
+        })}
 
         {ocorrencias.map((o) =>
           o.latitude && o.longitude ? (

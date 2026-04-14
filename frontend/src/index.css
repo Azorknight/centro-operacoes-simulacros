@@ -113,3 +113,11 @@ code {
 .ordem-ativa {
   filter: hue-rotate(60deg);
 }
+
+.ordem-emitida {
+  filter: hue-rotate(60deg);
+}
+
+.ordem-executada {
+  filter: hue-rotate(20deg);
+}

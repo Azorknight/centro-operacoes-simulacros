@@ -354,3 +354,32 @@ def criar_ordem(ordem: Ordem):
         conn.commit()
 
     return {"mensagem": "Ordem criada com sucesso"}
+
+@app.put("/ordens/{ordem_id}/estado")
+def atualizar_estado_ordem(ordem_id: int, dados: dict):
+    with engine.connect() as conn:
+        conn.execute(
+            text("""
+                UPDATE ordens
+                SET estado = :estado
+                WHERE id = :id
+            """),
+            {
+                "estado": dados["estado"],
+                "id": ordem_id
+            }
+        )
+
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao)
+                VALUES ('ordem', :descricao)
+            """),
+            {
+                "descricao": f"Ordem {ordem_id} mudou estado para {dados['estado']}"
+            }
+        )
+
+        conn.commit()
+
+    return {"mensagem": "Estado da ordem atualizado"}
