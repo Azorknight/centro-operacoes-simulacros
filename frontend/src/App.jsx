@@ -245,7 +245,22 @@ function App() {
           const recurso = recursos.find(r => r.id === m.recurso_id)
 
           return (
-            <div key={m.id}>
+            <div
+              key={m.id}
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                if (mapRef.current) {
+                  const recurso = recursos.find(r => r.id === m.recurso_id)
+                  const ocorrencia = ocorrencias.find(o => o.id === m.ocorrencia_id)
+
+                  if (recurso && recurso.latitude && recurso.longitude) {
+                    mapRef.current.setView([recurso.latitude, recurso.longitude], 13)
+                  } else if (ocorrencia && ocorrencia.latitude && ocorrencia.longitude) {
+                    mapRef.current.setView([ocorrencia.latitude, ocorrencia.longitude], 13)
+                  }
+                }
+              }}
+            >
               {m.titulo} ({m.prioridade}) - {m.estado}
               {recurso && (
                 <div style={{ fontSize: '0.9em', color: 'gray' }}>
