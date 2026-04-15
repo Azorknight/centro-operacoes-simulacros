@@ -84,6 +84,7 @@ function App() {
   const [bases, setBases] = useState([])
   const [timeline, setTimeline] = useState([])
   const [ordens, setOrdens] = useState([])
+  const [missoes, setMissoes] = useState([])
 
   const mapRef = useRef()
 
@@ -107,6 +108,10 @@ function App() {
     fetch('http://127.0.0.1:8000/ordens')
       .then(res => res.json())
       .then(data => setOrdens(data))
+
+    fetch('http://127.0.0.1:8000/missoes')
+      .then(res => res.json())
+      .then(data => setMissoes(data))
   }, [])
 
   function mudarEstado(id, novoEstado) {
@@ -233,6 +238,36 @@ function App() {
             <br /><br />
           </div>
         ))}
+        <br />
+        <strong>Missões</strong>
+        <br />
+        {missoes.map(m => {
+          const recurso = recursos.find(r => r.id === m.recurso_id)
+
+          return (
+            <div key={m.id}>
+              {m.titulo} ({m.prioridade}) - {m.estado}
+              {recurso && (
+                <div style={{ fontSize: '0.9em', color: 'gray' }}>
+                  → {recurso.nome}
+                </div>
+              )}
+
+              <br />
+              <button onClick={() => {
+                const recursoId = prompt('ID do recurso:')
+                if (recursoId) {
+                  fetch(`http://127.0.0.1:8000/missoes/${m.id}/atribuir-recurso/${recursoId}`, {
+                    method: 'PUT'
+                  }).then(() => window.location.reload())
+                }
+              }}>
+                Atribuir recurso
+              </button>
+              <br /><br />
+            </div>
+          )
+        })}
       </div>
 
       <MapContainer
@@ -252,9 +287,15 @@ function App() {
         {recursos.map((r) => {
           if (!r.latitude || !r.longitude) return null
 
-          const ordem = ordens
-          .filter(o => o.recurso_id === r.id)
-          .sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em))[0]
+          const ordensRecurso = ordens.filter(o => o.recurso_id === r.id)
+
+          const ordem = ordensRecurso.length > 0
+            ? ordensRecurso.reduce((latest, current) =>
+                new Date(current.criado_em) > new Date(latest.criado_em)
+                  ? current
+                  : latest
+              )
+            : null
 
           let iconClass = ''
 
@@ -267,19 +308,25 @@ function App() {
               position={[r.latitude, r.longitude]}
               draggable={true}
               icon={
-                ordem?.estado === 'emitida'
-                  ? new L.Icon({
-                      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
-                      iconSize: [32, 32],
-                      iconAnchor: [16, 32]
-                    })
-                  : ordem?.estado === 'executada'
-                  ? new L.Icon({
-                      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
-                      iconSize: [32, 32],
-                      iconAnchor: [16, 32]
-                    })
-                  : new L.Icon.Default()
+                L.divIcon({
+                  className: '',
+                  html: `<div style="
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    background: ${
+                      ordem?.estado === 'emitida'
+                        ? 'yellow'
+                        : ordem?.estado === 'executada'
+                        ? 'orange'
+                        : 'blue'
+                    };
+                    border: 3px solid white;
+                    box-shadow: 0 0 4px rgba(0,0,0,0.5);
+                  "></div>`,
+                  iconSize: [18, 18],
+                  iconAnchor: [9, 9]
+                })
               }
               eventHandlers={{
                 dragend: (e) => {
@@ -368,6 +415,29 @@ function App() {
                 {o.titulo} <br />
                 {o.tipo} <br />
                 {o.estado}
+                <br /><br />
+                  <button onClick={() => {
+                    const titulo = prompt('Título da missão:')
+                    const descricao = prompt('Descrição:')
+                    const prioridade = prompt('Prioridade (baixa, media, alta):')
+
+                    fetch('http://127.0.0.1:8000/missoes', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        titulo,
+                        descricao,
+                        prioridade,
+                        estado: 'planeada',
+                        recurso_id: null,
+                        ocorrencia_id: o.id
+                      })
+                    }).then(() => {
+                      window.location.reload()
+                    })
+                  }}>
+                    Criar missão
+                  </button>
               </Popup>
             </CircleMarker>
           ) : null

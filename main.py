@@ -383,3 +383,100 @@ def atualizar_estado_ordem(ordem_id: int, dados: dict):
         conn.commit()
 
     return {"mensagem": "Estado da ordem atualizado"}
+
+@app.get("/missoes")
+def listar_missoes():
+    with engine.connect() as conn:
+        resultado = conn.execute(text("""
+            SELECT id, titulo, descricao, prioridade, estado, recurso_id, ocorrencia_id, criado_em
+            FROM missoes
+            ORDER BY criado_em DESC
+        """))
+
+        dados = []
+        for linha in resultado:
+            dados.append(dict(linha._mapping))
+
+        return dados
+    
+class Missao(BaseModel):
+    titulo: str
+    descricao: str
+    prioridade: str
+    estado: str
+    recurso_id: int | None = None
+    ocorrencia_id: int | None = None
+
+
+@app.post("/missoes")
+def criar_missao(missao: Missao):
+    with engine.connect() as conn:
+        conn.execute(
+            text("""
+                INSERT INTO missoes (titulo, descricao, prioridade, estado, recurso_id, ocorrencia_id)
+                VALUES (:titulo, :descricao, :prioridade, :estado, :recurso_id, :ocorrencia_id)
+            """),
+            {
+                "titulo": missao.titulo,
+                "descricao": missao.descricao,
+                "prioridade": missao.prioridade,
+                "estado": missao.estado,
+                "recurso_id": missao.recurso_id,
+                "ocorrencia_id": missao.ocorrencia_id
+            }
+        )
+
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao)
+                VALUES ('missao', :descricao)
+            """),
+            {
+                "descricao": f"Missão criada: {missao.titulo}"
+            }
+        )
+
+        conn.commit()
+
+    return {"mensagem": "Missão criada com sucesso"}
+
+@app.put("/missoes/{missao_id}/atribuir-recurso/{recurso_id}")
+def atribuir_recurso_missao(missao_id: int, recurso_id: int):
+    with engine.connect() as conn:
+        conn.execute(
+            text("""
+                UPDATE missoes
+                SET recurso_id = :recurso_id,
+                    estado = 'em_execucao'
+                WHERE id = :missao_id
+            """),
+            {
+                "recurso_id": recurso_id,
+                "missao_id": missao_id
+            }
+        )
+
+        conn.execute(
+            text("""
+                UPDATE recursos
+                SET estado = 'em_missao'
+                WHERE id = :recurso_id
+            """),
+            {
+                "recurso_id": recurso_id
+            }
+        )
+
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao)
+                VALUES ('missao', :descricao)
+            """),
+            {
+                "descricao": f"Recurso {recurso_id} atribuído à missão {missao_id}"
+            }
+        )
+
+        conn.commit()
+
+    return {"mensagem": "Recurso atribuído à missão"}
