@@ -480,3 +480,50 @@ def atribuir_recurso_missao(missao_id: int, recurso_id: int):
         conn.commit()
 
     return {"mensagem": "Recurso atribuído à missão"}
+
+@app.put("/missoes/{missao_id}/concluir")
+def concluir_missao(missao_id: int):
+    with engine.connect() as conn:
+        # obter recurso associado
+        resultado = conn.execute(
+            text("SELECT recurso_id FROM missoes WHERE id = :id"),
+            {"id": missao_id}
+        )
+        linha = resultado.fetchone()
+        recurso_id = linha[0] if linha else None
+
+        # atualizar missão
+        conn.execute(
+            text("""
+                UPDATE missoes
+                SET estado = 'concluida'
+                WHERE id = :id
+            """),
+            {"id": missao_id}
+        )
+
+        # libertar recurso
+        if recurso_id:
+            conn.execute(
+                text("""
+                    UPDATE recursos
+                    SET estado = 'disponivel'
+                    WHERE id = :recurso_id
+                """),
+                {"recurso_id": recurso_id}
+            )
+
+        # timeline
+        conn.execute(
+            text("""
+                INSERT INTO timeline_eventos (tipo, descricao)
+                VALUES ('missao', :descricao)
+            """),
+            {
+                "descricao": f"Missão {missao_id} concluída"
+            }
+        )
+
+        conn.commit()
+
+    return {"mensagem": "Missão concluída"}
