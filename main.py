@@ -527,3 +527,22 @@ def concluir_missao(missao_id: int):
         conn.commit()
 
     return {"mensagem": "Missão concluída"}
+
+@app.get("/relatorio")
+def relatorio():
+    with engine.connect() as conn:
+        total_recursos = conn.execute(text("SELECT COUNT(*) FROM recursos")).scalar()
+        total_ocorrencias = conn.execute(text("SELECT COUNT(*) FROM ocorrencias")).scalar()
+        total_missoes = conn.execute(text("SELECT COUNT(*) FROM missoes")).scalar()
+        missoes_ativas = conn.execute(text("SELECT COUNT(*) FROM missoes WHERE estado != 'concluida'")).scalar()
+        missoes_concluidas = conn.execute(text("SELECT COUNT(*) FROM missoes WHERE estado = 'concluida'")).scalar()
+        total_ordens = conn.execute(text("SELECT COUNT(*) FROM ordens")).scalar()
+
+        return {
+            "recursos": total_recursos,
+            "ocorrencias": total_ocorrencias,
+            "missoes_total": total_missoes,
+            "missoes_ativas": missoes_ativas,
+            "missoes_concluidas": missoes_concluidas,
+            "ordens": total_ordens
+        }
