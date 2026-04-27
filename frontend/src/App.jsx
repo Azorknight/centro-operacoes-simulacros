@@ -100,6 +100,9 @@ function App() {
   const [relatorio, setRelatorio] = useState(null)
   const [mostrarSoAtivos, setMostrarSoAtivos] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState('recursos')
+  const [mostrarPainelEsquerdo, setMostrarPainelEsquerdo] = useState(true)
+  const [mostrarPainelDireito, setMostrarPainelDireito] = useState(true)
+  const [detalhe, setDetalhe] = useState(null)
 
   const mapRef = useRef()
 
@@ -462,7 +465,8 @@ function App() {
         </div>
       </div>
 
-      <div style={styles.leftPanel}>
+      {mostrarPainelEsquerdo && (
+        <div style={styles.leftPanel}>
         <div style={styles.panelTitle}>Controlo</div>
 
         <label style={styles.checkboxLabel}>
@@ -507,8 +511,10 @@ function App() {
           <div>🔵 Base</div>
         </div>
       </div>
+      )}
 
-      <div style={styles.rightPanel}>
+      {mostrarPainelDireito && (
+        <div style={styles.rightPanel}>
         <div style={styles.tabBar}>
           {['recursos', 'ocorrencias', 'missoes', 'ordens', 'timeline'].map((aba) => (
             <button
@@ -526,6 +532,47 @@ function App() {
 
         <div style={styles.rightPanelContent}>{renderAba()}</div>
       </div>
+      )}
+
+      <div style={styles.toggleButtons}>
+        <button
+          style={styles.toggleButton}
+          onClick={() => setMostrarPainelEsquerdo(!mostrarPainelEsquerdo)}
+        >
+          {mostrarPainelEsquerdo ? 'Ocultar controlo' : 'Mostrar controlo'}
+        </button>
+
+        <button
+          style={styles.toggleButton}
+          onClick={() => setMostrarPainelDireito(!mostrarPainelDireito)}
+        >
+          {mostrarPainelDireito ? 'Ocultar painel' : 'Mostrar painel'}
+        </button>
+      </div>
+
+      {detalhe && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>
+            Detalhe operacional
+          </div>
+
+          <div><strong>Tipo:</strong> {detalhe.tipo}</div>
+
+          {Object.entries(detalhe.dados).map(([key, value]) => (
+            <div key={key}>
+              <strong>{key}:</strong> {String(value)}
+            </div>
+          ))}
+
+          <br />
+          <button
+            style={styles.mainButton}
+            onClick={() => setDetalhe(null)}
+          >
+            Fechar
+          </button>
+        </div>
+      )}
 
       <div style={styles.mapWrapper}>
         <MapContainer
@@ -580,6 +627,12 @@ function App() {
                   iconAnchor: [9, 9],
                 })}
                 eventHandlers={{
+                  click: () => {
+                  setDetalhe({
+                    tipo: 'recurso',
+                    dados: r
+                  })
+                },
                   dragend: (e) => {
                     const lat = e.target.getLatLng().lat
                     const lng = e.target.getLatLng().lng
@@ -662,6 +715,14 @@ function App() {
                   center={[o.latitude, o.longitude]}
                   radius={10}
                   pathOptions={{ color: 'red' }}
+                  eventHandlers={{
+                    click: () => {
+                      setDetalhe({
+                        tipo: 'ocorrencia',
+                        dados: o
+                      })
+                    }
+                  }}
                 >
                   <Popup>
                     {o.titulo} <br />
@@ -947,6 +1008,39 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
+  },
+    toggleButtons: {
+    position: 'absolute',
+    bottom: '16px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 1300,
+    display: 'flex',
+    gap: '8px',
+  },
+
+  toggleButton: {
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: '1px solid #cbd5e1',
+    background: 'rgba(255,255,255,0.92)',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+  },
+  detailPanel: {
+    position: 'absolute',
+    bottom: '70px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 1300,
+    width: '360px',
+    maxHeight: '45vh',
+    overflowY: 'auto',
+    background: 'rgba(255,255,255,0.96)',
+    borderRadius: '12px',
+    padding: '12px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+    fontSize: '13px',
   },
 }
 
