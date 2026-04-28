@@ -16,12 +16,19 @@ function AdicionarRecurso() {
   useMapEvents({
     click(e) {
       if (e.originalEvent.ctrlKey) return
+      if (e.originalEvent.target.closest('.leaflet-interactive')) return
+      if (e.originalEvent.target.closest('.leaflet-marker-icon')) return
+      if (e.originalEvent.target.closest('.leaflet-tooltip')) return
+      if (e.originalEvent.target.closest('.leaflet-popup')) return
 
-      const nome = prompt('Nome do recurso:')
-      if (!nome) return
+      window.dispatchEvent(new CustomEvent('abrir-form-recurso', {
+        detail: {
+          latitude: e.latlng.lat,
+          longitude: e.latlng.lng
+        }
+      }))
 
-      const tipo = prompt('Tipo:')
-      if (!tipo) return
+      return
 
       const estado = 'disponivel'
       let ilha = 'Terceira'
@@ -103,6 +110,11 @@ function App() {
   const [mostrarPainelEsquerdo, setMostrarPainelEsquerdo] = useState(true)
   const [mostrarPainelDireito, setMostrarPainelDireito] = useState(true)
   const [detalhe, setDetalhe] = useState(null)
+  const [formRecurso, setFormRecurso] = useState({
+    nome: '',
+    tipo: ''
+  })
+  const [posicaoNovoRecurso, setPosicaoNovoRecurso] = useState(null)
 
   const mapRef = useRef()
 
@@ -558,19 +570,230 @@ function App() {
 
           <div><strong>Tipo:</strong> {detalhe.tipo}</div>
 
-          {Object.entries(detalhe.dados).map(([key, value]) => (
-            <div key={key}>
-              <strong>{key}:</strong> {String(value)}
-            </div>
-          ))}
+          {detalhe.tipo === 'recurso' && (
+            <>
+              {missoes.find(m => m.recurso_id === detalhe.dados.id) && (
+                <div>
+                  <strong>Missão atual:</strong>{' '}
+                  {missoes.find(m => m.recurso_id === detalhe.dados.id)?.titulo}
+                </div>
+              )}
 
-          <br />
-          <button
-            style={styles.mainButton}
-            onClick={() => setDetalhe(null)}
-          >
-            Fechar
-          </button>
+              {ocorrencias.find(o => o.id === detalhe.dados.ocorrencia_id) && (
+                <div
+                  style={{ cursor: 'pointer', color: '#2563eb' }}
+                  onClick={() =>
+                    setDetalhe({
+                      tipo: 'ocorrencia',
+                      dados: ocorrencias.find(o => o.id === detalhe.dados.ocorrencia_id)
+                    })
+                  }
+                >
+                  <strong>Ocorrência associada:</strong>{' '}
+                  {ocorrencias.find(o => o.id === detalhe.dados.ocorrencia_id)?.titulo}
+                </div>
+              )}
+
+              {ordens.find(o => o.recurso_id === detalhe.dados.id && o.estado !== 'concluida') && (
+                <div>
+                  <strong>Ordem ativa:</strong>{' '}
+                  {ordens.find(o => o.recurso_id === detalhe.dados.id && o.estado !== 'concluida')?.titulo}
+                </div>
+              )}
+            </>
+          )}
+
+          {detalhe.tipo === 'missao' && (
+            <>
+              {recursos.find(r => r.id === detalhe.dados.recurso_id) && (
+                <div
+                  style={{ cursor: 'pointer', color: '#2563eb' }}
+                  onClick={() =>
+                    setDetalhe({
+                      tipo: 'recurso',
+                      dados: recursos.find(r => r.id === detalhe.dados.recurso_id)
+                    })
+                  }
+                >
+                  <strong>Recurso atribuído:</strong>{' '}
+                  {recursos.find(r => r.id === detalhe.dados.recurso_id)?.nome}
+                </div>
+              )}
+
+              {ocorrencias.find(o => o.id === detalhe.dados.ocorrencia_id) && (
+                <div>
+                  <strong>Ocorrência associada:</strong>{' '}
+                  {ocorrencias.find(o => o.id === detalhe.dados.ocorrencia_id)?.titulo}
+                </div>
+              )}
+            </>
+          )}
+
+          {detalhe.tipo === 'ocorrencia' && (
+            <>
+              {missoes
+                .filter(m => m.ocorrencia_id === detalhe.dados.id)
+                .map(m => (
+                  <div
+                    key={m.id}
+                    style={{ cursor: 'pointer', color: '#2563eb' }}
+                    onClick={() => setDetalhe({
+                      tipo: 'missao',
+                      dados: m
+                    })}
+                  >
+                    <strong>Missão:</strong> {m.titulo}
+                  </div>
+                ))}
+
+              {recursos
+                .filter(r => r.ocorrencia_id === detalhe.dados.id)
+                .map(r => (
+                  <div
+                    key={r.id}
+                    style={{ cursor: 'pointer', color: '#2563eb' }}
+                    onClick={() => setDetalhe({
+                      tipo: 'recurso',
+                      dados: r
+                    })}
+                  >
+                    <strong>Recurso no terreno:</strong> {r.nome}
+                  </div>
+                ))}
+            </>
+          )}
+
+          {Object.entries(detalhe.dados).map(([key, value]) => {
+            const nomes = {
+              id: 'ID',
+              nome: 'Nome',
+              titulo: 'Título',
+              tipo: 'Tipo',
+              estado: 'Estado',
+              ilha: 'Ilha',
+              descricao: 'Descrição',
+              latitude: 'Latitude',
+              longitude: 'Longitude',
+              ocorrencia_id: 'Ocorrência associada',
+              recurso_id: 'Recurso associado',
+              criado_em: 'Criado em',
+            }
+
+            if (value === null || value === undefined) return null
+
+            return (
+              <div key={key}>
+                <strong>{nomes[key] || key}:</strong> {String(value)}
+              </div>
+            )
+          })}
+
+          <div style={styles.detailActions}>
+
+          {detalhe.tipo === 'recurso' && (
+            <>
+               <button
+                style={styles.mainButton}
+                onClick={() => mudarEstado(detalhe.dados.id, 'em_missao')}
+              >
+                Marcar em missão
+              </button>
+
+              <button
+                style={styles.mainButton}
+                onClick={() => mudarEstado(detalhe.dados.id, 'disponivel')}
+              >
+                Marcar disponível
+              </button>
+            </>
+          )}
+
+            {detalhe.tipo === 'ocorrencia' && (
+              <>
+                
+                <button
+                  style={styles.mainButton}
+                  onClick={() => {
+                    const titulo = prompt('Título da missão:')
+                    const descricao = prompt('Descrição:')
+                    const prioridade = prompt('Prioridade (baixa, media, alta):')
+
+                    fetch('http://127.0.0.1:8000/missoes', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        titulo,
+                        descricao,
+                        prioridade,
+                        estado: 'planeada',
+                        recurso_id: null,
+                        ocorrencia_id: detalhe.dados.id
+                      })
+                    }).then(() => {
+                      window.location.reload()
+                    })
+                  }}
+                >
+                  Criar missão
+                </button>
+              </>
+            )}
+
+            {detalhe.tipo === 'missao' && (
+              <>
+               
+                <button
+                  style={styles.mainButton}
+                  onClick={() => {
+                    const recursoId = prompt('ID do recurso:')
+                    if (recursoId) {
+                      fetch(`http://127.0.0.1:8000/missoes/${detalhe.dados.id}/atribuir-recurso/${recursoId}`, {
+                        method: 'PUT'
+                      }).then(() => window.location.reload())
+                    }
+                  }}
+                >
+                  Atribuir recurso
+                </button>
+
+                <button
+                  style={styles.mainButton}
+                  onClick={() => {
+                    fetch(`http://127.0.0.1:8000/missoes/${detalhe.dados.id}/concluir`, {
+                      method: 'PUT'
+                    }).then(() => window.location.reload())
+                  }}
+                >
+                  Concluir missão
+                </button>
+              </>
+            )}
+
+            <button
+              style={styles.mainButton}
+              onClick={() => {
+                if (
+                  detalhe.dados.latitude &&
+                  detalhe.dados.longitude &&
+                  mapRef.current
+                ) {
+                  mapRef.current.setView(
+                    [detalhe.dados.latitude, detalhe.dados.longitude],
+                    14
+                  )
+                }
+              }}
+            >
+              Centrar no mapa
+            </button>
+
+            <button
+              style={styles.mainButton}
+              onClick={() => setDetalhe(null)}
+            >
+              Fechar
+            </button>
+            </div>
         </div>
       )}
 
@@ -766,7 +989,18 @@ function App() {
                         key={`missao-${m.id}`}
                         center={[o.latitude, o.longitude]}
                         radius={16}
+                        interactive={false}
                         pathOptions={{ color, fillOpacity: 0 }}
+                        eventHandlers={{
+                          click: (e) => {
+                            L.DomEvent.stop(e.originalEvent)
+
+                            setDetalhe({
+                              tipo: 'missao',
+                              dados: m
+                            })
+                          }
+                        }}
                       />
                     )
                   })}
@@ -1041,6 +1275,12 @@ const styles = {
     padding: '12px',
     boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
     fontSize: '13px',
+  },
+  detailActions: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    marginTop: '12px',
   },
 }
 
