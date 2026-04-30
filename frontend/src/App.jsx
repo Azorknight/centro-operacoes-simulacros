@@ -12,85 +12,26 @@ import {
 import L from 'leaflet'
 import jsPDF from 'jspdf'
 
-function AdicionarRecurso() {
+function GestorCliquesMapa() {
   useMapEvents({
     click(e) {
-      if (e.originalEvent.ctrlKey) return
-      if (e.originalEvent.target.closest('.leaflet-interactive')) return
-      if (e.originalEvent.target.closest('.leaflet-marker-icon')) return
-      if (e.originalEvent.target.closest('.leaflet-tooltip')) return
-      if (e.originalEvent.target.closest('.leaflet-popup')) return
+      const isCtrl = e.originalEvent.ctrlKey || e.originalEvent.metaKey
 
-      window.dispatchEvent(new CustomEvent('abrir-form-recurso', {
-        detail: {
-          latitude: e.latlng.lat,
-          longitude: e.latlng.lng
-        }
-      }))
-
-      return
-
-      const estado = 'disponivel'
-      let ilha = 'Terceira'
-
-      if (e.latlng.lng < -28.2) {
-        ilha = 'São Jorge'
-      } else if (e.latlng.lng < -27.7) {
-        ilha = 'Graciosa'
+      if (isCtrl) {
+        window.dispatchEvent(new CustomEvent('abrir-form-recurso', {
+          detail: {
+            latitude: e.latlng.lat,
+            longitude: e.latlng.lng
+          }
+        }))
+      } else {
+        window.dispatchEvent(new CustomEvent('abrir-form-ocorrencia', {
+          detail: {
+            latitude: e.latlng.lat,
+            longitude: e.latlng.lng
+          }
+        }))
       }
-
-      fetch('http://127.0.0.1:8000/recursos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome,
-          tipo,
-          estado,
-          ilha,
-          latitude: e.latlng.lat,
-          longitude: e.latlng.lng,
-        }),
-      }).then(() => window.location.reload())
-    },
-  })
-
-  return null
-}
-
-function AdicionarOcorrencia() {
-  useMapEvents({
-    click(e) {
-      if (!e.originalEvent.ctrlKey) return
-
-      const titulo = prompt('Título da ocorrência:')
-      if (!titulo) return
-
-      const tipo = prompt('Tipo da ocorrência:')
-      if (!tipo) return
-
-      const descricao = prompt('Descrição da ocorrência:') || ''
-      const estado = 'aberta'
-      let ilha = 'Terceira'
-
-      if (e.latlng.lng < -28.2) {
-        ilha = 'São Jorge'
-      } else if (e.latlng.lng < -27.7) {
-        ilha = 'Graciosa'
-      }
-
-      fetch('http://127.0.0.1:8000/ocorrencias', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          titulo,
-          descricao,
-          tipo,
-          estado,
-          ilha,
-          latitude: e.latlng.lat,
-          longitude: e.latlng.lng,
-        }),
-      }).then(() => window.location.reload())
     },
   })
 
@@ -115,6 +56,28 @@ function App() {
     tipo: ''
   })
   const [posicaoNovoRecurso, setPosicaoNovoRecurso] = useState(null)
+  const [formOcorrencia, setFormOcorrencia] = useState({
+    titulo: '',
+    tipo: '',
+    descricao: ''
+  })
+  const [posicaoNovaOcorrencia, setPosicaoNovaOcorrencia] = useState(null)
+  const [formMissao, setFormMissao] = useState({
+    titulo: '',
+    descricao: '',
+    prioridade: 'media',
+    ocorrencia_id: null
+  })
+  const [mostrarFormMissao, setMostrarFormMissao] = useState(false)
+  const [missaoParaAtribuir, setMissaoParaAtribuir] = useState(null)
+  const [formOrdem, setFormOrdem] = useState({
+    titulo: '',
+    descricao: '',
+    recurso_id: null,
+    ocorrencia_id: null
+  })
+
+  const [mostrarFormOrdem, setMostrarFormOrdem] = useState(false)
 
   const mapRef = useRef()
 
@@ -146,8 +109,25 @@ function App() {
     fetch('http://127.0.0.1:8000/relatorio')
       .then((res) => res.json())
       .then((data) => setRelatorio(data))
-  }, [])
 
+    const abrirFormRecurso = (event) => {
+      setPosicaoNovoRecurso(event.detail)
+    }
+
+    window.addEventListener('abrir-form-recurso', abrirFormRecurso)
+
+    const abrirFormOcorrencia = (event) => {
+      setPosicaoNovaOcorrencia(event.detail)
+    }
+
+    window.addEventListener('abrir-form-ocorrencia', abrirFormOcorrencia)
+
+    return () => {
+      window.removeEventListener('abrir-form-recurso', abrirFormRecurso)
+      window.removeEventListener('abrir-form-ocorrencia', abrirFormOcorrencia)
+    }
+  }, [])
+    
   function mudarEstado(id, novoEstado) {
     fetch(`http://127.0.0.1:8000/recursos/${id}/estado`, {
       method: 'PUT',
@@ -390,13 +370,7 @@ function App() {
                     style={styles.smallButton}
                     onClick={(e) => {
                       e.stopPropagation()
-                      const recursoId = prompt('ID do recurso:')
-                      if (recursoId) {
-                        fetch(
-                          `http://127.0.0.1:8000/missoes/${m.id}/atribuir-recurso/${recursoId}`,
-                          { method: 'PUT' }
-                        ).then(() => window.location.reload())
-                      }
+                      setMissaoParaAtribuir(m)
                     }}
                   >
                     Atribuir
@@ -491,8 +465,8 @@ function App() {
         </label>
 
         <div style={styles.helpBox}>
-          <div>Click esquerdo: criar recurso</div>
-          <div>CTRL + Click esquerdo: criar ocorrência</div>
+          <div>Click esquerdo: criar ocorrência</div>
+          <div>CTRL + Click esquerdo: criar recurso</div>
         </div>
 
         <div style={styles.reportBox}>
@@ -637,10 +611,18 @@ function App() {
                   <div
                     key={m.id}
                     style={{ cursor: 'pointer', color: '#2563eb' }}
-                    onClick={() => setDetalhe({
-                      tipo: 'missao',
-                      dados: m
-                    })}
+                    onClick={() => {
+                      setDetalhe(null)
+
+                      setFormMissao({
+                        titulo: '',
+                        descricao: '',
+                        prioridade: 'media',
+                        ocorrencia_id: detalhe.dados.id
+                      })
+
+                      setMostrarFormMissao(true)
+                    }}
                   >
                     <strong>Missão:</strong> {m.titulo}
                   </div>
@@ -714,24 +696,16 @@ function App() {
                 <button
                   style={styles.mainButton}
                   onClick={() => {
-                    const titulo = prompt('Título da missão:')
-                    const descricao = prompt('Descrição:')
-                    const prioridade = prompt('Prioridade (baixa, media, alta):')
+                    setDetalhe(null)
 
-                    fetch('http://127.0.0.1:8000/missoes', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        titulo,
-                        descricao,
-                        prioridade,
-                        estado: 'planeada',
-                        recurso_id: null,
-                        ocorrencia_id: detalhe.dados.id
-                      })
-                    }).then(() => {
-                      window.location.reload()
+                    setFormMissao({
+                      titulo: '',
+                      descricao: '',
+                      prioridade: 'media',
+                      ocorrencia_id: detalhe.dados.id
                     })
+
+                    setMostrarFormMissao(true)
                   }}
                 >
                   Criar missão
@@ -745,12 +719,7 @@ function App() {
                 <button
                   style={styles.mainButton}
                   onClick={() => {
-                    const recursoId = prompt('ID do recurso:')
-                    if (recursoId) {
-                      fetch(`http://127.0.0.1:8000/missoes/${detalhe.dados.id}/atribuir-recurso/${recursoId}`, {
-                        method: 'PUT'
-                      }).then(() => window.location.reload())
-                    }
+                    setMissaoParaAtribuir(detalhe.dados)
                   }}
                 >
                   Atribuir recurso
@@ -797,6 +766,226 @@ function App() {
         </div>
       )}
 
+      {posicaoNovoRecurso && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>Novo recurso</div>
+
+          <input
+            style={styles.input}
+            placeholder="Nome"
+            value={formRecurso.nome}
+            onChange={(e) =>
+              setFormRecurso({ ...formRecurso, nome: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Tipo"
+            value={formRecurso.tipo}
+            onChange={(e) =>
+              setFormRecurso({ ...formRecurso, tipo: e.target.value })
+            }
+          />
+
+          <button
+            style={styles.mainButton}
+            onClick={() => {
+              if (!formRecurso.nome || !formRecurso.tipo) return
+
+              fetch('http://127.0.0.1:8000/recursos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  nome: formRecurso.nome,
+                  tipo: formRecurso.tipo,
+                  estado: 'disponivel',
+                  ilha: 'Terceira',
+                  latitude: posicaoNovoRecurso.latitude,
+                  longitude: posicaoNovoRecurso.longitude,
+                }),
+              }).then(() => window.location.reload())
+            }}
+          >
+            Criar recurso
+          </button>
+
+          <button
+            style={styles.mainButton}
+            onClick={() => {
+              setPosicaoNovoRecurso(null)
+              setFormRecurso({ nome: '', tipo: '' })
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {posicaoNovaOcorrencia && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>Nova ocorrência</div>
+
+          <input
+            style={styles.input}
+            placeholder="Título"
+            value={formOcorrencia.titulo}
+            onChange={(e) =>
+              setFormOcorrencia({ ...formOcorrencia, titulo: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Tipo"
+            value={formOcorrencia.tipo}
+            onChange={(e) =>
+              setFormOcorrencia({ ...formOcorrencia, tipo: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Descrição"
+            value={formOcorrencia.descricao}
+            onChange={(e) =>
+              setFormOcorrencia({ ...formOcorrencia, descricao: e.target.value })
+            }
+          />
+
+          <button
+            style={styles.mainButton}
+            onClick={() => {
+              if (!formOcorrencia.titulo || !formOcorrencia.tipo) return
+
+              fetch('http://127.0.0.1:8000/ocorrencias', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  titulo: formOcorrencia.titulo,
+                  tipo: formOcorrencia.tipo,
+                  descricao: formOcorrencia.descricao,
+                  estado: 'aberta',
+                  ilha: 'Terceira',
+                  latitude: posicaoNovaOcorrencia.latitude,
+                  longitude: posicaoNovaOcorrencia.longitude,
+                }),
+              }).then(() => window.location.reload())
+            }}
+          >
+            Criar ocorrência
+          </button>
+
+          <button
+            style={styles.mainButton}
+            onClick={() => {
+              setPosicaoNovaOcorrencia(null)
+              setFormOcorrencia({ titulo: '', tipo: '', descricao: '' })
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {mostrarFormMissao && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>Nova missão</div>
+
+          <input
+            style={styles.input}
+            placeholder="Título"
+            value={formMissao.titulo}
+            onChange={(e) =>
+              setFormMissao({ ...formMissao, titulo: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Descrição"
+            value={formMissao.descricao}
+            onChange={(e) =>
+              setFormMissao({ ...formMissao, descricao: e.target.value })
+            }
+          />
+
+          <select
+            style={styles.input}
+            value={formMissao.prioridade}
+            onChange={(e) =>
+              setFormMissao({ ...formMissao, prioridade: e.target.value })
+            }
+          >
+            <option value="baixa">Baixa</option>
+            <option value="media">Média</option>
+            <option value="alta">Alta</option>
+          </select>
+
+          <button
+            style={styles.mainButton}
+            onClick={() => {
+              if (!formMissao.titulo) return
+
+              fetch('http://127.0.0.1:8000/missoes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  titulo: formMissao.titulo,
+                  descricao: formMissao.descricao,
+                  prioridade: formMissao.prioridade,
+                  estado: 'planeada',
+                  recurso_id: null,
+                  ocorrencia_id: formMissao.ocorrencia_id
+                })
+              }).then(() => window.location.reload())
+            }}
+          >
+            Criar missão
+          </button>
+
+          <button
+            style={styles.mainButton}
+            onClick={() => setMostrarFormMissao(false)}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {missaoParaAtribuir && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>
+            Atribuir recurso à missão
+          </div>
+
+          {recursos
+            .filter(r => r.estado === 'disponivel')
+            .map(r => (
+              <div
+                key={r.id}
+                style={styles.itemCard}
+                onClick={() => {
+                  fetch(
+                    `http://127.0.0.1:8000/missoes/${missaoParaAtribuir.id}/atribuir-recurso/${r.id}`,
+                    { method: 'PUT' }
+                  ).then(() => window.location.reload())
+                }}
+              >
+                <strong>{r.nome}</strong>
+                <div>{r.tipo}</div>
+              </div>
+            ))}
+
+          <button
+            style={styles.mainButton}
+            onClick={() => setMissaoParaAtribuir(null)}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
       <div style={styles.mapWrapper}>
         <MapContainer
           center={[38.65, -27.22]}
@@ -809,8 +998,7 @@ function App() {
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
           />
 
-          <AdicionarRecurso />
-          <AdicionarOcorrencia />
+          <GestorCliquesMapa />
 
           {recursosFiltrados.map((r) => {
             if (!r.latitude || !r.longitude) return null
@@ -1281,6 +1469,13 @@ const styles = {
     flexDirection: 'column',
     gap: '10px',
     marginTop: '12px',
+  },
+  input: {
+    width: '100%',
+    padding: '8px',
+    marginBottom: '8px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
   },
 }
 
