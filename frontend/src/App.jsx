@@ -78,6 +78,7 @@ function App() {
   })
 
   const [mostrarFormOrdem, setMostrarFormOrdem] = useState(false)
+  const [recursoParaAtribuirOcorrencia, setRecursoParaAtribuirOcorrencia] = useState(null)
 
   const mapRef = useRef()
 
@@ -687,6 +688,31 @@ function App() {
               >
                 Marcar disponível
               </button>
+
+              <button
+                style={styles.mainButton}
+                onClick={() => {
+                  setRecursoParaAtribuirOcorrencia(detalhe.dados)
+                }}
+              >
+                Atribuir ocorrência
+              </button>
+
+              <button
+                style={styles.mainButton}
+                onClick={() => {
+                  setFormOrdem({
+                    titulo: '',
+                    descricao: '',
+                    recurso_id: detalhe.dados.id,
+                    ocorrencia_id: detalhe.dados.ocorrencia_id || null
+                  })
+
+                  setMostrarFormOrdem(true)
+                }}
+              >
+                Criar ordem
+              </button>
             </>
           )}
 
@@ -986,6 +1012,97 @@ function App() {
         </div>
       )}
 
+      {mostrarFormOrdem && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>Nova ordem</div>
+
+          <input
+            style={styles.input}
+            placeholder="Título"
+            value={formOrdem.titulo}
+            onChange={(e) =>
+              setFormOrdem({ ...formOrdem, titulo: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Descrição"
+            value={formOrdem.descricao}
+            onChange={(e) =>
+              setFormOrdem({ ...formOrdem, descricao: e.target.value })
+            }
+          />
+
+          <button
+            style={styles.mainButton}
+            onClick={() => {
+              if (!formOrdem.titulo) return
+
+              fetch('http://127.0.0.1:8000/ordens', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  titulo: formOrdem.titulo,
+                  descricao: formOrdem.descricao,
+                  estado: 'emitida',
+                  recurso_id: formOrdem.recurso_id,
+                  ocorrencia_id: formOrdem.ocorrencia_id
+                })
+              }).then(() => window.location.reload())
+            }}
+          >
+            Criar ordem
+          </button>
+
+          <button
+            style={styles.mainButton}
+            onClick={() => setMostrarFormOrdem(false)}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {recursoParaAtribuirOcorrencia && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>
+            Atribuir ocorrência ao recurso
+          </div>
+
+          <div>
+            <strong>Recurso:</strong> {recursoParaAtribuirOcorrencia.nome}
+          </div>
+
+          <br />
+
+          {ocorrencias
+            .filter(o => o.estado !== 'fechada')
+            .map(o => (
+              <div
+                key={o.id}
+                style={{ ...styles.itemCard, cursor: 'pointer' }}
+                onClick={() => {
+                  fetch(
+                    `http://127.0.0.1:8000/recursos/${recursoParaAtribuirOcorrencia.id}/atribuir-ocorrencia/${o.id}`,
+                    { method: 'PUT' }
+                  ).then(() => window.location.reload())
+                }}
+              >
+                <strong>{o.titulo}</strong>
+                <div>{o.tipo} · {o.estado}</div>
+              </div>
+            ))}
+
+          <button
+            style={styles.mainButton}
+            onClick={() => setRecursoParaAtribuirOcorrencia(null)}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
       <div style={styles.mapWrapper}>
         <MapContainer
           center={[38.65, -27.22]}
@@ -1060,55 +1177,13 @@ function App() {
                 }}
               >
                 <Popup>
-                  {r.nome} <br />
-                  {r.tipo} <br />
+                  <strong>{r.nome}</strong>
+                  <br />
+                  {r.tipo}
+                  <br />
                   Estado: {r.estado}
                   <br /><br />
-
-                  <button onClick={() => mudarEstado(r.id, 'em_missao')}>
-                    Em missão
-                  </button>
-                  <br />
-                  <button onClick={() => mudarEstado(r.id, 'disponivel')}>
-                    Disponível
-                  </button>
-                  <br />
-                  <button
-                    onClick={() => {
-                      const ocorrenciaId = prompt('ID da ocorrência:')
-                      if (ocorrenciaId) {
-                        fetch(
-                          `http://127.0.0.1:8000/recursos/${r.id}/atribuir-ocorrencia/${ocorrenciaId}`,
-                          { method: 'PUT' }
-                        ).then(() => window.location.reload())
-                      }
-                    }}
-                  >
-                    Atribuir a ocorrência
-                  </button>
-
-                  <br /><br />
-                  <button
-                    onClick={() => {
-                      const titulo = prompt('Título da ordem:')
-                      const descricao = prompt('Descrição:')
-                      const ocorrenciaId = prompt('ID da ocorrência (opcional):')
-
-                      fetch('http://127.0.0.1:8000/ordens', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          titulo,
-                          descricao,
-                          estado: 'emitida',
-                          recurso_id: r.id,
-                          ocorrencia_id: ocorrenciaId ? parseInt(ocorrenciaId) : null,
-                        }),
-                      }).then(() => window.location.reload())
-                    }}
-                  >
-                    Criar ordem
-                  </button>
+                  Clique no marcador para abrir o detalhe operacional.
                 </Popup>
 
                 <Tooltip permanent direction="top">
@@ -1136,32 +1211,13 @@ function App() {
                   }}
                 >
                   <Popup>
-                    {o.titulo} <br />
-                    {o.tipo} <br />
-                    {o.estado}
+                    <strong>{o.titulo}</strong>
+                    <br />
+                    {o.tipo}
+                    <br />
+                    Estado: {o.estado}
                     <br /><br />
-                    <button
-                      onClick={() => {
-                        const titulo = prompt('Título da missão:')
-                        const descricao = prompt('Descrição:')
-                        const prioridade = prompt('Prioridade (baixa, media, alta):')
-
-                        fetch('http://127.0.0.1:8000/missoes', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            titulo,
-                            descricao,
-                            prioridade,
-                            estado: 'planeada',
-                            recurso_id: null,
-                            ocorrencia_id: o.id,
-                          }),
-                        }).then(() => window.location.reload())
-                      }}
-                    >
-                      Criar missão
-                    </button>
+                    Clique na ocorrência para abrir o detalhe operacional.
                   </Popup>
                 </CircleMarker>
 
@@ -1205,8 +1261,11 @@ function App() {
                 pathOptions={{ color: 'blue' }}
               >
                 <Popup>
-                  {b.nome} <br />
+                  <strong>{b.nome}</strong>
+                  <br />
                   {b.tipo}
+                  <br /><br />
+                  Base operacional.
                 </Popup>
               </CircleMarker>
             ) : null
