@@ -38,6 +38,18 @@ function GestorCliquesMapa() {
   return null
 }
 
+function obterIconeRecurso(tipo) {
+  const tipoLower = tipo?.toLowerCase() || ''
+
+  if (tipoLower.includes('ambul')) return '🚑'
+  if (tipoLower.includes('bombe')) return '🚒'
+  if (tipoLower.includes('pol')) return '🚓'
+  if (tipoLower.includes('moto')) return '🏍️'
+  if (tipoLower.includes('drone')) return '🚁'
+
+  return '📍'
+}
+
 function App() {
   const [recursos, setRecursos] = useState([])
   const [ocorrencias, setOcorrencias] = useState([])
@@ -1138,19 +1150,13 @@ function App() {
                 icon={L.divIcon({
                   className: '',
                   html: `<div style="
-                    width: 18px;
-                    height: 18px;
-                    border-radius: 50%;
-                    background: ${
-                      ordem?.estado === 'emitida'
-                        ? 'yellow'
-                        : ordem?.estado === 'executada'
-                        ? 'orange'
-                        : 'blue'
-                    };
-                    border: 3px solid white;
-                    box-shadow: 0 0 4px rgba(0,0,0,0.5);
-                  "></div>`,
+                    font-size: 26px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  ">
+                    ${obterIconeRecurso(r.tipo)}
+                  </div>`,
                   iconSize: [18, 18],
                   iconAnchor: [9, 9],
                 })}
