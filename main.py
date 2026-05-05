@@ -502,6 +502,47 @@ def concluir_missao(missao_id: int):
             {"id": missao_id}
         )
 
+        # obter ocorrência associada
+        resultado_ocorrencia = conn.execute(
+            text("SELECT ocorrencia_id FROM missoes WHERE id = :id"),
+            {"id": missao_id}
+        )
+
+        linha_ocorrencia = resultado_ocorrencia.fetchone()
+        ocorrencia_id = linha_ocorrencia[0] if linha_ocorrencia else None
+
+        # se não houver missões ativas nessa ocorrência, fechar ocorrência
+        if ocorrencia_id:
+            missoes_ativas = conn.execute(
+                text("""
+                    SELECT COUNT(*)
+                    FROM missoes
+                    WHERE ocorrencia_id = :ocorrencia_id
+                    AND estado != 'concluida'
+                """),
+                {"ocorrencia_id": ocorrencia_id}
+            ).scalar()
+
+            if missoes_ativas == 0:
+                conn.execute(
+                    text("""
+                        UPDATE ocorrencias
+                        SET estado = 'fechada'
+                        WHERE id = :ocorrencia_id
+                    """),
+                    {"ocorrencia_id": ocorrencia_id}
+                )
+
+                conn.execute(
+                    text("""
+                        INSERT INTO timeline_eventos (tipo, descricao)
+                        VALUES ('ocorrencia', :descricao)
+                    """),
+                    {
+                        "descricao": f"Ocorrência {ocorrencia_id} fechada automaticamente"
+                    }
+                )
+
         # libertar recurso
         if recurso_id:
             conn.execute(

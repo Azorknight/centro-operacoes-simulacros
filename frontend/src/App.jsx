@@ -50,6 +50,18 @@ function obterIconeRecurso(tipo) {
   return '📍'
 }
 
+function obterCorOcorrencia(tipo, estado) {
+  const tipoLower = tipo?.toLowerCase() || ''
+  const estadoLower = estado?.toLowerCase() || ''
+
+  if (estadoLower.includes('fechada')) return 'green'
+  if (tipoLower.includes('incend')) return 'red'
+  if (tipoLower.includes('acidente')) return 'orange'
+  if (tipoLower.includes('evac')) return 'purple'
+
+  return 'red'
+}
+
 function App() {
   const [recursos, setRecursos] = useState([])
   const [ocorrencias, setOcorrencias] = useState([])
@@ -501,13 +513,33 @@ function App() {
 
         <div style={styles.legendBox}>
           <div style={styles.sectionTitle}>Legenda</div>
-          <div>🔵 Recurso normal</div>
+
+          <div>🚑 Ambulância</div>
+          <div>🚒 Bombeiros</div>
+          <div>🚓 Polícia</div>
+          <div>🏍️ Moto</div>
+          <div>🚁 Drone / Aéreo</div>
+
+          <br />
+
           <div>🟡 Ordem emitida</div>
           <div>🟠 Ordem executada</div>
-          <div>🔴 Ocorrência</div>
+
+          <br />
+
+          <div>🔴 Incêndio</div>
+          <div>🟠 Acidente</div>
+          <div>🟣 Evacuação</div>
+          <div>🟢 Ocorrência fechada</div>
+
+          <br />
+
           <div>⚪ Missão planeada</div>
           <div>🟢 Missão concluída</div>
-          <div>🔵 Base</div>
+
+          <br />
+
+          <div>🔵 Base operacional</div>
         </div>
       </div>
       )}
@@ -1206,7 +1238,9 @@ function App() {
                   key={`oc-${o.id}`}
                   center={[o.latitude, o.longitude]}
                   radius={10}
-                  pathOptions={{ color: 'red' }}
+                  pathOptions={{
+                    color: obterCorOcorrencia(o.tipo, o.estado)
+                  }}
                   eventHandlers={{
                     click: () => {
                       setDetalhe({
