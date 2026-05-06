@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from database import testar_ligacao
 from pydantic import BaseModel
@@ -7,6 +7,7 @@ class Recurso(BaseModel):
     nome: str
     tipo: str
     estado: str
+    indicativo_radio: str | None = None
     ilha: str
     latitude: float
     longitude: float
@@ -53,6 +54,7 @@ def listar_recursos():
             nome,
             tipo,
             estado,
+            indicativo_radio,                        
             ilha,
             ocorrencia_id,
             ST_Y(localizacao) AS latitude,
@@ -70,11 +72,12 @@ def criar_recurso(recurso: Recurso):
     with engine.connect() as conn:
         conn.execute(
             text("""
-                INSERT INTO recursos (nome, tipo, estado, ilha, localizacao)
+                INSERT INTO recursos (nome, tipo, estado, indicativo_radio, ilha, localizacao)
                 VALUES (
                     :nome,
                     :tipo,
                     :estado,
+                    :indicativo_radio,
                     :ilha,
                     ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
                 )
@@ -83,6 +86,7 @@ def criar_recurso(recurso: Recurso):
                 "nome": recurso.nome,
                 "tipo": recurso.tipo,
                 "estado": recurso.estado,
+                "indicativo_radio": recurso.indicativo_radio,
                 "ilha": recurso.ilha,
                 "latitude": recurso.latitude,
                 "longitude": recurso.longitude
@@ -608,3 +612,113 @@ def relatorio():
             "missoes_concluidas": missoes_concluidas,
             "ordens": total_ordens
         }
+    
+@app.get("/elementos")
+def listar_elementos():
+    with engine.connect() as conn:
+        resultado = conn.execute(text("""
+            SELECT
+                id,
+                nome,
+                funcao,
+                entidade,
+                estado,
+                indicativo_radio,
+                recurso_id,
+                ocorrencia_id,
+                ST_Y(localizacao) AS latitude,
+                ST_X(localizacao) AS longitude,
+                criado_em
+            FROM elementos
+        """))
+
+        dados = []
+        for linha in resultado:
+            dados.append(dict(linha._mapping))
+
+        return dados
+    
+@app.post("/elementos")
+async def criar_elemento(request: Request):
+    dados = await request.json()
+
+    latitude = dados.get("latitude")
+    longitude = dados.get("longitude")
+
+    if latitude is not None and longitude is not None:
+        localizacao_sql = "ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)"
+    else:
+        localizacao_sql = "NULL"
+
+    with engine.begin() as conn:
+        conn.execute(
+            text(f"""
+                INSERT INTO elementos (
+                    nome,
+                    funcao,
+                    entidade,
+                    estado,
+                    indicativo_radio,
+                    recurso_id,
+                    ocorrencia_id,
+                    localizacao
+                )
+                VALUES (
+                    :nome,
+                    :funcao,
+                    :entidade,
+                    :estado,
+                    :indicativo_radio,
+                    :recurso_id,
+                    :ocorrencia_id,
+                    {localizacao_sql}
+                )
+            """),
+            dados
+        )
+
+    return {"ok": True}
+
+@app.put("/elementos/{elemento_id}/posicao")
+async def atualizar_posicao_elemento(elemento_id: int, request: Request):
+    dados = await request.json()
+
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                UPDATE elementos
+                SET
+                    recurso_id = NULL,
+                    localizacao = ST_SetSRID(
+                        ST_MakePoint(:longitude, :latitude),
+                        4326
+                    )
+                WHERE id = :id
+            """),
+            {
+                "id": elemento_id,
+                "latitude": dados["latitude"],
+                "longitude": dados["longitude"]
+            }
+        )
+
+    return {"ok": True}
+
+@app.put("/elementos/{elemento_id}/reembarcar/{recurso_id}")
+def reembarcar_elemento(elemento_id: int, recurso_id: int):
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                UPDATE elementos
+                SET
+                    recurso_id = :recurso_id,
+                    localizacao = NULL
+                WHERE id = :elemento_id
+            """),
+            {
+                "elemento_id": elemento_id,
+                "recurso_id": recurso_id
+            }
+        )
+
+    return {"ok": True}

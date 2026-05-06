@@ -12,9 +12,21 @@ import {
 import L from 'leaflet'
 import jsPDF from 'jspdf'
 
-function GestorCliquesMapa() {
+function GestorCliquesMapa({ elementoParaApear }) {
   useMapEvents({
     click(e) {
+      if (elementoParaApear) {
+        fetch(`http://127.0.0.1:8000/elementos/${elementoParaApear.id}/posicao`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            latitude: e.latlng.lat,
+            longitude: e.latlng.lng
+          })
+        }).then(() => window.location.reload())
+
+        return
+      }
       const isCtrl = e.originalEvent.ctrlKey || e.originalEvent.metaKey
 
       if (isCtrl) {
@@ -77,7 +89,8 @@ function App() {
   const [detalhe, setDetalhe] = useState(null)
   const [formRecurso, setFormRecurso] = useState({
     nome: '',
-    tipo: ''
+    tipo: '',
+    indicativo_radio: ''
   })
   const [posicaoNovoRecurso, setPosicaoNovoRecurso] = useState(null)
   const [formOcorrencia, setFormOcorrencia] = useState({
@@ -103,6 +116,18 @@ function App() {
 
   const [mostrarFormOrdem, setMostrarFormOrdem] = useState(false)
   const [recursoParaAtribuirOcorrencia, setRecursoParaAtribuirOcorrencia] = useState(null)
+  const [elementos, setElementos] = useState([])
+  const [formElemento, setFormElemento] = useState({
+    nome: '',
+    funcao: '',
+    entidade: '',
+    indicativo_radio: '',
+    recurso_id: null
+  })
+
+  const [mostrarFormElemento, setMostrarFormElemento] = useState(false)
+  const [elementoParaApear, setElementoParaApear] = useState(null)
+  const [elementoParaReembarcar, setElementoParaReembarcar] = useState(null)
 
   const mapRef = useRef()
 
@@ -134,6 +159,10 @@ function App() {
     fetch('http://127.0.0.1:8000/relatorio')
       .then((res) => res.json())
       .then((data) => setRelatorio(data))
+
+    fetch('http://127.0.0.1:8000/elementos')
+      .then((res) => res.json())
+      .then((data) => setElementos(data))
 
     const abrirFormRecurso = (event) => {
       setPosicaoNovoRecurso(event.detail)
@@ -591,6 +620,25 @@ function App() {
 
           {detalhe.tipo === 'recurso' && (
             <>
+              {elementos
+                .filter(el => el.recurso_id === detalhe.dados.id)
+                .map(el => (
+                  <div key={el.id} style={styles.itemCard}>
+                    <strong>{el.nome}</strong>
+                    <div>{el.funcao}</div>
+                    <div>Indicativo: {el.indicativo_radio || 'sem indicativo'}</div>
+                    <button
+                      style={styles.smallButton}
+                      onClick={() => {
+                        setElementoParaApear(el)
+                        setDetalhe(null)
+                      }}
+                    >
+                      Deixar apeado
+                    </button>
+                  </div>
+                ))}
+
               {missoes.find(m => m.recurso_id === detalhe.dados.id) && (
                 <div>
                   <strong>Missão atual:</strong>{' '}
@@ -757,6 +805,23 @@ function App() {
               >
                 Criar ordem
               </button>
+
+              <button
+                style={styles.mainButton}
+                onClick={() => {
+                  setFormElemento({
+                    nome: '',
+                    funcao: '',
+                    entidade: '',
+                    indicativo_radio: '',
+                    recurso_id: detalhe.dados.id
+                  })
+
+                  setMostrarFormElemento(true)
+                }}
+              >
+                Adicionar elemento
+              </button>
             </>
           )}
 
@@ -804,6 +869,20 @@ function App() {
                   }}
                 >
                   Concluir missão
+                </button>
+              </>
+            )}
+
+            {detalhe.tipo === 'elemento' && (
+              <>
+                <button
+                  style={styles.mainButton}
+                  onClick={() => {
+                    setElementoParaReembarcar(detalhe.dados)
+                    setDetalhe(null)
+                  }}
+                >
+                  Reembarcar em viatura
                 </button>
               </>
             )}
@@ -858,6 +937,15 @@ function App() {
             }
           />
 
+          <input
+            style={styles.input}
+            placeholder="Indicativo rádio"
+            value={formRecurso.indicativo_radio}
+            onChange={(e) =>
+              setFormRecurso({ ...formRecurso, indicativo_radio: e.target.value })
+            }
+          />
+
           <button
             style={styles.mainButton}
             onClick={() => {
@@ -870,6 +958,7 @@ function App() {
                   nome: formRecurso.nome,
                   tipo: formRecurso.tipo,
                   estado: 'disponivel',
+                  indicativo_radio: formRecurso.indicativo_radio,
                   ilha: 'Terceira',
                   latitude: posicaoNovoRecurso.latitude,
                   longitude: posicaoNovoRecurso.longitude,
@@ -1147,6 +1236,114 @@ function App() {
         </div>
       )}
 
+      {mostrarFormElemento && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>Novo elemento</div>
+
+          <input
+            style={styles.input}
+            placeholder="Nome"
+            value={formElemento.nome}
+            onChange={(e) =>
+              setFormElemento({ ...formElemento, nome: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Função"
+            value={formElemento.funcao}
+            onChange={(e) =>
+              setFormElemento({ ...formElemento, funcao: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Entidade"
+            value={formElemento.entidade}
+            onChange={(e) =>
+              setFormElemento({ ...formElemento, entidade: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Indicativo rádio"
+            value={formElemento.indicativo_radio}
+            onChange={(e) =>
+              setFormElemento({ ...formElemento, indicativo_radio: e.target.value })
+            }
+          />
+
+          <button
+            style={styles.mainButton}
+            onClick={() => {
+              if (!formElemento.nome) return
+
+              fetch('http://127.0.0.1:8000/elementos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  nome: formElemento.nome,
+                  funcao: formElemento.funcao,
+                  entidade: formElemento.entidade,
+                  estado: 'disponivel',
+                  indicativo_radio: formElemento.indicativo_radio,
+                  recurso_id: formElemento.recurso_id,
+                  ocorrencia_id: null,
+                  latitude: null,
+                  longitude: null
+                })
+              }).then(() => window.location.reload())
+            }}
+          >
+            Criar elemento
+          </button>
+
+          <button
+            style={styles.mainButton}
+            onClick={() => setMostrarFormElemento(false)}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {elementoParaReembarcar && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>Reembarcar elemento</div>
+
+          <div>
+            <strong>Elemento:</strong> {elementoParaReembarcar.nome}
+          </div>
+
+          <br />
+
+          {recursos.map(r => (
+            <div
+              key={r.id}
+              style={{ ...styles.itemCard, cursor: 'pointer' }}
+              onClick={() => {
+                fetch(`http://127.0.0.1:8000/elementos/${elementoParaReembarcar.id}/reembarcar/${r.id}`, {
+                  method: 'PUT'
+                }).then(() => window.location.reload())
+              }}
+            >
+              <strong>{r.nome}</strong>
+              <div>{r.tipo} · {r.estado}</div>
+            </div>
+          ))}
+
+          <button
+            style={styles.mainButton}
+            onClick={() => setElementoParaReembarcar(null)}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
       <div style={styles.mapWrapper}>
         <MapContainer
           center={[38.65, -27.22]}
@@ -1159,7 +1356,7 @@ function App() {
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
           />
 
-          <GestorCliquesMapa />
+          <GestorCliquesMapa elementoParaApear={elementoParaApear} />
 
           {recursosFiltrados.map((r) => {
             if (!r.latitude || !r.longitude) return null
@@ -1173,6 +1370,8 @@ function App() {
                       : latest
                   )
                 : null
+            
+            const totalElementos = elementos.filter(el => el.recurso_id === r.id).length    
 
             return (
               <Marker
@@ -1182,12 +1381,29 @@ function App() {
                 icon={L.divIcon({
                   className: '',
                   html: `<div style="
-                    font-size: 26px;
+                    position: relative;
+                    width: 36px;
+                    height: 36px;
+                    font-size: 30px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                   ">
                     ${obterIconeRecurso(r.tipo)}
+                    <span style="
+                      position: absolute;
+                      top: 50%;
+                      right: -22px;
+                      transform: translateY(-50%);
+                      background: black;
+                      color: white;
+                      border-radius: 50%;
+                      font-size: 10px;
+                      padding: 3px 6px;
+                      border: 1px solid white;
+                    ">
+                      ${totalElementos}
+                    </span>
                   </div>`,
                   iconSize: [18, 18],
                   iconAnchor: [9, 9],
@@ -1226,6 +1442,7 @@ function App() {
 
                 <Tooltip permanent direction="top">
                   {r.nome}
+                  {r.indicativo_radio ? ` (${r.indicativo_radio})` : ''}
                 </Tooltip>
               </Marker>
             )
@@ -1291,6 +1508,38 @@ function App() {
               </>
             ) : null
           )}
+
+          {elementos.map((el) =>
+            el.latitude && el.longitude ? (
+              <Marker
+                key={`elemento-${el.id}`}
+                position={[el.latitude, el.longitude]}
+                icon={L.divIcon({
+                  className: '',
+                  html: `<div style="
+                    font-size: 22px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  ">🚶</div>`,
+                  iconSize: [22, 22],
+                  iconAnchor: [11, 11],
+                })}
+                eventHandlers={{
+                  click: () => {
+                    setDetalhe({
+                      tipo: 'elemento',
+                      dados: el
+                    })
+                  }
+                }}
+              >
+                <Tooltip permanent direction="top">
+                  {el.nome}
+                </Tooltip>
+              </Marker>
+            ) : null
+          )}  
 
           {bases.map((b) =>
             b.latitude && b.longitude ? (
