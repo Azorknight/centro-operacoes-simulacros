@@ -492,6 +492,27 @@ def concluir_missao(missao_id: int):
         linha = resultado.fetchone()
         recurso_id = linha[0] if linha else None
 
+        # obter recurso associado à missão
+        resultado_recurso = conn.execute(
+            text("SELECT recurso_id FROM missoes WHERE id = :id"),
+            {"id": missao_id}
+        )
+
+        linha_recurso = resultado_recurso.fetchone()
+        recurso_id = linha_recurso[0] if linha_recurso else None
+
+        # libertar recurso
+        if recurso_id:
+            conn.execute(
+                text("""
+                    UPDATE recursos
+                    SET estado = 'disponivel',
+                        ocorrencia_id = NULL
+                    WHERE id = :recurso_id
+                """),
+                {"recurso_id": recurso_id}
+            )
+
         # atualizar missão
         conn.execute(
             text("""
