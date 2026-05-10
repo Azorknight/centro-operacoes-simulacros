@@ -622,11 +622,25 @@ function App() {
             <>
               {elementos
                 .filter(el => el.recurso_id === detalhe.dados.id)
+                .sort((a, b) => {
+                  const ordemFuncoes = {
+                    comandante: 1,
+                    chefe: 2,
+                    condutor: 3,
+                    operacional: 4
+                  }
+
+                  const fa = (a.funcao || '').toLowerCase()
+                  const fb = (b.funcao || '').toLowerCase()
+
+                  return (ordemFuncoes[fa] || 99) - (ordemFuncoes[fb] || 99)
+                })
                 .map(el => (
                   <div key={el.id} style={styles.itemCard}>
                     <strong>{el.nome}</strong>
-                    <div>{el.funcao}</div>
-                    <div>Indicativo: {el.indicativo_radio || 'sem indicativo'}</div>
+                    <div>Função: {el.funcao || 'sem função'}</div>
+                    <div>Indicativo rádio: {el.indicativo_radio || 'sem indicativo'}</div>
+                    <div>Estado: {el.estado || 'sem estado'}</div>
                     <button
                       style={styles.smallButton}
                       onClick={() => {
@@ -1536,6 +1550,7 @@ function App() {
               >
                 <Tooltip permanent direction="top">
                   {el.nome}
+                  {el.indicativo_radio ? ` (${el.indicativo_radio})` : ''}
                 </Tooltip>
               </Marker>
             ) : null

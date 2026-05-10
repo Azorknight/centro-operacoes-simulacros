@@ -722,3 +722,20 @@ def reembarcar_elemento(elemento_id: int, recurso_id: int):
         )
 
     return {"ok": True}
+
+@app.put("/elementos/{elemento_id}/estado/{novo_estado}")
+def mudar_estado_elemento(elemento_id: int, novo_estado: str):
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                UPDATE elementos
+                SET estado = :estado
+                WHERE id = :id
+            """),
+            {
+                "estado": novo_estado,
+                "id": elemento_id
+            }
+        )
+
+    return {"ok": True}
