@@ -1,0 +1,17 @@
+SGO — MODOS DE OPERAÇÃO v1
+
+Alterações:
+- Um clique normal no mapa deixou de criar ou deslocar objetos.
+- Nova barra de ferramentas do mapa.
+- Modos exclusivos: Normal, Nova ocorrência, Novo recurso e Apear elemento.
+- Apenas um modo pode estar ativo de cada vez.
+- Cada ação regressa automaticamente ao Modo Normal.
+- A tecla Esc cancela qualquer modo ativo.
+- Faixa superior indica sempre o modo atual.
+
+Teste:
+1. Clique no mapa em Modo Normal: nada deve ser criado ou deslocado.
+2. Clique em "Nova ocorrência" e depois no mapa: abre o formulário uma única vez.
+3. Clique novamente no mapa: não deve abrir outro formulário.
+4. Escolha "Deixar apeado" num elemento e clique no destino: o elemento é apeado uma única vez.
+5. Prima Esc durante um modo ativo: regressa ao Modo Normal.

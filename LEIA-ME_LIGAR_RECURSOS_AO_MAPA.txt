@@ -1,0 +1,23 @@
+SGO 2.0 — LIGAÇÃO DOS RECURSOS PREPARADOS AO CENTRO DE OPERAÇÕES
+
+INSTALAÇÃO
+1. Feche o SGO.
+2. Copie o ficheiro main.py deste pacote para a pasta principal do projeto.
+3. Escolha "Substituir o ficheiro no destino".
+4. Inicie o SGO através do iniciar.bat.
+
+O QUE MUDA
+- No Centro de Operações aparecem apenas os recursos preparados para a operação ativa.
+- O indicativo mostrado é o indicativo operacional definido em "Preparar".
+- Ao retirar um recurso da preparação, ele deixa de aparecer nessa operação sem ser apagado do catálogo.
+- Os recursos que já existiam são preservados e associados automaticamente ao catálogo.
+- Um recurso novo criado diretamente no mapa passa também a ficar registado no catálogo e na preparação da operação.
+- Quando um recurso preparado ainda não tem posição anterior, recebe uma posição inicial aproximada na ilha indicada e pode depois ser deslocado no mapa.
+
+TESTE RÁPIDO
+1. Crie ou abra uma operação de teste.
+2. Em "Preparar", adicione dois recursos e atribua indicativos diferentes.
+3. Abra a operação.
+4. Confirme que aparecem apenas esses recursos e com os indicativos definidos.
+5. Volte ao gestor, retire um deles em "Preparar" e abra novamente a operação.
+6. Confirme que o recurso retirado deixou de aparecer.

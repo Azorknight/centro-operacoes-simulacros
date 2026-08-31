@@ -1,0 +1,21 @@
+SGO 2.0 — PREPARAÇÃO DOS RECURSOS PARTICIPANTES
+
+INSTALAÇÃO
+1. Feche o SGO.
+2. Copie todo o conteúdo deste pacote para a pasta principal do projeto.
+3. Escolha "Substituir os ficheiros no destino".
+4. Inicie novamente pelo iniciar.bat.
+
+TESTE
+1. No Gestor de Operações, carregue em "Preparar".
+2. Selecione um recurso permanente, indique o indicativo operacional e a função.
+3. Carregue em "Adicionar".
+4. Confirme que o recurso aparece em "Recursos selecionados".
+5. Feche e volte a abrir "Preparar": o recurso deve continuar guardado.
+6. Teste também o botão "Retirar".
+
+NOTAS
+- A atualização cria automaticamente as tabelas recursos_catalogo e operacao_recursos.
+- Os recursos existentes são copiados para o catálogo permanente sem serem apagados ou alterados.
+- O indicativo e a função pertencem apenas à participação nessa operação.
+- Nesta primeira versão, a preparação não altera ainda os recursos mostrados no mapa. Essa ligação será o passo seguinte.

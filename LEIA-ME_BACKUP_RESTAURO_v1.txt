@@ -1,0 +1,23 @@
+SGO — BACKUP E RESTAURO v1
+
+Esta versão acrescenta:
+- botão "Backups" na barra da operação ativa;
+- criação manual de cópias de segurança;
+- lista de backups existentes;
+- restauro confirmado pela palavra RESTAURAR;
+- eliminação de backups;
+- restauro transacional: em caso de erro, o estado atual é mantido.
+
+Os ficheiros ficam guardados na pasta "backups" junto ao main.py.
+
+TESTE RECOMENDADO
+1. Inicie o SGO e abra uma operação.
+2. Clique em "Backups".
+3. Clique em "Criar backup agora".
+4. Confirme que o ficheiro aparece na lista.
+5. Faça uma pequena alteração no SGO.
+6. Restaure o backup, escrevendo RESTAURAR.
+7. Confirme que a aplicação reinicia e recupera o estado anterior.
+
+IMPORTANTE
+Guarde periodicamente uma cópia da pasta "backups" noutro disco.

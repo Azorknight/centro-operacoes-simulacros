@@ -1,0 +1,13 @@
+SGO — SISTEMA DE MISSÕES 8.1
+
+Esta atualização acrescenta a primeira estrutura consolidada das missões:
+- responsável e notas operacionais;
+- estados: Recebida, Planeada, Em execução, Concluída e Cancelada;
+- registo automático das horas de planeamento, início, conclusão e cancelamento;
+- painel próprio da missão;
+- alteração de estado diretamente no painel;
+- eventos automáticos na Timeline;
+- atualização automática da base de dados sem apagar informação existente.
+
+Nesta fase continua a existir um recurso principal por missão. A associação de vários
+recursos e elementos será implementada na fase 8.2.

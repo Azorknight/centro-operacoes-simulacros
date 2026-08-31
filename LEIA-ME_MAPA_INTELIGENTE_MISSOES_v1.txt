@@ -1,0 +1,19 @@
+SGO 25 — MAPA INTELIGENTE DAS MISSÕES v1
+
+Novidades:
+- Linhas entre cada missão e os recursos que lhe estão atribuídos.
+- Cores das ligações conforme a situação operacional da missão.
+- Linha contínua para missões em execução e tracejada para as restantes.
+- Missão selecionada destacada no mapa.
+- Clique numa linha para abrir o painel da missão.
+- Informação rápida ao passar o rato sobre a missão ou a ligação.
+- Opção "Mostrar ligações das missões" no painel de controlo.
+- Legenda atualizada com as situações operacionais.
+
+Teste recomendado:
+1. Abra uma operação com uma ocorrência, uma missão e vários recursos.
+2. Atribua recursos à missão.
+3. Confirme que surgem linhas da ocorrência para os recursos.
+4. Altere a situação operacional e confirme a mudança de cor.
+5. Selecione a missão e confirme que fica destacada.
+6. Desmarque "Mostrar ligações das missões" e confirme que as linhas desaparecem.

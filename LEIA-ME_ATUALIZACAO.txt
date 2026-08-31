@@ -1,0 +1,14 @@
+SGO — CONSULTAR E RESTAURAR OPERAÇÕES ARQUIVADAS
+
+1. Feche o SGO.
+2. Copie o conteúdo deste ZIP para a pasta principal do projeto.
+3. Escolha "Substituir os ficheiros no destino".
+4. Inicie o SGO através do iniciar.bat.
+
+TESTE
+- No Gestor de Operações, clique em "Arquivo".
+- Confirme que aparecem as operações arquivadas.
+- Clique em "Restaurar" numa operação.
+- Confirme que ela volta à lista principal e pode ser aberta.
+
+Nenhum dado é apagado.

@@ -1,0 +1,21 @@
+SGO — Sprint 9.1: Objetivos Operacionais
+
+Funcionalidades:
+- Lista editável de objetivos operacionais.
+- Criar, editar, eliminar ou arquivar objetivos.
+- Prioridades: crítica, alta, normal e baixa.
+- Estados: planeado, em preparação, em execução, suspenso, concluído e cancelado.
+- Associação opcional a ocorrência e responsável.
+- Modelos de objetivos editáveis (criar, editar e eliminar).
+- Associação de uma missão a um objetivo diretamente no painel da missão.
+- Objetivos com missões associadas são arquivados em vez de apagados.
+- Registos automáticos na Timeline.
+- Inclusão das novas tabelas nos backups.
+
+Teste recomendado:
+1. Abra o separador Objetivos.
+2. Crie um objetivo novo.
+3. Edite o objetivo e altere prioridade/estado.
+4. Crie um modelo e use-o para criar outro objetivo.
+5. Abra uma missão e associe-a a um objetivo.
+6. Tente eliminar o objetivo associado: deverá ser arquivado.

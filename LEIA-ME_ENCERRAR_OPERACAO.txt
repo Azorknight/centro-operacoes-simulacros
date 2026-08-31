@@ -1,0 +1,24 @@
+ATUALIZAÇÃO SGO — ENCERRAR E REABRIR OPERAÇÕES
+
+1. Feche o SGO.
+2. Copie todo o conteúdo deste ZIP para a pasta principal do projeto.
+3. Escolha "Substituir os ficheiros no destino".
+4. Inicie o SGO através do iniciar.bat.
+
+FUNCIONALIDADES:
+- Botão "Encerrar operação" no Centro de Operações.
+- Confirmação antes do encerramento.
+- Estado alterado para "concluida" e registo automático da data/hora de fim.
+- Aviso "OPERAÇÃO CONCLUÍDA — MODO DE CONSULTA".
+- Criação de ocorrências, missões e ordens bloqueada no backend enquanto a operação estiver concluída.
+- Cliques no mapa para criar recursos/ocorrências ficam bloqueados em modo de consulta.
+- Botão "Reabrir operação" para voltar a permitir alterações.
+- Consulta dos dados e relatórios continua disponível.
+
+TESTE:
+1. Abra uma operação de teste.
+2. Clique em "Encerrar operação" e confirme.
+3. Verifique o aviso de modo de consulta.
+4. Tente criar uma ocorrência pelo mapa: não deverá abrir o formulário.
+5. Clique em "Reabrir operação" e confirme.
+6. Volte a criar uma ocorrência para confirmar que a operação ficou editável.

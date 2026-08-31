@@ -1,0 +1,22 @@
+SGO — PAINEL DE COMANDO INTELIGENTE v1
+
+INSTALAÇÃO
+1. Feche o SGO.
+2. Copie o conteúdo deste ZIP para a pasta principal do projeto.
+3. Escolha "Substituir os ficheiros no destino".
+4. Inicie novamente pelo iniciar.bat.
+
+NOVIDADES
+- O painel do recurso passa a chamar-se "Painel de Comando".
+- Mostra indicativo, nome, tipo, estado, função, ilha, ocorrência, missão e ordem ativa.
+- Mostra o total de elementos embarcados e a respetiva lista.
+- Mostra estatísticas e os cinco eventos mais recentes do recurso.
+- Novo botão "Libertar recurso".
+- Libertar remove a ocorrência e a missão ativa do recurso, mantendo-o disponível na operação.
+- Reembarcar um elemento passa a definir corretamente o estado como "embarcado".
+
+TESTE RÁPIDO
+1. Abra uma operação.
+2. Clique numa viatura no mapa.
+3. Confirme a abertura do Painel de Comando.
+4. Teste "Libertar recurso" numa viatura associada a uma ocorrência.

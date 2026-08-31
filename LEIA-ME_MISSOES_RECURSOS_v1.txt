@@ -1,0 +1,25 @@
+SGO — Sprint 8.2: vários recursos por missão
+
+ALTERAÇÕES
+- Nova tabela missao_recursos, criada automaticamente no arranque.
+- As associações antigas guardadas em missoes.recurso_id são migradas sem apagar dados.
+- Uma missão pode receber vários recursos.
+- É possível adicionar e remover recursos no painel da missão.
+- A Timeline regista cada associação e remoção.
+- Ao iniciar uma missão, todos os recursos associados passam a "em_missao".
+- Ao concluir ou cancelar, os recursos são libertados desde que não estejam noutra missão ativa.
+- Os backups passam a incluir a nova tabela.
+
+TESTE
+1. Abra uma operação com recursos participantes.
+2. Crie ou abra uma missão.
+3. Clique em "Gerir recursos" ou "Atribuir".
+4. Adicione dois ou mais recursos.
+5. Feche e volte a abrir o painel da missão.
+6. Remova um recurso.
+7. Inicie e conclua a missão, verificando os estados dos recursos e a Timeline.
+
+NOTA
+O backend foi validado com py_compile. O frontend foi verificado estruturalmente,
+mas a compilação Vite neste ambiente Linux ficou impedida pela dependência nativa
+Windows incluída no node_modules do projeto.

@@ -1,0 +1,20 @@
+SGO — Associar elementos às viaturas
+
+INSTALAÇÃO
+1. Feche o SGO.
+2. Copie o conteúdo deste ZIP para a pasta principal do projeto.
+3. Escolha "Substituir os ficheiros no destino".
+4. Inicie o SGO através do iniciar.bat.
+
+TESTE
+1. Abra o Gestor de Operações e clique em Preparar.
+2. Confirme que existe pelo menos uma viatura no separador Recursos.
+3. No separador Elementos, adicione um elemento.
+4. Escolha a respetiva viatura no campo "Viatura / recurso de transporte".
+5. Abra a operação.
+6. O contador junto da viatura deverá incluir esse elemento.
+7. Ao apear o elemento, ele passa a aparecer individualmente no mapa.
+8. Ao reembarcar, volta a ficar associado à viatura.
+
+NOTA
+Se retirar uma viatura da operação, os elementos que estavam nela ficam automaticamente sem viatura atribuída, mas não são apagados.

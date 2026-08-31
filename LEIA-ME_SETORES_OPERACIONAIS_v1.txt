@@ -1,0 +1,22 @@
+SGO 28 — SETORES OPERACIONAIS (SPRINT 10.1)
+
+Foi acrescentada a base funcional dos setores operacionais:
+- criação e edição de setores;
+- nome, descrição, cor, estado, comandante e notas;
+- estados: planeado, ativo, suspenso e encerrado;
+- associação de objetivos e missões a setores;
+- contagem de objetivos e missões por setor;
+- eliminação de setores vazios;
+- arquivamento automático de setores que já estejam em utilização;
+- registos na Timeline;
+- inclusão da tabela setores nos backups.
+
+TESTE RECOMENDADO
+1. Abrir o separador Setores.
+2. Criar dois setores com cores diferentes.
+3. Associar um objetivo e uma missão a um setor.
+4. Confirmar as contagens no cartão do setor.
+5. Tentar eliminar o setor em utilização: deverá ser arquivado.
+
+NOTA
+Esta versão cria a estrutura operacional dos setores. O desenho de perímetros no mapa será desenvolvido numa etapa posterior.

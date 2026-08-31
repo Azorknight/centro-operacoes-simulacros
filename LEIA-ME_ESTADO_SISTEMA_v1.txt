@@ -1,0 +1,15 @@
+SGO — Estado do Sistema v1
+
+Alterações:
+- Novo botão «⚙ Estado do Sistema» junto aos comandos da operação ativa.
+- Diagnóstico da API e da base de dados.
+- Estado da Timeline, Replay e polling.
+- Operação ativa e contagens de recursos, elementos, ocorrências e ordens.
+- Botão «Atualizar diagnóstico».
+- Novo endpoint GET /diagnostico.
+
+Instalação:
+1. Fechar o SGO.
+2. Copiar os ficheiros desta atualização para a pasta principal do projeto.
+3. Confirmar a substituição.
+4. Iniciar através do iniciar.bat.

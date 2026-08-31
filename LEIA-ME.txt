@@ -1,0 +1,8 @@
+CORREÇÃO — MARCADORES VOLTAVAM À POSIÇÃO ANTERIOR
+
+1. Feche o SGO.
+2. Copie a pasta frontend para a pasta principal do projeto.
+3. Confirme a substituição de frontend/src/App.jsx.
+4. Inicie novamente pelo iniciar.bat.
+
+A correção impede a atualização automática de 5 segundos de repor a posição anterior enquanto um recurso ou elemento está a ser arrastado. A nova posição é mostrada imediatamente e depois guardada na base de dados.

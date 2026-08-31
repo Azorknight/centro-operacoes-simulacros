@@ -1,0 +1,18 @@
+SGO — SPRINT 8.3: GESTÃO OPERACIONAL DAS MISSÕES
+
+Esta versão elimina qualquer ideia de percentagem de execução.
+
+NOVO:
+- Situação operacional: Sob controlo, Estável, Complexa, Crítica ou Necessita de reforço.
+- Indicadores objetivos: tempo decorrido, recursos, elementos, ordens e última atualização.
+- Diário operacional com autor, data/hora e texto.
+- Timeline própria da missão.
+- Registo automático na timeline quando a situação muda ou é adicionada uma nota.
+- Compatibilidade com missões existentes; as novas colunas e tabelas são criadas automaticamente.
+
+TESTE:
+1. Abrir uma missão.
+2. Alterar a Situação operacional.
+3. Registar uma nota no Diário operacional.
+4. Confirmar os indicadores e a Timeline.
+5. Fechar e voltar a abrir a missão para confirmar a persistência.

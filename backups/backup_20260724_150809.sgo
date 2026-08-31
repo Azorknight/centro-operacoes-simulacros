@@ -1,0 +1,548 @@
+{
+  "formato": "SGO_BACKUP",
+  "versao_formato": 1,
+  "criado_em": "2026-07-24T15:08:09.690323+00:00",
+  "total_registos": 38,
+  "tabelas": {
+    "entidades": [
+      {
+        "id": 1,
+        "nome": "Polícia de Segurança Pública",
+        "sigla": "PSP",
+        "tipo": "Força de Segurança",
+        "estado": "ativa",
+        "descricao": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-10T10:56:43.344827"
+        }
+      },
+      {
+        "id": 2,
+        "nome": "Guarda Nacional Republicana",
+        "sigla": "GNR",
+        "tipo": "Força de Segurança",
+        "estado": "ativa",
+        "descricao": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-10T10:56:43.344827"
+        }
+      },
+      {
+        "id": 3,
+        "nome": "Bombeiros Voluntários de Angra do Heroísmo",
+        "sigla": "BVAH",
+        "tipo": "Bombeiros",
+        "estado": "ativa",
+        "descricao": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-10T10:56:43.344827"
+        }
+      },
+      {
+        "id": 4,
+        "nome": "Bombeiros Voluntários da Praia da Vitória",
+        "sigla": "BVPV",
+        "tipo": "Bombeiros",
+        "estado": "ativa",
+        "descricao": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-10T10:56:43.344827"
+        }
+      },
+      {
+        "id": 5,
+        "nome": "Serviço Regional de Proteção Civil e Bombeiros dos Açores",
+        "sigla": "SRPCBA",
+        "tipo": "Proteção Civil",
+        "estado": "ativa",
+        "descricao": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-10T10:56:43.344827"
+        }
+      },
+      {
+        "id": 6,
+        "nome": "Instituto Nacional de Emergência Médica",
+        "sigla": "INEM",
+        "tipo": "Emergência Médica",
+        "estado": "ativa",
+        "descricao": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-10T10:56:43.344827"
+        }
+      },
+      {
+        "id": 7,
+        "nome": "Cruz Vermelha Portuguesa",
+        "sigla": "CVP",
+        "tipo": "Socorro",
+        "estado": "ativa",
+        "descricao": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-10T10:56:43.344827"
+        }
+      },
+      {
+        "id": 8,
+        "nome": "Força Aérea Portuguesa",
+        "sigla": "FAP",
+        "tipo": "Forças Armadas",
+        "estado": "ativa",
+        "descricao": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-10T10:56:43.344827"
+        }
+      }
+    ],
+    "recursos_catalogo": [
+      {
+        "id": 1,
+        "nome": "Skoda 01-AF-01",
+        "tipo": "Carro Patrulha",
+        "entidade_id": null,
+        "ilha": "Terceira",
+        "estado": "ativo",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T14:19:54.479586"
+        }
+      },
+      {
+        "id": 2,
+        "nome": "Skoda 02-AF-02",
+        "tipo": "Carro patrulha",
+        "entidade_id": null,
+        "ilha": "Terceira",
+        "estado": "ativo",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T14:21:30.301109"
+        }
+      }
+    ],
+    "elementos_catalogo": [
+      {
+        "id": 1,
+        "nome": "Martins",
+        "entidade": "PSP",
+        "estado": "ativo",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:16:57.005899"
+        }
+      }
+    ],
+    "operacoes": [
+      {
+        "id": 6,
+        "nome": "teste preparar",
+        "tipo": "simulacro",
+        "entidade_organizadora": "Proteção Civil Açores",
+        "local": "Ilha Terceira",
+        "objetivo": "Teste",
+        "descricao": null,
+        "estado": "planeada",
+        "data_inicio": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:00:00"
+        },
+        "data_fim": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:00:35.837320"
+        }
+      },
+      {
+        "id": 1,
+        "nome": "Sismulacro Teste 0",
+        "tipo": "simulacro",
+        "entidade_organizadora": "Proteção Civil Açores",
+        "local": "Ilha Terceira",
+        "objetivo": "Treino",
+        "descricao": null,
+        "estado": "arquivada",
+        "data_inicio": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T08:30:00"
+        },
+        "data_fim": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T11:07:26.784778"
+        }
+      }
+    ],
+    "configuracao": [
+      {
+        "chave": "operacao_ativa",
+        "valor": "6"
+      }
+    ],
+    "bases": [],
+    "ocorrencias": [
+      {
+        "id": 3,
+        "titulo": "O1",
+        "descricao": "O1",
+        "tipo": "O1",
+        "estado": "encerrada",
+        "ilha": "Terceira",
+        "localizacao": "0101000020E6100000010000C084363BC0DF1CFDE44F5B4340",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:21:04.496981"
+        },
+        "operacao_id": 6,
+        "recebida_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:21:04.496981"
+        },
+        "despachada_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:21:49.750064"
+        },
+        "em_curso_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:22:23.704135"
+        },
+        "sob_controlo_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:22:36.558745"
+        },
+        "encerrada_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:22:53.366838"
+        },
+        "arquivada_em": null
+      }
+    ],
+    "recursos": [
+      {
+        "id": 5,
+        "nome": "Skoda 02-AF-02",
+        "tipo": "Carro patrulha",
+        "estado": "disponivel",
+        "ilha": "Terceira",
+        "localizacao": "0101000020E6100000B81E85EB51383BC014AE47E17A544340",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:01:11.841562"
+        },
+        "ocorrencia_id": null,
+        "indicativo_radio": null,
+        "operacao_id": 6,
+        "recurso_catalogo_id": 2
+      },
+      {
+        "id": 2,
+        "nome": "Skoda 01-AF-01",
+        "tipo": "Carro Patrulha",
+        "estado": "disponivel",
+        "ilha": "Terceira",
+        "localizacao": "0101000020E6100000B81E85EB51383BC014AE47E17A544340",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T14:56:43.448566"
+        },
+        "ocorrencia_id": null,
+        "indicativo_radio": "Lima 1",
+        "operacao_id": 1,
+        "recurso_catalogo_id": 1
+      },
+      {
+        "id": 3,
+        "nome": "Skoda 02-AF-02",
+        "tipo": "Carro patrulha",
+        "estado": "disponivel",
+        "ilha": "Terceira",
+        "localizacao": "0101000020E6100000B81E85EB51383BC014AE47E17A544340",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T14:56:43.448566"
+        },
+        "ocorrencia_id": null,
+        "indicativo_radio": "Lima 2",
+        "operacao_id": 1,
+        "recurso_catalogo_id": 2
+      },
+      {
+        "id": 4,
+        "nome": "Skoda 01-AF-01",
+        "tipo": "Carro Patrulha",
+        "estado": "disponivel",
+        "ilha": "Terceira",
+        "localizacao": "0101000020E6100000010000C087333BC0FD45F5BAE05B4340",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:01:08.563253"
+        },
+        "ocorrencia_id": null,
+        "indicativo_radio": null,
+        "operacao_id": 6,
+        "recurso_catalogo_id": 1
+      }
+    ],
+    "elementos": [
+      {
+        "id": 5,
+        "nome": "Martins",
+        "funcao": "Agente",
+        "entidade": "PSP",
+        "estado": "apeado",
+        "indicativo_radio": "Roca 1",
+        "recurso_id": null,
+        "ocorrencia_id": null,
+        "localizacao": "0101000020E610000000000080ED2B3BC05DB4C766D6594340",
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-24T09:31:33.398175"
+        },
+        "operacao_id": 6,
+        "elemento_catalogo_id": 1
+      }
+    ],
+    "missoes": [],
+    "ordens": [
+      {
+        "id": 4,
+        "titulo": "Deslocação para ocorrência",
+        "descricao": "Ordem direta para Skoda 01-AF-01 se deslocar para: O1",
+        "estado": "executada",
+        "recurso_id": 4,
+        "ocorrencia_id": 3,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:21:49.750064"
+        },
+        "operacao_id": 6
+      }
+    ],
+    "timeline_eventos": [
+      {
+        "id": 22,
+        "tipo": "ocorrencia",
+        "descricao": "Ocorrência recebida: O1",
+        "recurso_id": null,
+        "ocorrencia_id": 3,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:21:04.496981"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 23,
+        "tipo": "ocorrencia",
+        "descricao": "Ocorrência O1: estado alterado para Despachada",
+        "recurso_id": null,
+        "ocorrencia_id": 3,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:21:49.750064"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 24,
+        "tipo": "ordem",
+        "descricao": "Ordem emitida: Skoda 01-AF-01 deslocar para O1",
+        "recurso_id": 4,
+        "ocorrencia_id": 3,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:21:49.750064"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 25,
+        "tipo": "chegada",
+        "descricao": "Chegada ao local: Skoda 01-AF-01 chegou à ocorrência O1",
+        "recurso_id": 4,
+        "ocorrencia_id": 3,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:22:23.704135"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 26,
+        "tipo": "ocorrencia",
+        "descricao": "Ocorrência O1: estado alterado para Em curso",
+        "recurso_id": null,
+        "ocorrencia_id": 3,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:22:23.704135"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 27,
+        "tipo": "ocorrencia",
+        "descricao": "Ocorrência O1: estado alterado para Sob controlo",
+        "recurso_id": null,
+        "ocorrencia_id": 3,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:22:36.558745"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 28,
+        "tipo": "ocorrencia",
+        "descricao": "Ocorrência O1: estado alterado para Encerrada",
+        "recurso_id": null,
+        "ocorrencia_id": 3,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:22:53.366838"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 29,
+        "tipo": "recurso",
+        "descricao": "Recurso libertado: Skoda 01-AF-01",
+        "recurso_id": 4,
+        "ocorrencia_id": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:25:26.257160"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 30,
+        "tipo": "elemento",
+        "descricao": "Elemento apeado/deslocado: Martins (Roca 1)",
+        "recurso_id": null,
+        "ocorrencia_id": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:49:29.730743"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 31,
+        "tipo": "elemento",
+        "descricao": "Elemento apeado/deslocado: Martins (Roca 1)",
+        "recurso_id": null,
+        "ocorrencia_id": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-23T09:50:03.305136"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 32,
+        "tipo": "elemento",
+        "descricao": "Elemento apeado/deslocado: Martins (Roca 1)",
+        "recurso_id": null,
+        "ocorrencia_id": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-24T12:04:42.325014"
+        },
+        "operacao_id": 6
+      },
+      {
+        "id": 33,
+        "tipo": "elemento",
+        "descricao": "Elemento apeado/deslocado: Martins (Roca 1)",
+        "recurso_id": null,
+        "ocorrencia_id": null,
+        "criado_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-24T15:07:20.057447"
+        },
+        "operacao_id": 6
+      }
+    ],
+    "operacao_recursos": [
+      {
+        "id": 1,
+        "operacao_id": 1,
+        "recurso_catalogo_id": 1,
+        "indicativo_operacional": "Lima 1",
+        "funcao": "Patrulhamento",
+        "estado": "participante",
+        "entrada_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T14:20:11.665472"
+        },
+        "saida_em": null
+      },
+      {
+        "id": 2,
+        "operacao_id": 1,
+        "recurso_catalogo_id": 2,
+        "indicativo_operacional": "Lima 2",
+        "funcao": "Patrulhamento",
+        "estado": "participante",
+        "entrada_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T14:21:34.374822"
+        },
+        "saida_em": null
+      },
+      {
+        "id": 3,
+        "operacao_id": 6,
+        "recurso_catalogo_id": 1,
+        "indicativo_operacional": null,
+        "funcao": null,
+        "estado": "participante",
+        "entrada_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:01:08.563253"
+        },
+        "saida_em": null
+      },
+      {
+        "id": 4,
+        "operacao_id": 6,
+        "recurso_catalogo_id": 2,
+        "indicativo_operacional": null,
+        "funcao": null,
+        "estado": "retirado",
+        "entrada_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:01:11.841562"
+        },
+        "saida_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:01:46.235582"
+        }
+      }
+    ],
+    "operacao_elementos": [
+      {
+        "id": 1,
+        "operacao_id": 6,
+        "elemento_catalogo_id": 1,
+        "indicativo_operacional": "Roca 1",
+        "funcao_operacional": "Agente",
+        "estado": "participante",
+        "entrada_em": {
+          "__tipo__": "datetime",
+          "valor": "2026-07-22T15:17:12.903398"
+        },
+        "saida_em": null,
+        "recurso_catalogo_id": 1
+      }
+    ]
+  }
+}

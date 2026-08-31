@@ -1,0 +1,12 @@
+SGO 26 — Interação entre ocorrências e missões
+
+- O círculo da ocorrência abre sempre o painel da ocorrência.
+- Cada missão é representada por um pequeno ícone 🎯 junto da ocorrência.
+- O ícone 🎯 abre exclusivamente o painel da missão.
+- As ligações entre missões e recursos são apenas visuais e deixaram de captar cliques.
+- Quando existem várias missões na mesma ocorrência, os ícones são distribuídos em redor do ponto para evitar sobreposição.
+
+Teste:
+1. Clique no círculo da ocorrência: deve abrir a ocorrência.
+2. Clique no ícone 🎯: deve abrir a missão.
+3. Clique numa linha de ligação: não deve abrir qualquer painel.

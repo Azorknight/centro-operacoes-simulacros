@@ -1,0 +1,20 @@
+CORREÇÃO — MARCADOR VOLTAVA IMEDIATAMENTE À POSIÇÃO INICIAL
+
+Alteração aplicada em frontend/src/App.jsx.
+
+Causa:
+O marcador do React-Leaflet era controlado pelas coordenadas guardadas no estado React.
+As atualizações frequentes da interface voltavam a enviar ao marcador as coordenadas antigas
+antes de terminar o arrasto.
+
+Correção:
+- atualização das coordenadas no estado durante todo o movimento (evento drag);
+- gravação na base de dados apenas quando o marcador é largado (dragend);
+- remoção do refresh imediato após o arrasto, evitando que uma resposta anterior reponha a posição;
+- mesma correção aplicada aos elementos apeados.
+
+Teste:
+1. Iniciar o SGO.
+2. Arrastar uma viatura para outro ponto.
+3. Largar e aguardar mais de 5 segundos.
+4. Confirmar que permanece no novo local.

@@ -1,0 +1,14 @@
+SGO 24 — PAINEL DE MISSÃO E DIÁRIO OPERACIONAL
+
+Alterações:
+- O painel da ocorrência apresenta agora uma secção "Missões desta ocorrência".
+- Cada missão possui um botão "Abrir" claramente visível.
+- Ao abrir a missão ficam disponíveis o Diário Operacional, recursos, indicadores, situação e Timeline própria.
+- Os círculos de missão no mapa voltaram a aceitar clique direto.
+- Mantém-se a separação entre os dados da ocorrência e os dados da missão.
+
+Teste:
+1. Abrir uma ocorrência com missão associada.
+2. Na secção "Missões desta ocorrência", clicar em "Abrir".
+3. Confirmar que aparece o painel da missão e a secção "Diário operacional".
+4. Registar uma nota e confirmar que fica guardada e aparece na Timeline.

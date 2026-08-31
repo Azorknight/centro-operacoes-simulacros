@@ -1,0 +1,24 @@
+SGO — REPLAY OPERACIONAL FUNCIONAL v1
+=====================================
+
+ALTERAÇÕES
+- O botão Replay carrega os acontecimentos reais da Timeline da operação ativa.
+- Os acontecimentos são ordenados cronologicamente.
+- Reproduzir, Pausar, Início e Próximo evento estão funcionais.
+- Velocidades disponíveis: 1x, 2x, 5x e 10x.
+- A barra temporal permite saltar diretamente para qualquer acontecimento.
+- A lista inferior permite selecionar um acontecimento específico.
+- O acontecimento atual é mostrado no painel e numa faixa sobre o mapa.
+- Durante o Replay, os comandos operacionais ficam bloqueados.
+- Atalhos: Espaço (reproduzir/pausar), seta direita (próximo), Home (início), Esc (fechar).
+
+NOTA
+Esta versão reproduz a sequência real da Timeline. A reconstrução histórica das posições
+no mapa exigirá que cada movimento grave coordenadas na Timeline e será desenvolvida na
+etapa seguinte.
+
+INSTALAÇÃO
+1. Fechar o SGO.
+2. Fazer uma cópia de segurança da pasta atual.
+3. Substituir a pasta atual pelo conteúdo de SGO_12.zip.
+4. Iniciar pelo ficheiro iniciar.bat.

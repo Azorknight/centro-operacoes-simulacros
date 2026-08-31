@@ -1,0 +1,26 @@
+SGO — OCORRÊNCIA INTELIGENTE v1
+
+INSTALAÇÃO
+1. Fechar o SGO.
+2. Copiar todo o conteúdo desta pasta para a pasta principal do projeto.
+3. Escolher "Substituir os ficheiros no destino".
+4. Iniciar novamente através do iniciar.bat.
+
+NOVIDADES
+- Estados: Recebida, Despachada, Em curso, Sob controlo, Encerrada e Arquivada.
+- Registo automático das horas de cada estado.
+- Estado Despachada automático ao ordenar a deslocação do primeiro recurso.
+- Estado Em curso automático ao confirmar a primeira chegada.
+- Cronómetro em tempo real.
+- Estatísticas automáticas: despacho, resposta, duração, recursos, elementos e ordens.
+- Timeline exclusiva de cada ocorrência.
+- Painel completo ao clicar numa ocorrência no mapa.
+- Migração automática da base de dados sem apagar dados existentes.
+
+TESTE RECOMENDADO
+1. Criar uma ocorrência.
+2. Clicar no marcador da ocorrência.
+3. Ordenar a deslocação de um recurso: o estado passa a Despachada.
+4. Confirmar a chegada: o estado passa a Em curso.
+5. Alterar para Sob controlo e depois Encerrada no painel.
+6. Confirmar as horas, tempos e eventos da timeline.

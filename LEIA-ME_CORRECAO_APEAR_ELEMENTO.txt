@@ -1,0 +1,7 @@
+CORREÇÃO — MODO APEAR ELEMENTO
+
+- O clique para apear um elemento passou a ser uma ação única.
+- Depois de escolher o destino, o modo é encerrado automaticamente.
+- Cliques seguintes no mapa já não deslocam o elemento.
+- Foi acrescentado um aviso visível com botão Cancelar.
+- A tecla Esc também cancela o modo antes de escolher o destino.

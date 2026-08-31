@@ -1,0 +1,26 @@
+SGO — ELIMINAR OPERAÇÕES DEFINITIVAMENTE
+
+INSTALAÇÃO
+1. Feche o SGO.
+2. Copie o conteúdo deste pacote para a pasta principal do projeto.
+3. Escolha «Substituir os ficheiros no destino».
+4. Inicie novamente através do iniciar.bat.
+
+UTILIZAÇÃO
+1. No Gestor de Operações, arquive primeiro a operação.
+2. Abra «Arquivo».
+3. Clique em «Eliminar definitivamente».
+4. Escreva ELIMINAR no campo de confirmação.
+5. Clique novamente em «Eliminar definitivamente».
+
+SEGURANÇA
+- Apenas operações arquivadas podem ser eliminadas.
+- Uma operação ativa não pode ser eliminada.
+- A eliminação remove a operação e os respetivos recursos, ocorrências,
+  elementos, missões, ordens e registos da timeline.
+- A ação não pode ser anulada.
+
+VALIDAÇÃO
+- O backend main.py foi validado quanto à sintaxe Python.
+- O frontend não foi compilado neste ambiente porque o node_modules do projeto
+  foi criado no Windows e inclui dependências nativas incompatíveis com Linux.

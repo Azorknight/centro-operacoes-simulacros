@@ -1,0 +1,8 @@
+CORREÇÃO DA CONTAGEM DE RECURSOS
+
+1. Feche o SGO.
+2. Copie o ficheiro main.py para a pasta principal do projeto.
+3. Escolha "Substituir o ficheiro no destino".
+4. Inicie novamente através do iniciar.bat.
+
+A correção faz com que o Resumo conte apenas os recursos participantes e visíveis na operação ativa. Os elementos continuam separados e não são contados como recursos.

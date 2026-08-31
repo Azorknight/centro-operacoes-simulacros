@@ -1,0 +1,18 @@
+SGO — CONTADOR DE ELEMENTOS
+
+Esta atualização acrescenta:
+- contador próprio de Elementos no topo;
+- linha Elementos no Resumo do painel esquerdo;
+- número de elementos no relatório PDF;
+- contagem apenas dos elementos participantes na operação ativa.
+
+INSTALAÇÃO
+1. Feche o SGO.
+2. Copie main.py para a pasta principal do projeto.
+3. Copie frontend/src/App.jsx para frontend/src/App.jsx.
+4. Escolha “Substituir os ficheiros no destino”.
+5. Inicie novamente pelo iniciar.bat.
+
+TESTE
+- Abra uma operação com 1 viatura e 1 elemento.
+- O topo e o Resumo devem mostrar: Recursos 1 e Elementos 1.

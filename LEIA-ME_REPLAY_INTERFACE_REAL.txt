@@ -1,0 +1,17 @@
+SGO 11 — Replay Operacional: Interface v1
+
+ALTERAÇÃO REALIZADA
+- Foi acrescentado o botão “▶ Replay” na caixa da OPERAÇÃO ATIVA.
+- Ao clicar, abre o painel “Replay Operacional”.
+- O painel inclui: Início, Reproduzir/Pausar, Próximo evento e velocidades 1×, 2×, 5× e 10×.
+- Esta primeira etapa valida apenas a interface. Ainda não lê os eventos reais da Timeline.
+
+INSTALAÇÃO RECOMENDADA
+1. Fechar o SGO.
+2. Fazer uma cópia de segurança da pasta atual.
+3. Substituir a pasta do projeto pelo conteúdo deste ZIP.
+4. Iniciar normalmente pelo iniciar.bat.
+
+VALIDAÇÃO
+- O ficheiro frontend/src/App.jsx foi analisado com o parser JSX sem erros.
+- A compilação Linux não foi possível porque o node_modules do projeto contém dependências nativas do Windows.

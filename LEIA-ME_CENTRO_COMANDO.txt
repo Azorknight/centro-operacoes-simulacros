@@ -1,0 +1,19 @@
+SGO — CENTRO DE COMANDO v1
+
+INSTALAÇÃO
+1. Feche o SGO.
+2. Copie o conteúdo desta atualização para a pasta principal do projeto.
+3. Confirme a substituição dos ficheiros.
+4. Inicie novamente através do iniciar.bat.
+
+NOVIDADES
+- Barra operacional permanente com nome e estado da operação.
+- Relógio oficial dos Açores atualizado em tempo real.
+- Pesquisa global de recursos, ocorrências e elementos.
+- Clique num resultado centra o mapa e abre o respetivo painel.
+- Painel de alertas com os cinco eventos mais recentes.
+- Atualização automática dos dados e timeline a cada 5 segundos.
+- Recursos do painel lateral passam a ser clicáveis e centram o mapa.
+
+NOTA
+A atualização altera apenas frontend/src/App.jsx e não apaga dados.

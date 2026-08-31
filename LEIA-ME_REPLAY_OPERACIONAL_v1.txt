@@ -1,0 +1,17 @@
+SGO — REPLAY OPERACIONAL v1
+
+Esta atualização acrescenta a infraestrutura inicial do Replay Operacional.
+
+Inclui:
+- botão Replay no Centro de Comando;
+- leitura cronológica dos eventos da operação ativa;
+- modo somente leitura, sem alteração dos dados reais;
+- reproduzir, pausar, reiniciar e avançar evento;
+- velocidades 1x, 2x, 5x e 10x;
+- barra temporal e lista de eventos clicável.
+
+Instalação:
+1. Fechar o SGO.
+2. Copiar o conteúdo desta atualização para a pasta principal.
+3. Substituir os ficheiros existentes.
+4. Iniciar pelo iniciar.bat.

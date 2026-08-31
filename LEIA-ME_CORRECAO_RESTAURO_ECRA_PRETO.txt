@@ -1,0 +1,14 @@
+SGO 18 — Correção do Restauro e do Ecrã Preto
+
+Alterações:
+- Corrigido erro JavaScript ao abrir uma ocorrência sem data de encerramento após restauro.
+- O painel selecionado é limpo antes de recarregar os dados restaurados.
+- O recarregamento após restauro ignora a cache do navegador.
+- As mensagens de erro do backend passam a aparecer no painel de backups.
+
+Teste:
+1. Crie um backup.
+2. Crie e encerre uma ocorrência.
+3. Restaure o backup anterior.
+4. Confirme que a ocorrência criada depois do backup desapareceu.
+5. Abra uma ocorrência existente e confirme que o ecrã não fica preto.
