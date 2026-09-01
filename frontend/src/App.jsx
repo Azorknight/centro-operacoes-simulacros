@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -6,13 +6,16 @@ import {
   Popup,
   CircleMarker,
   Tooltip,
-  useMapEvents,
   Polyline,
 } from 'react-leaflet'
 import L from 'leaflet'
 import jsPDF from 'jspdf'
 import FichaOperacional from './components/FichaOperacional'
 import PainelTimeline from './components/PainelTimeline'
+import RelogioOperacional from './components/RelogioOperacional'
+import CronometroOcorrencia from './components/CronometroOcorrencia'
+import GestorCliquesMapa from './components/GestorCliquesMapa'
+import { obterIconeRecurso, obterCorOcorrencia, obterCorSituacaoMissao, formatarDuracao, formatarDataHora } from './utils/formatacao'
 import Operacoes from './pages/Operacoes'
 import { desativarOperacao, encerrarOperacao, obterOperacaoAtiva, reabrirOperacao, obterDiagnostico, obterBackups, criarBackup, restaurarBackup, eliminarBackup } from './services/api'
 import {
@@ -67,119 +70,6 @@ import {
   associarSetorMissao
 } from './services/api' 
 
-function RelogioOperacional() {
-  const [agora, setAgora] = useState(() => Date.now())
-
-
-  return new Date(agora).toLocaleTimeString('pt-PT', {
-    timeZone: 'Atlantic/Azores'
-  })
-}
-
-function CronometroOcorrencia({ recebidaEm, encerradaEm, totalSegundos }) {
-  const [agora, setAgora] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (!recebidaEm || encerradaEm) return undefined
-    const timer = setInterval(() => setAgora(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [recebidaEm, encerradaEm])
-
-  const segundos = encerradaEm
-    ? totalSegundos
-    : recebidaEm
-      ? Math.max(0, Math.floor((agora - new Date(recebidaEm).getTime()) / 1000))
-      : null
-
-  return formatarDuracao(segundos)
-}
-
-function GestorCliquesMapa({ modoMapa, refresh, modoConsulta, concluirModo }) {
-  useMapEvents({
-    async click(e) {
-      if (modoConsulta || !modoMapa || modoMapa.tipo === 'normal') return
-
-      if (modoMapa.tipo === 'apear_elemento' && modoMapa.alvo) {
-        await atualizarPosicaoElemento(
-          modoMapa.alvo.id,
-          e.latlng.lat,
-          e.latlng.lng
-        )
-        concluirModo?.()
-        await refresh()
-        return
-      }
-
-      if (modoMapa.tipo === 'novo_recurso') {
-        window.dispatchEvent(new CustomEvent('abrir-form-recurso', {
-          detail: { latitude: e.latlng.lat, longitude: e.latlng.lng }
-        }))
-        concluirModo?.()
-        return
-      }
-
-      if (modoMapa.tipo === 'nova_ocorrencia') {
-        window.dispatchEvent(new CustomEvent('abrir-form-ocorrencia', {
-          detail: { latitude: e.latlng.lat, longitude: e.latlng.lng }
-        }))
-        concluirModo?.()
-      }
-    },
-  })
-
-  return null
-}
-
-function obterIconeRecurso(tipo) {
-  const tipoLower = tipo?.toLowerCase() || ''
-
-  if (tipoLower.includes('ambul')) return '🚑'
-  if (tipoLower.includes('bombe')) return '🚒'
-  if (tipoLower.includes('pol')) return '🚓'
-  if (tipoLower.includes('moto')) return '🏍️'
-  if (tipoLower.includes('drone')) return '🚁'
-
-  return '📍'
-}
-
-function obterCorOcorrencia(tipo, estado) {
-  const tipoLower = tipo?.toLowerCase() || ''
-  const estadoLower = estado?.toLowerCase() || ''
-
-  if (estadoLower.includes('fechada')) return 'green'
-  if (tipoLower.includes('incend')) return 'red'
-  if (tipoLower.includes('acidente')) return 'orange'
-  if (tipoLower.includes('evac')) return 'purple'
-
-  return 'red'
-}
-
-function formatarDuracao(segundos) {
-  if (segundos === null || segundos === undefined) return '—'
-  const total = Math.max(0, Math.floor(segundos))
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
-  return `${m}m ${String(s).padStart(2, '0')}s`
-}
-
-function formatarDataHora(valor) {
-  return valor ? new Date(valor).toLocaleString('pt-PT') : '—'
-}
-
-function obterCorSituacaoMissao(situacao, estado) {
-  if (estado === 'concluida') return '#16a34a'
-  if (estado === 'cancelada') return '#64748b'
-  return {
-    sob_controlo: '#22c55e',
-    estavel: '#eab308',
-    complexa: '#f97316',
-    critica: '#dc2626',
-    necessita_reforco: '#111827'
-  }[situacao] || '#7c3aed'
-}
-
 function obterPosicaoIconeMissao(latitude, longitude, indice, total) {
   const quantidade = Math.max(total, 1)
   const angulo = (-Math.PI / 2) + ((2 * Math.PI * indice) / quantidade)
@@ -214,7 +104,6 @@ function criarIconeMissao(cor, selecionada = false) {
     iconAnchor: [tamanho / 2, tamanho / 2]
   })
 }
-
 function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null }) {
   const [recursos, setRecursos] = useState([])
   const [ocorrencias, setOcorrencias] = useState([])
@@ -2372,7 +2261,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
       {modoConsulta && (
         <div style={styles.modoConsultaAviso}>
-          OPERAÇÃO CONCLUÍDA — MODO DE CONSULTA
+          OPERAÇÃO CONCLUÃDA — MODO DE CONSULTA
         </div>
       )}
 
@@ -3586,3 +3475,6 @@ function App() {
 }
 
 export default App
+
+
+
