@@ -652,6 +652,24 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               <div style={{ ...styles.itemSubtle, marginTop: 8 }}>{mensagemIntencao}</div>
             )}
           </div>
+
+          <div style={styles.itemCard}>
+            <div style={styles.itemTitle}>Objetivos operacionais</div>
+            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
+              Objetivos definidos para concretizar a Intenção do Comandante.
+            </div>
+            {objetivos.filter((o) => !o.arquivado).length === 0 && (
+              <div style={styles.itemSubtle}>Ainda não existem objetivos operacionais.</div>
+            )}
+            {objetivos.filter((o) => !o.arquivado).map((o) => (
+              <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
+                <div style={styles.itemTitle}>🎯 {o.nome}</div>
+                <div style={styles.itemMeta}>{o.prioridade} · {o.estado} · {o.total_missoes || 0} missão(ões)</div>
+                {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
+                {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
+              </div>
+            ))}
+          </div>
         </>
       )
     }
