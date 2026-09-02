@@ -587,6 +587,20 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   }
 
   function renderAba() {
+    if (abaAtiva === 'pao') {
+      return (
+        <>
+          <strong style={styles.sectionTitle}>Plano de Ação Operacional</strong>
+          <div style={styles.itemCard}>
+            <div style={styles.itemTitle}>PAO</div>
+            <div style={styles.itemSubtle}>
+              Estrutura inicial do PAO. Intenção do Comandante, Objetivos, Missões e Decisões serão integrados progressivamente.
+            </div>
+          </div>
+        </>
+      )
+    }
+
     if (abaAtiva === 'recursos') {
       return (
         <>
@@ -1010,7 +1024,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       {mostrarPainelDireito && (
         <div style={styles.rightPanel}>
         <div style={styles.tabBar}>
-          {['recursos', 'ocorrencias', 'setores', 'objetivos', 'missoes', 'ordens', 'timeline'].map((aba) => (
+          {['recursos', 'ocorrencias', 'pao', 'setores', 'objetivos', 'missoes', 'ordens', 'timeline'].map((aba) => (
             <button
               key={aba}
               style={{
@@ -2261,7 +2275,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
       {modoConsulta && (
         <div style={styles.modoConsultaAviso}>
-          OPERAÇÃO CONCLUÃDA — MODO DE CONSULTA
+          OPERAÇÃO CONCLUÍDA — MODO DE CONSULTA
         </div>
       )}
 
