@@ -177,7 +177,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [novaNotaMissao, setNovaNotaMissao] = useState({ autor: 'Operador', texto: '' })
   const [pesquisaGlobal, setPesquisaGlobal] = useState('')
   const [mostrarAlertas, setMostrarAlertas] = useState(true)
+  const [intencaoComandante, setIntencaoComandante] = useState(operacaoAtiva?.intencao_comandante || '')
+  const [aGuardarIntencao, setAGuardarIntencao] = useState(false)
+  const [mensagemIntencao, setMensagemIntencao] = useState('')
   const modoBloqueado = modoConsulta || modoReplay
+
+  useEffect(() => {
+    setIntencaoComandante(operacaoAtiva?.intencao_comandante || '')
+    setMensagemIntencao('')
+  }, [operacaoAtiva?.id, operacaoAtiva?.intencao_comandante])
 
   useEffect(() => {
     if (modoMapa.tipo === 'normal') return undefined
@@ -586,16 +594,63 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     await atualizarDados()
   }
 
+  async function guardarIntencaoComandante() {
+    if (!operacaoAtiva?.id || modoBloqueado) return
+    setAGuardarIntencao(true)
+    setMensagemIntencao('')
+    try {
+      const resposta = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/intencao-comandante`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intencao_comandante: intencaoComandante })
+      })
+      if (!resposta.ok) {
+        const erro = await resposta.json().catch(() => null)
+        throw new Error(erro?.detail || 'Não foi possível guardar a Intenção do Comandante.')
+      }
+      const dados = await resposta.json()
+      setIntencaoComandante(dados.intencao_comandante || '')
+      setMensagemIntencao('Intenção do Comandante guardada.')
+    } catch (erro) {
+      console.error(erro)
+      setMensagemIntencao(erro.message || 'Não foi possível guardar a Intenção do Comandante.')
+    } finally {
+      setAGuardarIntencao(false)
+    }
+  }
+
   function renderAba() {
     if (abaAtiva === 'pao') {
       return (
         <>
           <strong style={styles.sectionTitle}>Plano de Ação Operacional</strong>
           <div style={styles.itemCard}>
-            <div style={styles.itemTitle}>PAO</div>
-            <div style={styles.itemSubtle}>
-              Estrutura inicial do PAO. Intenção do Comandante, Objetivos, Missões e Decisões serão integrados progressivamente.
+            <div style={styles.itemTitle}>Intenção do Comandante</div>
+            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
+              Define a orientação geral da operação e serve de referência para os objetivos e missões.
             </div>
+            <textarea
+              style={{ ...styles.input, minHeight: 120, resize: 'vertical' }}
+              value={intencaoComandante}
+              disabled={modoBloqueado || aGuardarIntencao}
+              placeholder="Registar a Intenção do Comandante..."
+              onChange={(e) => {
+                setIntencaoComandante(e.target.value)
+                setMensagemIntencao('')
+              }}
+            />
+            <div style={styles.buttonRow}>
+              <button
+                style={styles.smallButton}
+                disabled={modoBloqueado || aGuardarIntencao || !operacaoAtiva?.id}
+                onClick={guardarIntencaoComandante}
+              >
+                {aGuardarIntencao ? 'A guardar...' : 'Guardar'}
+              </button>
+            </div>
+            {mensagemIntencao && (
+              <div style={{ ...styles.itemSubtle, marginTop: 8 }}>{mensagemIntencao}</div>
+            )}
           </div>
         </>
       )
