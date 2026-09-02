@@ -44,6 +44,10 @@ class Operacao(BaseModel):
     data_inicio: datetime | None = None
     data_fim: datetime | None = None
 
+class IntencaoComandante(BaseModel):
+    intencao_comandante: str = ""
+
+
 class ConfirmacaoEliminacao(BaseModel):
     confirmacao: str
 
@@ -363,6 +367,9 @@ def exigir_operacao_editavel_id(conn):
 def preparar_separacao_por_operacao():
     """Atualiza a estrutura sem apagar dados antigos."""
     with engine.begin() as conn:
+        # PAO: intenção do comandante associada à operação.
+        conn.execute(text("ALTER TABLE operacoes ADD COLUMN IF NOT EXISTS intencao_comandante TEXT"))
+
         for tabela in ("recursos", "ocorrencias", "missoes", "ordens", "timeline_eventos", "elementos"):
             conn.execute(text(f"ALTER TABLE {tabela} ADD COLUMN IF NOT EXISTS operacao_id INTEGER"))
 
@@ -758,6 +765,29 @@ def obter_operacao_ativa():
         """)).mappings().fetchone()
 
         return dict(operacao) if operacao else None
+
+
+@app.put("/operacoes/{operacao_id}/intencao-comandante")
+def atualizar_intencao_comandante(operacao_id: int, dados: IntencaoComandante):
+    with engine.begin() as conn:
+        operacao_ativa_id = exigir_operacao_editavel_id(conn)
+        if operacao_ativa_id != operacao_id:
+            raise HTTPException(status_code=409, detail="A operação indicada não é a operação ativa")
+
+        atualizado = conn.execute(text("""
+            UPDATE operacoes
+            SET intencao_comandante = :intencao
+            WHERE id = :id
+            RETURNING id, intencao_comandante
+        """), {
+            "id": operacao_id,
+            "intencao": dados.intencao_comandante.strip()
+        }).mappings().first()
+
+        if not atualizado:
+            raise HTTPException(status_code=404, detail="Operação não encontrada")
+
+        return dict(atualizado)
 
 
 @app.post("/operacoes/{operacao_id}/ativar")
