@@ -654,7 +654,12 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           </div>
 
           <div style={styles.itemCard}>
-            <div style={styles.itemTitle}>Objetivos operacionais</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div style={styles.itemTitle}>Objetivos operacionais</div>
+              <button style={styles.smallButton} disabled={modoBloqueado} onClick={novoObjetivo}>
+                ➕ Novo objetivo
+              </button>
+            </div>
             <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
               Objetivos definidos para concretizar a Intenção do Comandante.
             </div>
@@ -667,6 +672,11 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 <div style={styles.itemMeta}>{o.prioridade} · {o.estado} · {o.total_missoes || 0} missão(ões)</div>
                 {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
                 {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
+                <div style={styles.buttonRow}>
+                  <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => editarObjetivo(o)}>
+                    Editar
+                  </button>
+                </div>
               </div>
             ))}
           </div>
