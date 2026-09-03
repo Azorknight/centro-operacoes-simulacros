@@ -672,6 +672,30 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 <div style={styles.itemMeta}>{o.prioridade} · {o.estado} · {o.total_missoes || 0} missão(ões)</div>
                 {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
                 {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
+
+                <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ ...styles.itemMeta, marginBottom: 6 }}>Missões associadas</div>
+                  {missoes.filter((m) => m.objetivo_id === o.id).length === 0 && (
+                    <div style={styles.itemSubtle}>Sem missões associadas.</div>
+                  )}
+                  {missoes.filter((m) => m.objetivo_id === o.id).map((m) => (
+                    <div key={m.id} style={{ ...styles.itemCard, marginTop: 6, cursor: 'pointer' }}
+                      onClick={() => setDetalhe({ tipo: 'missao', dados: m })}>
+                      <div style={styles.itemTitle}>↳ {m.titulo}</div>
+                      <div style={styles.itemMeta}>
+                        {m.prioridade || 'media'} · {m.estado} · {{
+                          sob_controlo: '🟢 Sob controlo',
+                          estavel: '🟡 Estável',
+                          complexa: '🟠 Complexa',
+                          critica: '🔴 Crítica',
+                          necessita_reforco: '⚫ Necessita de reforço'
+                        }[m.situacao_operacional] || '🟡 Estável'}
+                      </div>
+                      {m.responsavel && <div style={styles.itemSubtle}>Responsável: {m.responsavel}</div>}
+                    </div>
+                  ))}
+                </div>
+
                 <div style={styles.buttonRow}>
                   <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => editarObjetivo(o)}>
                     Editar
