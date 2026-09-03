@@ -142,7 +142,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     responsavel: '',
     notas: '',
     situacao_operacional: 'estavel',
-    ocorrencia_id: null
+    ocorrencia_id: null,
+    objetivo_id: null
   })
   const [mostrarFormMissao, setMostrarFormMissao] = useState(false)
   const [missaoParaAtribuir, setMissaoParaAtribuir] = useState(null)
@@ -697,6 +698,25 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 </div>
 
                 <div style={styles.buttonRow}>
+                  <button
+                    style={styles.smallButton}
+                    disabled={modoBloqueado}
+                    onClick={() => {
+                      setFormMissao({
+                        titulo: '',
+                        descricao: '',
+                        prioridade: 'media',
+                        responsavel: '',
+                        notas: '',
+                        situacao_operacional: 'estavel',
+                        ocorrencia_id: o.ocorrencia_id || null,
+                        objetivo_id: o.id
+                      })
+                      setMostrarFormMissao(true)
+                    }}
+                  >
+                    ➕ Nova missão
+                  </button>
                   <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => editarObjetivo(o)}>
                     Editar
                   </button>
@@ -2043,7 +2063,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             onClick={async () => {
               if (!formMissao.titulo) return
 
-              await criarMissao({
+              const novaMissao = await criarMissao({
                 titulo: formMissao.titulo,
                 descricao: formMissao.descricao,
                 prioridade: formMissao.prioridade,
@@ -2054,6 +2074,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 recurso_id: null,
                 ocorrencia_id: formMissao.ocorrencia_id
               })
+
+              if (formMissao.objetivo_id && novaMissao?.id) {
+                await associarObjetivoMissao(novaMissao.id, formMissao.objetivo_id)
+              }
 
               await refresh()
 
@@ -2066,7 +2090,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 responsavel: '',
                 notas: '',
                 situacao_operacional: 'estavel',
-                ocorrencia_id: null
+                ocorrencia_id: null,
+                objetivo_id: null
               })
             }}
           >
