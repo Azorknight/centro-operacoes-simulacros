@@ -181,12 +181,29 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [intencaoComandante, setIntencaoComandante] = useState(operacaoAtiva?.intencao_comandante || '')
   const [aGuardarIntencao, setAGuardarIntencao] = useState(false)
   const [mensagemIntencao, setMensagemIntencao] = useState('')
+  const [decisoesOperacionais, setDecisoesOperacionais] = useState([])
+  const [novaDecisaoOperacional, setNovaDecisaoOperacional] = useState('')
+  const [aGuardarDecisao, setAGuardarDecisao] = useState(false)
+  const [mensagemDecisao, setMensagemDecisao] = useState('')
   const modoBloqueado = modoConsulta || modoReplay
 
   useEffect(() => {
     setIntencaoComandante(operacaoAtiva?.intencao_comandante || '')
     setMensagemIntencao('')
   }, [operacaoAtiva?.id, operacaoAtiva?.intencao_comandante])
+
+  useEffect(() => {
+    setNovaDecisaoOperacional('')
+    setMensagemDecisao('')
+    if (!operacaoAtiva?.id) {
+      setDecisoesOperacionais([])
+      return
+    }
+    fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('Não foi possível carregar as decisões.')))
+      .then(setDecisoesOperacionais)
+      .catch(console.error)
+  }, [operacaoAtiva?.id])
 
   useEffect(() => {
     if (modoMapa.tipo === 'normal') return undefined
@@ -620,6 +637,32 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     }
   }
 
+  async function carregarDecisoesOperacionais() {
+    if (!operacaoAtiva?.id) return setDecisoesOperacionais([])
+    try {
+      const r = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`)
+      if (!r.ok) throw new Error('Não foi possível carregar as decisões.')
+      setDecisoesOperacionais(await r.json())
+    } catch (erro) { console.error(erro) }
+  }
+
+  async function guardarDecisaoOperacional() {
+    const texto = novaDecisaoOperacional.trim()
+    if (!texto || !operacaoAtiva?.id || modoBloqueado) return
+    setAGuardarDecisao(true); setMensagemDecisao('')
+    try {
+      const r = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texto, autor: 'Comandante' })
+      })
+      if (!r.ok) { const e = await r.json().catch(()=>null); throw new Error(e?.detail || 'Não foi possível guardar a decisão.') }
+      setNovaDecisaoOperacional('')
+      setMensagemDecisao('Decisão operacional registada.')
+      await carregarDecisoesOperacionais()
+    } catch (erro) { setMensagemDecisao(erro.message) }
+    finally { setAGuardarDecisao(false) }
+  }
+
   function renderAba() {
     if (abaAtiva === 'pao') {
       return (
@@ -679,6 +722,39 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   </div>
                 )
               })}
+            </div>
+          </div>
+
+          <div style={styles.itemCard}>
+            <div style={styles.itemTitle}>Decisões Operacionais</div>
+            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
+              Registo cronológico das decisões tomadas pelo Comandante durante a operação.
+            </div>
+            <textarea
+              style={{ ...styles.input, minHeight: 80, resize: 'vertical' }}
+              value={novaDecisaoOperacional}
+              disabled={modoBloqueado || aGuardarDecisao}
+              placeholder="Registar nova decisão operacional..."
+              onChange={(e) => { setNovaDecisaoOperacional(e.target.value); setMensagemDecisao('') }}
+            />
+            <div style={styles.buttonRow}>
+              <button style={styles.smallButton}
+                disabled={modoBloqueado || aGuardarDecisao || !novaDecisaoOperacional.trim()}
+                onClick={guardarDecisaoOperacional}>
+                {aGuardarDecisao ? 'A guardar...' : '➕ Registar decisão'}
+              </button>
+            </div>
+            {mensagemDecisao && <div style={{ ...styles.itemSubtle, marginTop: 8 }}>{mensagemDecisao}</div>}
+            <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
+              {decisoesOperacionais.length === 0 && <div style={styles.itemSubtle}>Ainda não existem decisões operacionais.</div>}
+              {decisoesOperacionais.map(d => (
+                <div key={d.id} style={{ ...styles.itemCard, marginTop: 6 }}>
+                  <div style={styles.itemTitle}>{d.texto}</div>
+                  <div style={styles.itemMeta}>
+                    {d.autor || 'Comandante'} · {new Date(d.criado_em).toLocaleString('pt-PT', { timeZone: 'Atlantic/Azores', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
