@@ -655,6 +655,34 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           </div>
 
           <div style={styles.itemCard}>
+            <div style={styles.itemTitle}>Situação Operacional</div>
+            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
+              Distribuição das missões ativas pela respetiva situação operacional.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))', gap: 8 }}>
+              {[
+                ['sob_controlo', '🟢', 'Sob controlo'],
+                ['estavel', '🟡', 'Estável'],
+                ['complexa', '🟠', 'Complexa'],
+                ['critica', '🔴', 'Crítica'],
+                ['necessita_reforco', '⚫', 'Necessita de reforço']
+              ].map(([id, icone, nome]) => {
+                const total = missoes.filter(
+                  (m) => !['concluida', 'cancelada'].includes(m.estado) &&
+                    (m.situacao_operacional || 'estavel') === id
+                ).length
+                return (
+                  <div key={id} style={{ ...styles.itemCard, margin: 0, textAlign: 'center' }}>
+                    <div style={{ fontSize: 22 }}>{icone}</div>
+                    <div style={styles.itemTitle}>{total}</div>
+                    <div style={styles.itemSubtle}>{nome}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={styles.itemCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <div style={styles.itemTitle}>Objetivos operacionais</div>
               <button style={styles.smallButton} disabled={modoBloqueado} onClick={novoObjetivo}>
