@@ -693,6 +693,41 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         }[m.situacao_operacional] || '🟡 Estável'}
                       </div>
                       {m.responsavel && <div style={styles.itemSubtle}>Responsável: {m.responsavel}</div>}
+                      <div style={styles.buttonRow}>
+                        <button style={styles.smallButton} onClick={(e) => {
+                          e.stopPropagation()
+                          setDetalhe({ tipo: 'missao', dados: m })
+                        }}>Abrir</button>
+                        <button
+                          style={styles.smallButton}
+                          disabled={modoBloqueado || ['concluida', 'cancelada'].includes(m.estado)}
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            const situacao = window.prompt(
+                              'Situação: sob_controlo, estavel, complexa, critica ou necessita_reforco',
+                              m.situacao_operacional || 'estavel'
+                            )
+                            if (!situacao) return
+                            const validas = ['sob_controlo', 'estavel', 'complexa', 'critica', 'necessita_reforco']
+                            if (!validas.includes(situacao)) {
+                              window.alert('Situação inválida.')
+                              return
+                            }
+                            await alterarSituacaoMissao(m.id, situacao)
+                            await refresh()
+                          }}
+                        >Alterar situação</button>
+                        <button
+                          style={styles.smallButton}
+                          disabled={modoBloqueado || ['concluida', 'cancelada'].includes(m.estado)}
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            if (!window.confirm(`Concluir a missão "${m.titulo}"?`)) return
+                            await concluirMissao(m.id)
+                            await refresh()
+                          }}
+                        >Concluir</button>
+                      </div>
                     </div>
                   ))}
                 </div>
