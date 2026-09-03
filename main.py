@@ -47,6 +47,10 @@ class Operacao(BaseModel):
 class IntencaoComandante(BaseModel):
     intencao_comandante: str = ""
 
+class DecisaoOperacional(BaseModel):
+    texto: str
+    autor: str | None = "Comandante"
+
 
 class ConfirmacaoEliminacao(BaseModel):
     confirmacao: str
@@ -162,7 +166,7 @@ BACKUP_NAME_RE = re.compile(r"^backup_\d{8}_\d{6}\.sgo$")
 TABELAS_BACKUP = [
     "entidades", "recursos_catalogo", "elementos_catalogo", "operacoes",
     "configuracao", "bases", "ocorrencias", "recursos", "elementos",
-    "setores", "objetivos", "objetivo_modelos", "missoes", "missao_recursos", "missao_notas", "ordens", "timeline_eventos", "operacao_recursos",
+    "setores", "objetivos", "objetivo_modelos", "missoes", "missao_recursos", "missao_notas", "decisoes_operacionais", "ordens", "timeline_eventos", "operacao_recursos",
     "operacao_elementos",
 ]
 
@@ -369,6 +373,15 @@ def preparar_separacao_por_operacao():
     with engine.begin() as conn:
         # PAO: intenção do comandante associada à operação.
         conn.execute(text("ALTER TABLE operacoes ADD COLUMN IF NOT EXISTS intencao_comandante TEXT"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS decisoes_operacionais (
+                id SERIAL PRIMARY KEY,
+                operacao_id INTEGER NOT NULL REFERENCES operacoes(id) ON DELETE CASCADE,
+                texto TEXT NOT NULL,
+                autor TEXT,
+                criado_em TIMESTAMP DEFAULT NOW()
+            )
+        """))
 
         for tabela in ("recursos", "ocorrencias", "missoes", "ordens", "timeline_eventos", "elementos"):
             conn.execute(text(f"ALTER TABLE {tabela} ADD COLUMN IF NOT EXISTS operacao_id INTEGER"))
@@ -788,6 +801,42 @@ def atualizar_intencao_comandante(operacao_id: int, dados: IntencaoComandante):
             raise HTTPException(status_code=404, detail="Operação não encontrada")
 
         return dict(atualizado)
+
+
+@app.get("/operacoes/{operacao_id}/decisoes")
+def listar_decisoes_operacionais(operacao_id: int):
+    with engine.connect() as conn:
+        existe = conn.execute(text("SELECT id FROM operacoes WHERE id = :id"), {"id": operacao_id}).scalar()
+        if existe is None:
+            raise HTTPException(status_code=404, detail="Operação não encontrada")
+        resultado = conn.execute(text("""
+            SELECT id, operacao_id, texto, autor, criado_em
+            FROM decisoes_operacionais
+            WHERE operacao_id = :operacao_id
+            ORDER BY criado_em DESC, id DESC
+        """), {"operacao_id": operacao_id})
+        return [dict(linha._mapping) for linha in resultado]
+
+
+@app.post("/operacoes/{operacao_id}/decisoes")
+def criar_decisao_operacional(operacao_id: int, dados: DecisaoOperacional):
+    texto_decisao = dados.texto.strip()
+    if not texto_decisao:
+        raise HTTPException(status_code=400, detail="A decisão não pode ficar vazia")
+    with engine.begin() as conn:
+        operacao_ativa_id = exigir_operacao_editavel_id(conn)
+        if operacao_ativa_id != operacao_id:
+            raise HTTPException(status_code=409, detail="A operação indicada não é a operação ativa")
+        nova = conn.execute(text("""
+            INSERT INTO decisoes_operacionais (operacao_id, texto, autor, criado_em)
+            VALUES (:operacao_id, :texto, :autor, NOW())
+            RETURNING id, operacao_id, texto, autor, criado_em
+        """), {
+            "operacao_id": operacao_id,
+            "texto": texto_decisao,
+            "autor": (dados.autor or "Comandante").strip() or "Comandante"
+        }).mappings().first()
+        return dict(nova)
 
 
 @app.post("/operacoes/{operacao_id}/ativar")
