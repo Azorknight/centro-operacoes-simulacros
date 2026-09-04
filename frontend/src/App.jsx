@@ -790,39 +790,24 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             {objetivos.filter((o) => !o.arquivado).length === 0 && (
               <div style={styles.itemSubtle}>Ainda não existem objetivos operacionais.</div>
             )}
-            {objetivos.filter((o) => !o.arquivado).map((o) => (
-              <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
+            {(() => {
+              const objetivosAtivos = objetivos.filter((o) => !o.arquivado)
+              const gruposOcorrencia = ocorrencias
+                .map((oc) => ({
+                  ocorrencia: oc,
+                  objetivos: objetivosAtivos.filter((o) => o.ocorrencia_id === oc.id)
+                }))
+                .filter((grupo) => grupo.objetivos.length > 0)
+              const objetivosSemOcorrencia = objetivosAtivos.filter(
+                (o) => !ocorrencias.some((oc) => oc.id === o.ocorrencia_id)
+              )
+
+              const renderObjetivoPAO = (o) => (
+                    <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
                 <div style={styles.itemTitle}>🎯 {o.nome}</div>
                 <div style={styles.itemMeta}>{o.prioridade} · {o.estado} · {o.total_missoes || 0} missão(ões)</div>
                 {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
                 {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
-
-                {(() => {
-                  const ocorrenciaAssociada = ocorrencias.find((oc) => oc.id === o.ocorrencia_id)
-                  if (!ocorrenciaAssociada) {
-                    return <div style={{ ...styles.itemSubtle, marginTop: 8 }}>Ocorrência: Sem ocorrência associada</div>
-                  }
-                  return (
-                    <div style={{ marginTop: 8 }}>
-                      <div style={styles.itemMeta}>🔴 Ocorrência associada</div>
-                      <div style={styles.itemTitle}>{ocorrenciaAssociada.titulo}</div>
-                      <div style={styles.itemSubtle}>{ocorrenciaAssociada.tipo} · {ocorrenciaAssociada.estado}</div>
-                      <div style={styles.buttonRow}>
-                        <button
-                          style={styles.smallButton}
-                          onClick={() => {
-                            setDetalhe({ tipo: 'ocorrencia', dados: ocorrenciaAssociada })
-                            if (ocorrenciaAssociada.latitude && ocorrenciaAssociada.longitude && mapRef.current) {
-                              mapRef.current.setView([ocorrenciaAssociada.latitude, ocorrenciaAssociada.longitude], 13)
-                            }
-                          }}
-                        >
-                          Abrir ocorrência
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })()}
 
                 <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
                   <div style={{ ...styles.itemMeta, marginBottom: 6 }}>Missões associadas</div>
@@ -907,7 +892,45 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   </button>
                 </div>
               </div>
-            ))}
+              )
+
+              return (
+                <>
+                  {gruposOcorrencia.map(({ ocorrencia, objetivos: objetivosGrupo }) => (
+                    <div key={`ocorrencia-${ocorrencia.id}`} style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #dc2626' }}>
+                      <div style={styles.itemMeta}>🔴 Ocorrência</div>
+                      <div style={styles.itemTitle}>{ocorrencia.titulo}</div>
+                      <div style={styles.itemSubtle}>{ocorrencia.tipo} · {ocorrencia.estado}</div>
+                      <div style={styles.buttonRow}>
+                        <button
+                          style={styles.smallButton}
+                          onClick={() => {
+                            setDetalhe({ tipo: 'ocorrencia', dados: ocorrencia })
+                            if (ocorrencia.latitude && ocorrencia.longitude && mapRef.current) {
+                              mapRef.current.setView([ocorrencia.latitude, ocorrencia.longitude], 13)
+                            }
+                          }}
+                        >
+                          Abrir ocorrência
+                        </button>
+                      </div>
+                      <div style={{ marginTop: 8 }}>
+                        {objetivosGrupo.map(renderObjetivoPAO)}
+                      </div>
+                    </div>
+                  ))}
+
+                  {objetivosSemOcorrencia.length > 0 && (
+                    <div style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #94a3b8' }}>
+                      <div style={styles.itemMeta}>⚪ Sem ocorrência associada</div>
+                      <div style={{ marginTop: 8 }}>
+                        {objetivosSemOcorrencia.map(renderObjetivoPAO)}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </div>
         </>
       )
