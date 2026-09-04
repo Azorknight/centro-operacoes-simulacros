@@ -669,6 +669,25 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         <>
           <strong style={styles.sectionTitle}>Plano de Ação Operacional</strong>
           <div style={styles.itemCard}>
+            <div style={styles.itemTitle}>Resumo do PAO</div>
+            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>Síntese automática do estado atual do Plano de Ação Operacional.</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))', gap: 8 }}>
+              {[
+                ['🎯','Objetivos ativos',objetivos.filter(o => !o.arquivado && !['concluido','cancelado'].includes(o.estado)).length],
+                ['🚩','Missões ativas',missoes.filter(m => !['concluida','cancelada'].includes(m.estado)).length],
+                ['🔴','Missões críticas',missoes.filter(m => !['concluida','cancelada'].includes(m.estado) && m.situacao_operacional === 'critica').length],
+                ['⚫','Necessitam reforço',missoes.filter(m => !['concluida','cancelada'].includes(m.estado) && m.situacao_operacional === 'necessita_reforco').length],
+                ['📋','Decisões registadas',decisoesOperacionais.length]
+              ].map(([icone,nome,total]) => (
+                <div key={nome} style={{ ...styles.itemCard, margin: 0, textAlign: 'center' }}>
+                  <div style={{ fontSize: 22 }}>{icone}</div>
+                  <div style={styles.itemTitle}>{total}</div>
+                  <div style={styles.itemSubtle}>{nome}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={styles.itemCard}>
             <div style={styles.itemTitle}>Intenção do Comandante</div>
             <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
               Define a orientação geral da operação e serve de referência para os objetivos e missões.
