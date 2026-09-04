@@ -792,17 +792,37 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             )}
             {(() => {
               const objetivosAtivos = objetivos.filter((o) => !o.arquivado)
+
               const gruposOcorrencia = ocorrencias
                 .map((oc) => ({
                   ocorrencia: oc,
-                  objetivos: objetivosAtivos.filter((o) => o.ocorrencia_id === oc.id)
+                  objetivos: objetivosAtivos.filter((o) =>
+                    Number(o.ocorrencia_id) === Number(oc.id) ||
+                    missoes.some((m) =>
+                      Number(m.objetivo_id) === Number(o.id) &&
+                      Number(m.ocorrencia_id) === Number(oc.id)
+                    )
+                  )
                 }))
                 .filter((grupo) => grupo.objetivos.length > 0)
-              const objetivosSemOcorrencia = objetivosAtivos.filter(
-                (o) => !ocorrencias.some((oc) => oc.id === o.ocorrencia_id)
+
+              const objetivosSemOcorrencia = objetivosAtivos.filter((o) =>
+                !o.ocorrencia_id ||
+                missoes.some((m) =>
+                  Number(m.objetivo_id) === Number(o.id) && !m.ocorrencia_id
+                )
               )
 
-              const renderObjetivoPAO = (o) => (
+              const renderObjetivoPAO = (o, ocorrenciaContexto = null) => {
+                const missoesDoObjetivo = missoes.filter((m) => {
+                  if (Number(m.objetivo_id) !== Number(o.id)) return false
+                  if (ocorrenciaContexto) {
+                    return Number(m.ocorrencia_id) === Number(ocorrenciaContexto.id)
+                  }
+                  return !m.ocorrencia_id
+                })
+
+                return (
                     <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
                 <div style={styles.itemTitle}>🎯 {o.nome}</div>
                 <div style={styles.itemMeta}>{o.prioridade} · {o.estado} · {o.total_missoes || 0} missão(ões)</div>
@@ -811,10 +831,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
                 <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
                   <div style={{ ...styles.itemMeta, marginBottom: 6 }}>Missões associadas</div>
-                  {missoes.filter((m) => m.objetivo_id === o.id).length === 0 && (
-                    <div style={styles.itemSubtle}>Sem missões associadas.</div>
+                  {missoesDoObjetivo.length === 0 && (
+                    <div style={styles.itemSubtle}>Sem missões associadas nesta ocorrência.</div>
                   )}
-                  {missoes.filter((m) => m.objetivo_id === o.id).map((m) => (
+                  {missoesDoObjetivo.map((m) => (
                     <div key={m.id} style={{ ...styles.itemCard, marginTop: 6, cursor: 'pointer' }}
                       onClick={() => setDetalhe({ tipo: 'missao', dados: m })}>
                       <div style={styles.itemTitle}>↳ {m.titulo}</div>
@@ -828,6 +848,27 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         }[m.situacao_operacional] || '🟡 Estável'}
                       </div>
                       {m.responsavel && <div style={styles.itemSubtle}>Responsável: {m.responsavel}</div>}
+                      {(() => {
+                        const idsRecursosMissao = (m.recurso_ids || []).map(Number)
+                        const recursosMissao = recursos.filter((r) =>
+                          idsRecursosMissao.includes(Number(r.id)) ||
+                          Number(r.missao_id) === Number(m.id)
+                        )
+                        return (
+                          <div style={{ marginTop: 7 }}>
+                            <div style={{ ...styles.itemMeta, marginBottom: 4 }}>Recursos atribuídos</div>
+                            {recursosMissao.length === 0 ? (
+                              <div style={styles.itemSubtle}>Sem recursos atribuídos.</div>
+                            ) : (
+                              recursosMissao.map((r) => (
+                                <div key={r.id} style={styles.itemSubtle}>
+                                  {obterIconeRecurso(r.tipo)} {r.indicativo_radio || r.nome} · {r.estado}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )
+                      })()}
                       <div style={styles.buttonRow}>
                         <button style={styles.smallButton} onClick={(e) => {
                           e.stopPropagation()
@@ -892,7 +933,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   </button>
                 </div>
               </div>
-              )
+                )
+              }
 
               return (
                 <>
@@ -915,7 +957,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         </button>
                       </div>
                       <div style={{ marginTop: 8 }}>
-                        {objetivosGrupo.map(renderObjetivoPAO)}
+                        {objetivosGrupo.map((o) => renderObjetivoPAO(o, ocorrencia))}
                       </div>
                     </div>
                   ))}
@@ -924,7 +966,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     <div style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #94a3b8' }}>
                       <div style={styles.itemMeta}>⚪ Sem ocorrência associada</div>
                       <div style={{ marginTop: 8 }}>
-                        {objetivosSemOcorrencia.map(renderObjetivoPAO)}
+                        {objetivosSemOcorrencia.map((o) => renderObjetivoPAO(o, null))}
                       </div>
                     </div>
                   )}
