@@ -797,6 +797,33 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
                 {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
 
+                {(() => {
+                  const ocorrenciaAssociada = ocorrencias.find((oc) => oc.id === o.ocorrencia_id)
+                  if (!ocorrenciaAssociada) {
+                    return <div style={{ ...styles.itemSubtle, marginTop: 8 }}>Ocorrência: Sem ocorrência associada</div>
+                  }
+                  return (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={styles.itemMeta}>🔴 Ocorrência associada</div>
+                      <div style={styles.itemTitle}>{ocorrenciaAssociada.titulo}</div>
+                      <div style={styles.itemSubtle}>{ocorrenciaAssociada.tipo} · {ocorrenciaAssociada.estado}</div>
+                      <div style={styles.buttonRow}>
+                        <button
+                          style={styles.smallButton}
+                          onClick={() => {
+                            setDetalhe({ tipo: 'ocorrencia', dados: ocorrenciaAssociada })
+                            if (ocorrenciaAssociada.latitude && ocorrenciaAssociada.longitude && mapRef.current) {
+                              mapRef.current.setView([ocorrenciaAssociada.latitude, ocorrenciaAssociada.longitude], 13)
+                            }
+                          }}
+                        >
+                          Abrir ocorrência
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
                   <div style={{ ...styles.itemMeta, marginBottom: 6 }}>Missões associadas</div>
                   {missoes.filter((m) => m.objetivo_id === o.id).length === 0 && (
@@ -3032,11 +3059,14 @@ const styles = {
     boxSizing: 'border-box',
     overflow: 'hidden',
     boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+    display: 'flex',
+    flexDirection: 'column',
   },
   rightPanelContent: {
     padding: '12px',
     overflowY: 'auto',
-    height: 'calc(100% - 48px)',
+    flex: 1,
+    minHeight: 0,
     boxSizing: 'border-box',
   },
   tabBar: {
