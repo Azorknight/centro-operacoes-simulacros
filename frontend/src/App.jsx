@@ -185,6 +185,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [novaDecisaoOperacional, setNovaDecisaoOperacional] = useState('')
   const [aGuardarDecisao, setAGuardarDecisao] = useState(false)
   const [mensagemDecisao, setMensagemDecisao] = useState('')
+  const [gruposPAOAbertos, setGruposPAOAbertos] = useState({})
+  const [secaoPAOAberta, setSecaoPAOAberta] = useState(null)
   const modoBloqueado = modoConsulta || modoReplay
 
   useEffect(() => {
@@ -668,6 +670,24 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       return (
         <>
           <strong style={styles.sectionTitle}>Plano de Ação Operacional</strong>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            {[
+              ['resumo', '📊 Resumo'],
+              ['intencao', '🧭 Intenção'],
+              ['situacao', '🚦 Situação'],
+              ['decisoes', `📋 Decisões ${decisoesOperacionais.length}`]
+            ].map(([id, nome]) => (
+              <button
+                key={id}
+                style={{ ...styles.smallButton, fontWeight: secaoPAOAberta === id ? 700 : 500 }}
+                onClick={() => setSecaoPAOAberta((atual) => atual === id ? null : id)}
+              >
+                {nome}
+              </button>
+            ))}
+          </div>
+
+          {secaoPAOAberta === 'resumo' && (
           <div style={styles.itemCard}>
             <div style={styles.itemTitle}>Resumo do PAO</div>
             <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>Síntese automática do estado atual do Plano de Ação Operacional.</div>
@@ -687,6 +707,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               ))}
             </div>
           </div>
+          )}
+
+          {secaoPAOAberta === 'intencao' && (
           <div style={styles.itemCard}>
             <div style={styles.itemTitle}>Intenção do Comandante</div>
             <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
@@ -715,7 +738,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               <div style={{ ...styles.itemSubtle, marginTop: 8 }}>{mensagemIntencao}</div>
             )}
           </div>
+          )}
 
+          {secaoPAOAberta === 'situacao' && (
           <div style={styles.itemCard}>
             <div style={styles.itemTitle}>Situação Operacional</div>
             <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
@@ -743,7 +768,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               })}
             </div>
           </div>
+          )}
 
+          {secaoPAOAberta === 'decisoes' && (
           <div style={styles.itemCard}>
             <div style={styles.itemTitle}>Decisões Operacionais</div>
             <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
@@ -776,6 +803,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               ))}
             </div>
           </div>
+          )}
 
           <div style={styles.itemCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -940,38 +968,45 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
               return (
                 <>
-                  {gruposOcorrencia.map(({ ocorrencia, objetivos: objetivosGrupo }) => (
-                    <div key={`ocorrencia-${ocorrencia.id}`} style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #dc2626' }}>
-                      <div style={styles.itemMeta}>🔴 Ocorrência</div>
-                      <div style={styles.itemTitle}>{ocorrencia.titulo}</div>
-                      <div style={styles.itemSubtle}>{ocorrencia.tipo} · {ocorrencia.estado}</div>
-                      <div style={styles.buttonRow}>
-                        <button
-                          style={styles.smallButton}
-                          onClick={() => {
-                            setDetalhe({ tipo: 'ocorrencia', dados: ocorrencia })
-                            if (ocorrencia.latitude && ocorrencia.longitude && mapRef.current) {
-                              mapRef.current.setView([ocorrencia.latitude, ocorrencia.longitude], 13)
-                            }
-                          }}
-                        >
-                          Abrir ocorrência
-                        </button>
+                  {gruposOcorrencia.map(({ ocorrencia, objetivos: objetivosGrupo }) => {
+                    const chaveGrupo = `ocorrencia-${ocorrencia.id}`
+                    const grupoAberto = !!gruposPAOAbertos[chaveGrupo]
+                    const totalMissoesGrupo = missoes.filter((m) => Number(m.ocorrencia_id) === Number(ocorrencia.id) && objetivosGrupo.some((o) => Number(o.id) === Number(m.objetivo_id))).length
+                    return (
+                      <div key={chaveGrupo} style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #dc2626' }}>
+                        <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                          onClick={() => setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto }))}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto })) } }}>
+                          <div>
+                            <div style={styles.itemTitle}>{grupoAberto ? '▼' : '▶'} 🔴 {ocorrencia.titulo}</div>
+                            <div style={styles.itemSubtle}>{ocorrencia.tipo} · {ocorrencia.estado}</div>
+                          </div>
+                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
+                        </div>
+                        {grupoAberto && (<>
+                          <div style={styles.buttonRow}><button style={styles.smallButton} onClick={() => { setDetalhe({ tipo: 'ocorrencia', dados: ocorrencia }); if (ocorrencia.latitude && ocorrencia.longitude && mapRef.current) mapRef.current.setView([ocorrencia.latitude, ocorrencia.longitude], 13) }}>Abrir ocorrência</button></div>
+                          <div style={{ marginTop: 8 }}>{objetivosGrupo.map((o) => renderObjetivoPAO(o, ocorrencia))}</div>
+                        </>)}
                       </div>
-                      <div style={{ marginTop: 8 }}>
-                        {objetivosGrupo.map((o) => renderObjetivoPAO(o, ocorrencia))}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
-                  {objetivosSemOcorrencia.length > 0 && (
-                    <div style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #94a3b8' }}>
-                      <div style={styles.itemMeta}>⚪ Sem ocorrência associada</div>
-                      <div style={{ marginTop: 8 }}>
-                        {objetivosSemOcorrencia.map((o) => renderObjetivoPAO(o, null))}
+                  {objetivosSemOcorrencia.length > 0 && (() => {
+                    const chaveGrupo = 'sem-ocorrencia'
+                    const grupoAberto = !!gruposPAOAbertos[chaveGrupo]
+                    const totalMissoesGrupo = missoes.filter((m) => !m.ocorrencia_id && objetivosSemOcorrencia.some((o) => Number(o.id) === Number(m.objetivo_id))).length
+                    return (
+                      <div style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #94a3b8' }}>
+                        <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                          onClick={() => setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto }))}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto })) } }}>
+                          <div style={styles.itemTitle}>{grupoAberto ? '▼' : '▶'} ⚪ Sem ocorrência associada</div>
+                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
+                        </div>
+                        {grupoAberto && <div style={{ marginTop: 8 }}>{objetivosSemOcorrencia.map((o) => renderObjetivoPAO(o, null))}</div>}
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                 </>
               )
             })()}
