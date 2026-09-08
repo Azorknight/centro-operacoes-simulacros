@@ -825,7 +825,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 return (
                     <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
                 <div style={styles.itemTitle}>🎯 {o.nome}</div>
-                <div style={styles.itemMeta}>{o.prioridade} · {o.estado} · {o.total_missoes || 0} missão(ões)</div>
+                <div style={styles.itemMeta}>
+                  {o.prioridade} · {o.estado} · {missoesDoObjetivo.length} {missoesDoObjetivo.length === 1 ? 'missão' : 'missões'} {ocorrenciaContexto ? 'nesta ocorrência' : 'sem ocorrência'}
+                </div>
                 {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
                 {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
 
