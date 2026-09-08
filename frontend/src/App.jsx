@@ -922,7 +922,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         responsavel: '',
                         notas: '',
                         situacao_operacional: 'estavel',
-                        ocorrencia_id: o.ocorrencia_id || null,
+                        ocorrencia_id: ocorrenciaContexto?.id || null,
                         objetivo_id: o.id
                       })
                       setMostrarFormMissao(true)
@@ -3876,6 +3876,7 @@ function App() {
 }
 
 export default App
+
 
 
 
