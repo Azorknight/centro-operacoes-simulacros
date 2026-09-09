@@ -971,7 +971,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   {gruposOcorrencia.map(({ ocorrencia, objetivos: objetivosGrupo }) => {
                     const chaveGrupo = `ocorrencia-${ocorrencia.id}`
                     const grupoAberto = !!gruposPAOAbertos[chaveGrupo]
-                    const totalMissoesGrupo = missoes.filter((m) => Number(m.ocorrencia_id) === Number(ocorrencia.id) && objetivosGrupo.some((o) => Number(o.id) === Number(m.objetivo_id))).length
+                    const missoesGrupo = missoes.filter((m) => Number(m.ocorrencia_id) === Number(ocorrencia.id) && objetivosGrupo.some((o) => Number(o.id) === Number(m.objetivo_id)))
+                    const totalMissoesGrupo = missoesGrupo.length
+                    const pesosSituacao = { necessita_reforco: 5, critica: 4, complexa: 3, estavel: 2, sob_controlo: 1 }
+                    const situacaoMaisGrave = missoesGrupo.filter((m) => !['concluida', 'cancelada'].includes(m.estado)).reduce((a, m) => {
+                      const atual = m.situacao_operacional || 'estavel'
+                      return (pesosSituacao[atual] || 0) > (pesosSituacao[a] || 0) ? atual : a
+                    }, null)
+                    const iconeSituacao = { necessita_reforco: '⚫', critica: '🔴', complexa: '🟠', estavel: '🟡', sob_controlo: '🟢' }[situacaoMaisGrave] || '⚪'
                     return (
                       <div key={chaveGrupo} style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #dc2626' }}>
                         <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
@@ -981,7 +988,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                             <div style={styles.itemTitle}>{grupoAberto ? '▼' : '▶'} 🔴 {ocorrencia.titulo}</div>
                             <div style={styles.itemSubtle}>{ocorrencia.tipo} · {ocorrencia.estado}</div>
                           </div>
-                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
+                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{iconeSituacao} · {totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
                         </div>
                         {grupoAberto && (<>
                           <div style={styles.buttonRow}><button style={styles.smallButton} onClick={() => { setDetalhe({ tipo: 'ocorrencia', dados: ocorrencia }); if (ocorrencia.latitude && ocorrencia.longitude && mapRef.current) mapRef.current.setView([ocorrencia.latitude, ocorrencia.longitude], 13) }}>Abrir ocorrência</button></div>
@@ -994,14 +1001,21 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   {objetivosSemOcorrencia.length > 0 && (() => {
                     const chaveGrupo = 'sem-ocorrencia'
                     const grupoAberto = !!gruposPAOAbertos[chaveGrupo]
-                    const totalMissoesGrupo = missoes.filter((m) => !m.ocorrencia_id && objetivosSemOcorrencia.some((o) => Number(o.id) === Number(m.objetivo_id))).length
+                    const missoesGrupo = missoes.filter((m) => !m.ocorrencia_id && objetivosSemOcorrencia.some((o) => Number(o.id) === Number(m.objetivo_id)))
+                    const totalMissoesGrupo = missoesGrupo.length
+                    const pesosSituacao = { necessita_reforco: 5, critica: 4, complexa: 3, estavel: 2, sob_controlo: 1 }
+                    const situacaoMaisGrave = missoesGrupo.filter((m) => !['concluida', 'cancelada'].includes(m.estado)).reduce((a, m) => {
+                      const atual = m.situacao_operacional || 'estavel'
+                      return (pesosSituacao[atual] || 0) > (pesosSituacao[a] || 0) ? atual : a
+                    }, null)
+                    const iconeSituacao = { necessita_reforco: '⚫', critica: '🔴', complexa: '🟠', estavel: '🟡', sob_controlo: '🟢' }[situacaoMaisGrave] || '⚪'
                     return (
                       <div style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #94a3b8' }}>
                         <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
                           onClick={() => setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto }))}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto })) } }}>
                           <div style={styles.itemTitle}>{grupoAberto ? '▼' : '▶'} ⚪ Sem ocorrência associada</div>
-                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
+                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{iconeSituacao} · {totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
                         </div>
                         {grupoAberto && <div style={{ marginTop: 8 }}>{objetivosSemOcorrencia.map((o) => renderObjetivoPAO(o, null))}</div>}
                       </div>
