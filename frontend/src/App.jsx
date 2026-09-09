@@ -498,9 +498,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     doc.save('relatorio_operacional.pdf')
   }
 
-  async function pedirDadosObjetivo(objetivo = null) {
+  async function pedirDadosObjetivo(objetivo = null, ocorrenciaContexto = null) {
     const modeloEscolhido = !objetivo && modelosObjetivo.length > 0
-      ? window.prompt(`Modelo (opcional):\n${modelosObjetivo.map(m => `${m.id} - ${m.nome}`).join('\n')}`, '')
+      ? window.prompt(`MODELO DE OBJETIVO (opcional)\n\nPode escolher um modelo previamente guardado\nou deixar em branco para criar um objetivo novo.\n\n${modelosObjetivo.map(m => `${m.id} - ${m.nome}`).join('\n')}`, '')
       : null
     const modelo = modelosObjetivo.find(m => String(m.id) === String(modeloEscolhido))
     const nome = window.prompt('Nome do objetivo:', objetivo?.nome || modelo?.nome || '')
@@ -509,7 +509,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     const prioridade = window.prompt('Prioridade: critica, alta, normal ou baixa', objetivo?.prioridade || modelo?.prioridade || 'normal') || 'normal'
     const estado = window.prompt('Estado: planeado, em_preparacao, em_execucao, suspenso, concluido ou cancelado', objetivo?.estado || 'planeado') || 'planeado'
     const responsavel = window.prompt('Responsável (opcional):', objetivo?.responsavel || '') || null
-    const ocorrenciaTexto = window.prompt(`Ocorrência associada (ID, opcional):\n${ocorrencias.map(o => `${o.id} - ${o.titulo}`).join('\n')}`, objetivo?.ocorrencia_id || '')
+    const ocorrenciaTexto = ocorrenciaContexto?.id
+      ? String(ocorrenciaContexto.id)
+      : window.prompt(`Ocorrência associada (ID, opcional):\n${ocorrencias.map(o => `${o.id} - ${o.titulo}`).join('\n')}`, objetivo?.ocorrencia_id || '')
     return {
       nome: nome.trim(), descricao, prioridade, estado, responsavel,
       ocorrencia_id: ocorrenciaTexto ? Number(ocorrenciaTexto) : null,
@@ -519,8 +521,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     }
   }
 
-  async function novoObjetivo() {
-    const dados = await pedirDadosObjetivo()
+  async function novoObjetivo(ocorrenciaContexto = null) {
+    const dados = await pedirDadosObjetivo(null, ocorrenciaContexto)
     if (!dados) return
     await criarObjetivo(dados)
     await atualizarDados()
@@ -991,7 +993,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                           <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{iconeSituacao} · {totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
                         </div>
                         {grupoAberto && (<>
-                          <div style={styles.buttonRow}><button style={styles.smallButton} onClick={() => { setDetalhe({ tipo: 'ocorrencia', dados: ocorrencia }); if (ocorrencia.latitude && ocorrencia.longitude && mapRef.current) mapRef.current.setView([ocorrencia.latitude, ocorrencia.longitude], 13) }}>Abrir ocorrência</button></div>
+                          <div style={styles.buttonRow}>
+                            <button style={styles.smallButton} onClick={() => { setDetalhe({ tipo: 'ocorrencia', dados: ocorrencia }); if (ocorrencia.latitude && ocorrencia.longitude && mapRef.current) mapRef.current.setView([ocorrencia.latitude, ocorrencia.longitude], 13) }}>Abrir ocorrência</button>
+                            <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => novoObjetivo(ocorrencia)}>➕ Novo objetivo</button>
+                          </div>
                           <div style={{ marginTop: 8 }}>{objetivosGrupo.map((o) => renderObjetivoPAO(o, ocorrencia))}</div>
                         </>)}
                       </div>
