@@ -2304,6 +2304,21 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         <div style={styles.detailPanel}>
           <div style={styles.panelTitle}>Nova missão</div>
 
+          {(formMissao.ocorrencia_id || formMissao.objetivo_id) && (
+            <div style={{ ...styles.itemCard, marginBottom: 10, background: '#f8fafc' }}>
+              {formMissao.ocorrencia_id && (
+                <div style={styles.itemSubtle}>
+                  <strong>🔴 Ocorrência:</strong> {ocorrencias.find((o) => Number(o.id) === Number(formMissao.ocorrencia_id))?.titulo || `ID ${formMissao.ocorrencia_id}`}
+                </div>
+              )}
+              {formMissao.objetivo_id && (
+                <div style={{ ...styles.itemSubtle, marginTop: formMissao.ocorrencia_id ? 4 : 0 }}>
+                  <strong>🎯 Objetivo:</strong> {objetivos.find((o) => Number(o.id) === Number(formMissao.objetivo_id))?.nome || `ID ${formMissao.objetivo_id}`}
+                </div>
+              )}
+            </div>
+          )}
+
           <input
             style={styles.input}
             placeholder="Título"
