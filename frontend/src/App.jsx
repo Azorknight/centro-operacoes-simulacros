@@ -139,6 +139,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     titulo: '',
     descricao: '',
     prioridade: 'media',
+    estado: 'planeada',
     responsavel: '',
     notas: '',
     situacao_operacional: 'estavel',
@@ -949,6 +950,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         titulo: '',
                         descricao: '',
                         prioridade: 'media',
+                        estado: 'planeada',
                         responsavel: '',
                         notas: '',
                         situacao_operacional: 'estavel',
@@ -2369,6 +2371,17 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <select
             style={styles.input}
+            value={formMissao.estado || 'planeada'}
+            onChange={(e) =>
+              setFormMissao({ ...formMissao, estado: e.target.value })
+            }
+          >
+            <option value="planeada">Estado inicial: Planeada</option>
+            <option value="em_execucao">Estado inicial: Em execução</option>
+          </select>
+
+          <select
+            style={styles.input}
             value={formMissao.prioridade}
             onChange={(e) =>
               setFormMissao({ ...formMissao, prioridade: e.target.value })
@@ -2388,7 +2401,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 titulo: formMissao.titulo,
                 descricao: formMissao.descricao,
                 prioridade: formMissao.prioridade,
-                estado: 'planeada',
+                estado: formMissao.estado || 'planeada',
                 responsavel: formMissao.responsavel || null,
                 notas: formMissao.notas || null,
                 situacao_operacional: formMissao.situacao_operacional || 'estavel',
