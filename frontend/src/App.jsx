@@ -873,6 +873,30 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   return !m.ocorrencia_id
                 })
 
+                const pesosSituacaoObjetivo = {
+                  necessita_reforco: 5,
+                  critica: 4,
+                  complexa: 3,
+                  estavel: 2,
+                  sob_controlo: 1
+                }
+                const situacaoObjetivo = missoesDoObjetivo
+                  .filter((m) => !['concluida', 'cancelada'].includes(m.estado))
+                  .reduce((maisGrave, m) => {
+                    const atual = m.situacao_operacional || 'estavel'
+                    return (pesosSituacaoObjetivo[atual] || 0) >
+                      (pesosSituacaoObjetivo[maisGrave] || 0)
+                      ? atual
+                      : maisGrave
+                  }, null)
+                const iconeSituacaoObjetivo = {
+                  necessita_reforco: '⚫',
+                  critica: '🔴',
+                  complexa: '🟠',
+                  estavel: '🟡',
+                  sob_controlo: '🟢'
+                }[situacaoObjetivo] || '⚪'
+
                 return (
                     <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
                 <div
@@ -889,8 +913,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 >
                   <div style={{ minWidth: 0 }}>
                     <div style={styles.itemTitle}>🎯 {o.nome}</div>
-                    <div style={styles.itemMeta}>
-                      {missoesDoObjetivo.length} {missoesDoObjetivo.length === 1 ? 'missão' : 'missões'}
+                    <div style={{ ...styles.itemMeta, display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span>{missoesDoObjetivo.length} {missoesDoObjetivo.length === 1 ? 'missão' : 'missões'}</span>
+                      <span title="Situação mais grave entre as missões ativas">{iconeSituacaoObjetivo}</span>
                     </div>
                   </div>
                   <div style={{ fontWeight: 700 }}>{Number(objetivoPAOExpandido) === Number(o.id) ? '⌃' : '›'}</div>
