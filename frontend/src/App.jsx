@@ -188,6 +188,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [mensagemDecisao, setMensagemDecisao] = useState('')
   const [gruposPAOAbertos, setGruposPAOAbertos] = useState({})
   const [secaoPAOAberta, setSecaoPAOAberta] = useState(null)
+  const [missaoPAOExpandida, setMissaoPAOExpandida] = useState(null)
   const modoBloqueado = modoConsulta || modoReplay
 
   useEffect(() => {
@@ -867,89 +868,69 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   {missoesDoObjetivo.length === 0 && (
                     <div style={styles.itemSubtle}>Sem missões associadas nesta ocorrência.</div>
                   )}
-                  {missoesDoObjetivo.map((m) => (
-                    <div key={m.id} style={{ ...styles.itemCard, marginTop: 6, cursor: 'pointer' }}
-                      onClick={() => setDetalhe({ tipo: 'missao', dados: m })}>
-                      <div style={styles.itemTitle}>↳ {m.titulo}</div>
-                      <div style={styles.itemMeta}>
-                        {{
-                          baixa: '🟢 Baixa',
-                          media: '🔵 Média',
-                          alta: '🟠 Alta',
-                          critica: '🔴 Crítica'
-                        }[m.prioridade] || '🔵 Média'} · {{
-                          recebida: '📥 Recebida',
-                          planeada: '📝 Planeada',
-                          em_execucao: '▶️ Em execução',
-                          concluida: '✅ Concluída',
-                          cancelada: '⛔ Cancelada'
-                        }[m.estado] || m.estado} · {{
-                          sob_controlo: '🟢 Sob controlo',
-                          estavel: '🟡 Estável',
-                          complexa: '🟠 Complexa',
-                          critica: '🔴 Crítica',
-                          necessita_reforco: '⚫ Necessita de reforço'
-                        }[m.situacao_operacional] || '🟡 Estável'}
-                      </div>
-                      {m.responsavel && <div style={styles.itemSubtle}>Responsável: {m.responsavel}</div>}
-                      {(() => {
-                        const idsRecursosMissao = (m.recurso_ids || []).map(Number)
-                        const recursosMissao = recursos.filter((r) =>
-                          idsRecursosMissao.includes(Number(r.id)) ||
-                          Number(r.missao_id) === Number(m.id)
-                        )
-                        return (
-                          <div style={{ marginTop: 7 }}>
-                            <div style={{ ...styles.itemMeta, marginBottom: 4 }}>Recursos atribuídos</div>
-                            {recursosMissao.length === 0 ? (
-                              <div style={styles.itemSubtle}>Sem recursos atribuídos.</div>
-                            ) : (
-                              recursosMissao.map((r) => (
-                                <div key={r.id} style={styles.itemSubtle}>
-                                  {obterIconeRecurso(r.tipo)} {r.indicativo_radio || r.nome} · {r.estado}
-                                </div>
-                              ))
-                            )}
+                  {missoesDoObjetivo.map((m) => {
+                    const expandida = Number(missaoPAOExpandida) === Number(m.id)
+                    const situacaoTexto = {
+                      sob_controlo: '🟢 Sob controlo', estavel: '🟡 Estável',
+                      complexa: '🟠 Complexa', critica: '🔴 Crítica',
+                      necessita_reforco: '⚫ Necessita de reforço'
+                    }[m.situacao_operacional] || '🟡 Estável'
+                    const estadoTexto = {
+                      recebida: '📥 Recebida', planeada: '📝 Planeada',
+                      em_execucao: '▶️ Em execução', concluida: '✅ Concluída',
+                      cancelada: '⛔ Cancelada'
+                    }[m.estado] || m.estado
+                    return (
+                      <div key={m.id} style={{ ...styles.itemCard, marginTop: 6 }}>
+                        <div role="button" tabIndex={0}
+                          style={{ cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}
+                          onClick={() => setMissaoPAOExpandida(a => Number(a) === Number(m.id) ? null : m.id)}
+                          onKeyDown={(e) => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); setMissaoPAOExpandida(a => Number(a)===Number(m.id)?null:m.id) } }}>
+                          <div style={{minWidth:0}}>
+                            <div style={styles.itemTitle}>↳ {m.titulo}</div>
+                            <div style={{ ...styles.itemMeta, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                              <span>{estadoTexto}</span><span>{situacaoTexto}</span>
+                            </div>
                           </div>
-                        )
-                      })()}
-                      <div style={styles.buttonRow}>
-                        <button style={styles.smallButton} onClick={(e) => {
-                          e.stopPropagation()
-                          setDetalhe({ tipo: 'missao', dados: m })
-                        }}>Abrir</button>
-                        <button
-                          style={styles.smallButton}
-                          disabled={modoBloqueado || ['concluida', 'cancelada'].includes(m.estado)}
-                          onClick={async (e) => {
-                            e.stopPropagation()
-                            const situacao = window.prompt(
-                              'Situação: sob_controlo, estavel, complexa, critica ou necessita_reforco',
-                              m.situacao_operacional || 'estavel'
-                            )
-                            if (!situacao) return
-                            const validas = ['sob_controlo', 'estavel', 'complexa', 'critica', 'necessita_reforco']
-                            if (!validas.includes(situacao)) {
-                              window.alert('Situação inválida.')
-                              return
-                            }
-                            await alterarSituacaoMissao(m.id, situacao)
-                            await refresh()
-                          }}
-                        >Alterar situação</button>
-                        <button
-                          style={styles.smallButton}
-                          disabled={modoBloqueado || ['concluida', 'cancelada'].includes(m.estado)}
-                          onClick={async (e) => {
-                            e.stopPropagation()
-                            if (!window.confirm(`Concluir a missão "${m.titulo}"?`)) return
-                            await concluirMissao(m.id)
-                            await refresh()
-                          }}
-                        >Concluir</button>
+                          <div style={{fontWeight:700}}>{expandida ? '⌃' : '›'}</div>
+                        </div>
+                        {m.estado === 'planeada' && !expandida && (
+                          <div style={{marginTop:6}}>
+                            <button style={styles.smallButton} disabled={modoBloqueado}
+                              onClick={async(e)=>{e.stopPropagation();await alterarEstadoMissao(m.id,'em_execucao');await refresh()}}>
+                              ▶️ Iniciar
+                            </button>
+                          </div>
+                        )}
+                        {expandida && (
+                          <div style={{marginTop:8,paddingTop:8,borderTop:'1px solid #e2e8f0'}}>
+                            <div style={styles.itemMeta}>Prioridade: {{
+                              baixa:'🟢 Baixa', media:'🔵 Média', alta:'🟠 Alta', critica:'🔴 Crítica'
+                            }[m.prioridade] || '🔵 Média'}</div>
+                            {m.responsavel && <div style={styles.itemSubtle}>Responsável: {m.responsavel}</div>}
+                            {(() => {
+                              const ids=(m.recurso_ids||[]).map(Number)
+                              const rs=recursos.filter(r=>ids.includes(Number(r.id))||Number(r.missao_id)===Number(m.id))
+                              return <div style={{marginTop:7}}>
+                                <div style={{...styles.itemMeta,marginBottom:4}}>Recursos atribuídos</div>
+                                {rs.length===0 ? <div style={styles.itemSubtle}>Sem recursos atribuídos.</div> :
+                                  rs.map(r=><div key={r.id} style={styles.itemSubtle}>{obterIconeRecurso(r.tipo)} {r.indicativo_radio||r.nome} · {r.estado}</div>)}
+                              </div>
+                            })()}
+                            <div style={{ ...styles.buttonRow, flexWrap: 'wrap' }}>
+                              <button style={styles.smallButton} onClick={(e)=>{e.stopPropagation();setDetalhe({tipo:'missao',dados:m})}}>Abrir</button>
+                              {m.estado==='planeada' && <button style={styles.smallButton} disabled={modoBloqueado}
+                                onClick={async(e)=>{e.stopPropagation();await alterarEstadoMissao(m.id,'em_execucao');await refresh()}}>▶️ Iniciar</button>}
+                              <button style={styles.smallButton} disabled={modoBloqueado||['concluida','cancelada'].includes(m.estado)}
+                                onClick={async(e)=>{e.stopPropagation();const s=window.prompt('Situação: sob_controlo, estavel, complexa, critica ou necessita_reforco',m.situacao_operacional||'estavel');if(!s)return;const v=['sob_controlo','estavel','complexa','critica','necessita_reforco'];if(!v.includes(s)){window.alert('Situação inválida.');return}await alterarSituacaoMissao(m.id,s);await refresh()}}>Situação</button>
+                              <button style={styles.smallButton} disabled={modoBloqueado||['concluida','cancelada'].includes(m.estado)}
+                                onClick={async(e)=>{e.stopPropagation();if(!window.confirm(`Concluir a missão "${m.titulo}"?`))return;await concluirMissao(m.id);await refresh()}}>Concluir</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 <div style={styles.buttonRow}>
