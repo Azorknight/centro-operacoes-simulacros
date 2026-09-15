@@ -916,6 +916,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     <div style={{ ...styles.itemMeta, display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
                       <span>{missoesDoObjetivo.length} {missoesDoObjetivo.length === 1 ? 'missão' : 'missões'}</span>
                       <span title="Situação mais grave entre as missões ativas">{iconeSituacaoObjetivo}</span>
+                      {['critica', 'necessita_reforco'].includes(situacaoObjetivo) && (
+                        <span
+                          title={situacaoObjetivo === 'critica' ? 'Existe pelo menos uma missão crítica' : 'Existe pelo menos uma missão que necessita de reforço'}
+                          style={{ fontWeight: 800, fontSize: 11 }}
+                        >
+                          ATENÇÃO
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div style={{ fontWeight: 700 }}>{Number(objetivoPAOExpandido) === Number(o.id) ? '⌃' : '›'}</div>
