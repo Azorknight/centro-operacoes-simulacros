@@ -872,7 +872,18 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       onClick={() => setDetalhe({ tipo: 'missao', dados: m })}>
                       <div style={styles.itemTitle}>↳ {m.titulo}</div>
                       <div style={styles.itemMeta}>
-                        {m.prioridade || 'media'} · {m.estado} · {{
+                        {{
+                          baixa: '🟢 Baixa',
+                          media: '🔵 Média',
+                          alta: '🟠 Alta',
+                          critica: '🔴 Crítica'
+                        }[m.prioridade] || '🔵 Média'} · {{
+                          recebida: '📥 Recebida',
+                          planeada: '📝 Planeada',
+                          em_execucao: '▶️ Em execução',
+                          concluida: '✅ Concluída',
+                          cancelada: '⛔ Cancelada'
+                        }[m.estado] || m.estado} · {{
                           sob_controlo: '🟢 Sob controlo',
                           estavel: '🟡 Estável',
                           complexa: '🟠 Complexa',
