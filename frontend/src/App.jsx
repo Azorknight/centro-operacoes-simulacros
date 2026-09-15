@@ -189,6 +189,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [gruposPAOAbertos, setGruposPAOAbertos] = useState({})
   const [secaoPAOAberta, setSecaoPAOAberta] = useState(null)
   const [missaoPAOExpandida, setMissaoPAOExpandida] = useState(null)
+  const [objetivoPAOExpandido, setObjetivoPAOExpandido] = useState(null)
   const modoBloqueado = modoConsulta || modoReplay
 
   useEffect(() => {
@@ -856,12 +857,33 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
                 return (
                     <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
-                <div style={styles.itemTitle}>🎯 {o.nome}</div>
-                <div style={styles.itemMeta}>
-                  {o.prioridade} · {o.estado} · {missoesDoObjetivo.length} {missoesDoObjetivo.length === 1 ? 'missão' : 'missões'} {ocorrenciaContexto ? 'nesta ocorrência' : 'sem ocorrência'}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                  onClick={() => setObjetivoPAOExpandido((atual) => Number(atual) === Number(o.id) ? null : o.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setObjetivoPAOExpandido((atual) => Number(atual) === Number(o.id) ? null : o.id)
+                    }
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={styles.itemTitle}>🎯 {o.nome}</div>
+                    <div style={styles.itemMeta}>
+                      {missoesDoObjetivo.length} {missoesDoObjetivo.length === 1 ? 'missão' : 'missões'}
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 700 }}>{Number(objetivoPAOExpandido) === Number(o.id) ? '⌃' : '›'}</div>
                 </div>
-                {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
-                {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
+
+                {Number(objetivoPAOExpandido) === Number(o.id) && (<>
+                  <div style={{ ...styles.itemMeta, marginTop: 7 }}>
+                    {o.prioridade} · {o.estado}
+                  </div>
+                  {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
+                  {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
 
                 <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
                   <div style={{ ...styles.itemMeta, marginBottom: 6 }}>Missões associadas</div>
@@ -958,6 +980,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     Editar
                   </button>
                 </div>
+                </>)}
               </div>
                 )
               }
