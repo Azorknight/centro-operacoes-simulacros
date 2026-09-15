@@ -950,7 +950,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         style={styles.smallButton}
                         disabled={modoBloqueado}
                         onClick={async () => {
-                          if (!window.confirm(`Concluir o objetivo "${o.nome}"?`)) return
+                          const missoesAtivas = missoesDoObjetivo.filter(
+                            (m) => !['concluida', 'cancelada'].includes(m.estado)
+                          )
+                          const totalAtivas = missoesAtivas.length
+                          const mensagem = totalAtivas > 0
+                            ? `⚠️ Este objetivo ainda tem ${totalAtivas} ${totalAtivas === 1 ? 'missão ativa' : 'missões ativas'}.\n\nPretende mesmo concluir o objetivo "${o.nome}"?\n\nAs missões não serão alteradas automaticamente.`
+                            : `Concluir o objetivo "${o.nome}"?`
+                          if (!window.confirm(mensagem)) return
                           await alterarEstadoObjetivoPAO(o, 'concluido')
                         }}
                       >
