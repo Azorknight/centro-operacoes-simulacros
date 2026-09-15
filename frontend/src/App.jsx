@@ -896,6 +896,11 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   estavel: '🟡',
                   sob_controlo: '🟢'
                 }[situacaoObjetivo] || '⚪'
+                const totalMissoesAtivasObjetivo = missoesDoObjetivo.filter(
+                  (m) => !['concluida', 'cancelada'].includes(m.estado)
+                ).length
+                const objetivoConcluidoComMissoesAtivas =
+                  o.estado === 'concluido' && totalMissoesAtivasObjetivo > 0
 
                 return (
                     <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
@@ -971,6 +976,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       >
                         ✅ Concluir objetivo
                       </button>
+                    </div>
+                  )}
+                  {objetivoConcluidoComMissoesAtivas && (
+                    <div
+                      title={`${totalMissoesAtivasObjetivo} ${totalMissoesAtivasObjetivo === 1 ? 'missão ativa' : 'missões ativas'} neste objetivo concluído`}
+                      style={{ marginTop: 6, fontSize: 11, fontWeight: 700 }}
+                    >
+                      ⚠️ Objetivo concluído com missões ativas
                     </div>
                   )}
                   {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
