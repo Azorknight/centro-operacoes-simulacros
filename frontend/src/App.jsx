@@ -538,6 +538,24 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     await atualizarDados()
   }
 
+  async function alterarEstadoObjetivoPAO(objetivo, novoEstado) {
+    if (modoBloqueado) return
+    await atualizarObjetivo(objetivo.id, {
+      nome: objetivo.nome,
+      descricao: objetivo.descricao || '',
+      prioridade: objetivo.prioridade || 'normal',
+      estado: novoEstado,
+      responsavel: objetivo.responsavel || null,
+      ocorrencia_id: objetivo.ocorrencia_id || null,
+      modelo_id: objetivo.modelo_id || null,
+      latitude: objetivo.latitude || null,
+      longitude: objetivo.longitude || null,
+      notas: objetivo.notas || null,
+      arquivado: objetivo.arquivado || false
+    })
+    await atualizarDados()
+  }
+
   async function gerirModelosObjetivo() {
     const escolha = window.prompt(`MODELOS DE OBJETIVO\n${modelosObjetivo.map(m => `${m.id} - ${m.nome}`).join('\n')}\n\nEscreva N para novo, E para editar ou A para apagar:`,'N')
     if (!escolha) return
@@ -879,9 +897,42 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 </div>
 
                 {Number(objetivoPAOExpandido) === Number(o.id) && (<>
-                  <div style={{ ...styles.itemMeta, marginTop: 7 }}>
-                    {o.prioridade} · {o.estado}
+                  <div style={{ ...styles.itemMeta, marginTop: 7, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                    <span>{o.prioridade}</span>
+                    <span>{{
+                      planeado: '📝 Planeado',
+                      em_preparacao: '🛠️ Em preparação',
+                      em_execucao: '▶️ Em execução',
+                      suspenso: '⏸️ Suspenso',
+                      concluido: '✅ Concluído',
+                      cancelado: '⛔ Cancelado'
+                    }[o.estado] || o.estado}</span>
                   </div>
+                  {o.estado === 'planeado' && (
+                    <div style={{ marginTop: 6 }}>
+                      <button
+                        style={styles.smallButton}
+                        disabled={modoBloqueado}
+                        onClick={() => alterarEstadoObjetivoPAO(o, 'em_execucao')}
+                      >
+                        ▶️ Iniciar objetivo
+                      </button>
+                    </div>
+                  )}
+                  {o.estado === 'em_execucao' && (
+                    <div style={{ marginTop: 6 }}>
+                      <button
+                        style={styles.smallButton}
+                        disabled={modoBloqueado}
+                        onClick={async () => {
+                          if (!window.confirm(`Concluir o objetivo "${o.nome}"?`)) return
+                          await alterarEstadoObjetivoPAO(o, 'concluido')
+                        }}
+                      >
+                        ✅ Concluir objetivo
+                      </button>
+                    </div>
+                  )}
                   {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
                   {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
 
