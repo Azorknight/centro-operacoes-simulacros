@@ -1016,6 +1016,20 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       </button>
                     </div>
                   )}
+                  {o.estado === 'cancelado' && (
+                    <div style={{ marginTop: 6 }}>
+                      <button
+                        style={styles.smallButton}
+                        disabled={modoBloqueado}
+                        onClick={async () => {
+                          if (!window.confirm(`Reabrir o objetivo "${o.nome}"?\n\nO objetivo voltará ao estado Em execução. As missões associadas não serão alteradas.`)) return
+                          await alterarEstadoObjetivoPAO(o, 'em_execucao')
+                        }}
+                      >
+                        ↩️ Reabrir objetivo
+                      </button>
+                    </div>
+                  )}
                   {o.estado === 'concluido' && (
                     <div style={{ marginTop: 6 }}>
                       <button
