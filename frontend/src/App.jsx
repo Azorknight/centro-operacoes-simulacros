@@ -688,6 +688,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     finally { setAGuardarDecisao(false) }
   }
 
+  const totalObjetivosPAOEmAtencao = objetivos.filter((objetivo) => {
+    if (objetivo.arquivado) return false
+    return missoes.some((m) =>
+      Number(m.objetivo_id) === Number(objetivo.id) &&
+      !['concluida', 'cancelada'].includes(m.estado) &&
+      ['critica', 'necessita_reforco'].includes(m.situacao_operacional)
+    )
+  }).length
+
   function renderAba() {
     if (abaAtiva === 'pao') {
       return (
@@ -697,7 +706,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             {[
               ['resumo', '📊 Resumo'],
               ['intencao', '🧭 Intenção'],
-              ['situacao', '🚦 Situação'],
+              ['situacao', `🚦 Situação${totalObjetivosPAOEmAtencao > 0 ? ` ${totalObjetivosPAOEmAtencao}` : ''}`],
               ['decisoes', `📋 Decisões ${decisoesOperacionais.length}`]
             ].map(([id, nome]) => (
               <button
