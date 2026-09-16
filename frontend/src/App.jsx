@@ -831,7 +831,28 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       <div key={ocorrencia.id} style={{ ...styles.itemCard, marginTop: 6 }}>
                         <div style={styles.itemTitle}>🔴 {ocorrencia.titulo}</div>
                         {objetivosAtencao.map(({ objetivo, situacao }) => (
-                          <div key={objetivo.id} style={{ ...styles.itemSubtle, marginTop: 4 }}>
+                          <div
+                            key={objetivo.id}
+                            role="button"
+                            tabIndex={0}
+                            title="Abrir este objetivo no PAO"
+                            style={{ ...styles.itemSubtle, marginTop: 4, cursor: 'pointer' }}
+                            onClick={() => {
+                              const chaveGrupo = `ocorrencia-${ocorrencia.id}`
+                              setSecaoPAOAberta(null)
+                              setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: true }))
+                              setObjetivoPAOExpandido(objetivo.id)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                const chaveGrupo = `ocorrencia-${ocorrencia.id}`
+                                setSecaoPAOAberta(null)
+                                setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: true }))
+                                setObjetivoPAOExpandido(objetivo.id)
+                              }
+                            }}
+                          >
                             {situacao === 'necessita_reforco' ? '⚫' : '🔴'} 🎯 {objetivo.nome}
                             {' · '}
                             {situacao === 'necessita_reforco' ? 'Necessita de reforço' : 'Crítica'}
