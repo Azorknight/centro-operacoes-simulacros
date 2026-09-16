@@ -1102,6 +1102,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       return (pesosSituacao[atual] || 0) > (pesosSituacao[a] || 0) ? atual : a
                     }, null)
                     const iconeSituacao = { necessita_reforco: '⚫', critica: '🔴', complexa: '🟠', estavel: '🟡', sob_controlo: '🟢' }[situacaoMaisGrave] || '⚪'
+                    const objetivosEmAtencao = objetivosGrupo.filter((objetivo) =>
+                      missoesGrupo.some((m) =>
+                        Number(m.objetivo_id) === Number(objetivo.id) &&
+                        !['concluida', 'cancelada'].includes(m.estado) &&
+                        ['critica', 'necessita_reforco'].includes(m.situacao_operacional)
+                      )
+                    ).length
                     return (
                       <div key={chaveGrupo} style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #dc2626' }}>
                         <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
@@ -1111,7 +1118,12 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                             <div style={styles.itemTitle}>{grupoAberto ? '▼' : '▶'} 🔴 {ocorrencia.titulo}</div>
                             <div style={styles.itemSubtle}>{ocorrencia.tipo} · {ocorrencia.estado}</div>
                           </div>
-                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{iconeSituacao} · {totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
+                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>
+                            {iconeSituacao} · {totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}
+                            {objetivosEmAtencao > 0 && (
+                              <> · {objetivosEmAtencao} {objetivosEmAtencao === 1 ? 'objetivo em atenção' : 'objetivos em atenção'}</>
+                            )}
+                          </div>
                         </div>
                         {grupoAberto && (<>
                           <div style={styles.buttonRow}>
