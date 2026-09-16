@@ -1111,14 +1111,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     ).length
                     return (
                       <div key={chaveGrupo} style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #dc2626' }}>
-                        <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                        <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap', minWidth: 0 }}
                           onClick={() => setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto }))}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto })) } }}>
-                          <div>
-                            <div style={styles.itemTitle}>{grupoAberto ? '▼' : '▶'} 🔴 {ocorrencia.titulo}</div>
-                            <div style={styles.itemSubtle}>{ocorrencia.tipo} · {ocorrencia.estado}</div>
+                          <div style={{ minWidth: 0, flex: '1 1 110px' }}>
+                            <div style={{ ...styles.itemTitle, overflowWrap: 'anywhere' }}>{grupoAberto ? '▼' : '▶'} 🔴 {ocorrencia.titulo}</div>
+                            <div style={{ ...styles.itemSubtle, overflowWrap: 'anywhere' }}>{ocorrencia.tipo} · {ocorrencia.estado}</div>
                           </div>
-                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>
+                          <div style={{ ...styles.itemMeta, flex: '1 1 120px', minWidth: 0, textAlign: 'right', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                             {iconeSituacao} · {totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}
                             {objetivosEmAtencao > 0 && (
                               <> · {objetivosEmAtencao} {objetivosEmAtencao === 1 ? 'objetivo em atenção' : 'objetivos em atenção'}</>
