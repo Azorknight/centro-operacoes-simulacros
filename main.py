@@ -1743,11 +1743,12 @@ def libertar_recurso(recurso_id: int):
 
         nome = recurso[1] or recurso[0]
         conn.execute(text("""
-            INSERT INTO timeline_eventos (tipo, descricao, recurso_id, operacao_id)
-            VALUES ('recurso', :descricao, :recurso_id, :operacao_id)
+            INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
+            VALUES ('recurso', :descricao, :recurso_id, :ocorrencia_id, :operacao_id)
         """), {
             "descricao": f"Recurso libertado: {nome}",
             "recurso_id": recurso_id,
+            "ocorrencia_id": recurso[2],
             "operacao_id": operacao_id
         })
 
