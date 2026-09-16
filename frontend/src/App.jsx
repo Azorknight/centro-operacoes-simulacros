@@ -958,7 +958,17 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     </div>
                   )}
                   {o.estado === 'em_execucao' && (
-                    <div style={{ marginTop: 6 }}>
+                    <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button
+                        style={styles.smallButton}
+                        disabled={modoBloqueado}
+                        onClick={async () => {
+                          if (!window.confirm(`Suspender o objetivo "${o.nome}"?\n\nAs missões associadas não serão alteradas.`)) return
+                          await alterarEstadoObjetivoPAO(o, 'suspenso')
+                        }}
+                      >
+                        ⏸️ Suspender objetivo
+                      </button>
                       <button
                         style={styles.smallButton}
                         disabled={modoBloqueado}
@@ -975,6 +985,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         }}
                       >
                         ✅ Concluir objetivo
+                      </button>
+                    </div>
+                  )}
+                  {o.estado === 'suspenso' && (
+                    <div style={{ marginTop: 6 }}>
+                      <button style={styles.smallButton} disabled={modoBloqueado}
+                        onClick={() => alterarEstadoObjetivoPAO(o, 'em_execucao')}>
+                        ▶️ Retomar objetivo
                       </button>
                     </div>
                   )}
