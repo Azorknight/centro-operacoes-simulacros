@@ -790,6 +790,59 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 )
               })}
             </div>
+
+            {(() => {
+              const missoesAtivas = missoes.filter(
+                (m) => !['concluida', 'cancelada'].includes(m.estado)
+              )
+              const ocorrenciasEmAtencao = ocorrencias.map((ocorrencia) => {
+                const objetivosAtencao = objetivos.filter((o) => !o.arquivado).map((objetivo) => {
+                  const missoesObjetivo = missoesAtivas.filter((m) =>
+                    Number(m.objetivo_id) === Number(objetivo.id) &&
+                    Number(m.ocorrencia_id) === Number(ocorrencia.id)
+                  )
+                  const pertenceOcorrencia =
+                    Number(objetivo.ocorrencia_id) === Number(ocorrencia.id) ||
+                    missoesObjetivo.length > 0
+                  if (!pertenceOcorrencia) return null
+
+                  const necessitaReforco = missoesObjetivo.some(
+                    (m) => m.situacao_operacional === 'necessita_reforco'
+                  )
+                  const critica = missoesObjetivo.some(
+                    (m) => m.situacao_operacional === 'critica'
+                  )
+                  const situacao = necessitaReforco ? 'necessita_reforco' : critica ? 'critica' : null
+                  return situacao ? { objetivo, situacao } : null
+                }).filter(Boolean)
+
+                return objetivosAtencao.length ? { ocorrencia, objetivosAtencao } : null
+              }).filter(Boolean)
+
+              return (
+                <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ ...styles.itemTitle, marginBottom: 6 }}>⚠️ Pontos que exigem atenção</div>
+                  {ocorrenciasEmAtencao.length === 0 ? (
+                    <div style={styles.itemSubtle}>
+                      Não existem ocorrências com objetivos em situação crítica ou a necessitar de reforço.
+                    </div>
+                  ) : (
+                    ocorrenciasEmAtencao.map(({ ocorrencia, objetivosAtencao }) => (
+                      <div key={ocorrencia.id} style={{ ...styles.itemCard, marginTop: 6 }}>
+                        <div style={styles.itemTitle}>🔴 {ocorrencia.titulo}</div>
+                        {objetivosAtencao.map(({ objetivo, situacao }) => (
+                          <div key={objetivo.id} style={{ ...styles.itemSubtle, marginTop: 4 }}>
+                            {situacao === 'necessita_reforco' ? '⚫' : '🔴'} 🎯 {objetivo.nome}
+                            {' · '}
+                            {situacao === 'necessita_reforco' ? 'Necessita de reforço' : 'Crítica'}
+                          </div>
+                        ))}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )
+            })()}
           </div>
           )}
 
