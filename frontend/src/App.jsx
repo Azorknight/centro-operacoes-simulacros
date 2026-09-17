@@ -106,6 +106,7 @@ function criarIconeMissao(cor, selecionada = false) {
 }
 function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null }) {
   const [recursos, setRecursos] = useState([])
+  const [resumoRecursosOperacionais, setResumoRecursosOperacionais] = useState([])
   const [ocorrencias, setOcorrencias] = useState([])
   const [bases, setBases] = useState([])
   const [timeline, setTimeline] = useState([])
@@ -273,7 +274,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         modelosObjetivoData,
         setoresData,
         relatorioData,
-        elementosData
+        elementosData,
+        resumoRecursosOperacionaisData
       ] = await Promise.all([
         obterRecursos(),
         obterOcorrencias(),
@@ -285,7 +287,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         obterModelosObjetivo(),
         obterSetores(mostrarArquivadosSetores),
         obterRelatorio(),
-        obterElementos()
+        obterElementos(),
+        fetch('http://127.0.0.1:8000/recursos-operacionais/resumo').then(r => r.ok ? r.json() : [])
       ])
 
       // Evita que a atualização automática reponha a posição anterior durante o arrasto.
@@ -302,6 +305,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       setSetores(setoresData)
       setRelatorio(relatorioData)
       setElementos(elementosData)
+      setResumoRecursosOperacionais(resumoRecursosOperacionaisData)
     } catch (erro) {
       console.error('Erro ao atualizar dados:', erro)
     }
@@ -698,6 +702,60 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   }).length
 
   function renderAba() {
+    if (abaAtiva === 'recursos_operacionais') {
+      const disponiveis = resumoRecursosOperacionais.filter(r => r.estado === 'disponivel').length
+      const emMissao = resumoRecursosOperacionais.filter(r => r.estado === 'em_missao').length
+      const formatarTempoEmpenhado = (segundos = 0) => {
+        const total = Math.max(0, Number(segundos) || 0)
+        const dias = Math.floor(total / 86400)
+        const horas = Math.floor((total % 86400) / 3600)
+        const minutos = Math.floor((total % 3600) / 60)
+        const segs = total % 60
+        if (dias > 0) return `${dias}d ${horas}h ${minutos}m`
+        if (horas > 0) return `${horas}h ${minutos}m ${segs}s`
+        if (minutos > 0) return `${minutos}m ${segs}s`
+        return `${segs}s`
+      }
+
+      return (
+        <>
+          <strong style={styles.sectionTitle}>📊 Recursos Operacionais</strong>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8, marginBottom:10 }}>
+            {[
+              ['Total', resumoRecursosOperacionais.length],
+              ['🟢 Disponíveis', disponiveis],
+              ['🔴 Em missão', emMissao]
+            ].map(([nome,total]) => (
+              <div key={nome} style={{ ...styles.itemCard, margin:0, textAlign:'center' }}>
+                <div style={{ fontSize:22, fontWeight:800 }}>{total}</div>
+                <div style={styles.itemSubtle}>{nome}</div>
+              </div>
+            ))}
+          </div>
+          {resumoRecursosOperacionais.length === 0 ? (
+            <div style={styles.itemSubtle}>Sem recursos na operação ativa.</div>
+          ) : resumoRecursosOperacionais.map(r => (
+            <div key={r.recurso_id} style={styles.itemCard}>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
+                <div>
+                  <div style={styles.itemTitle}>{r.indicativo_radio || r.nome}</div>
+                  <div style={styles.itemSubtle}>{r.nome} · {r.tipo}</div>
+                </div>
+                <div style={{ fontWeight:700 }}>
+                  {r.estado === 'disponivel' ? '🟢 Disponível' : r.estado === 'em_missao' ? '🔴 Em missão' : r.estado}
+                </div>
+              </div>
+              <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
+                <div><div style={styles.itemMeta}>Ocorrência</div><div>{r.ocorrencia_atual || '—'}</div></div>
+                <div><div style={styles.itemMeta}>Missões</div><div>{r.total_missoes}</div></div>
+                <div><div style={styles.itemMeta}>Tempo empenhado</div><div>{formatarTempoEmpenhado(r.tempo_total_empenhado_segundos)}</div></div>
+              </div>
+            </div>
+          ))}
+        </>
+      )
+    }
+
     if (abaAtiva === 'pao') {
       return (
         <>
@@ -1739,7 +1797,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       {mostrarPainelDireito && (
         <div style={styles.rightPanel}>
         <div style={styles.tabBar}>
-          {['recursos', 'ocorrencias', 'pao', 'setores', 'objetivos', 'missoes', 'ordens', 'timeline'].map((aba) => (
+          {['recursos', 'recursos_operacionais', 'ocorrencias', 'pao', 'setores', 'objetivos', 'missoes', 'ordens', 'timeline'].map((aba) => (
             <button
               key={aba}
               style={{
@@ -1748,7 +1806,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               }}
               onClick={() => setAbaAtiva(aba)}
             >
-              {aba}
+              {aba === 'recursos_operacionais' ? '📊 recursos' : aba}
             </button>
           ))}
         </div>
