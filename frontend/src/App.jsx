@@ -106,9 +106,6 @@ function criarIconeMissao(cor, selecionada = false) {
 }
 function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null }) {
   const [recursos, setRecursos] = useState([])
-  const [resumoRecursosOperacionais, setResumoRecursosOperacionais] = useState([])
-  const [recursoOperacionalExpandido, setRecursoOperacionalExpandido] = useState(null)
-  const [detalheRecursoOperacional, setDetalheRecursoOperacional] = useState(null)
   const [ocorrencias, setOcorrencias] = useState([])
   const [bases, setBases] = useState([])
   const [timeline, setTimeline] = useState([])
@@ -142,12 +139,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     titulo: '',
     descricao: '',
     prioridade: 'media',
-    estado: 'planeada',
     responsavel: '',
     notas: '',
     situacao_operacional: 'estavel',
-    ocorrencia_id: null,
-    objetivo_id: null
+    ocorrencia_id: null
   })
   const [mostrarFormMissao, setMostrarFormMissao] = useState(false)
   const [missaoParaAtribuir, setMissaoParaAtribuir] = useState(null)
@@ -182,36 +177,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [novaNotaMissao, setNovaNotaMissao] = useState({ autor: 'Operador', texto: '' })
   const [pesquisaGlobal, setPesquisaGlobal] = useState('')
   const [mostrarAlertas, setMostrarAlertas] = useState(true)
-  const [intencaoComandante, setIntencaoComandante] = useState(operacaoAtiva?.intencao_comandante || '')
-  const [aGuardarIntencao, setAGuardarIntencao] = useState(false)
-  const [mensagemIntencao, setMensagemIntencao] = useState('')
-  const [decisoesOperacionais, setDecisoesOperacionais] = useState([])
-  const [novaDecisaoOperacional, setNovaDecisaoOperacional] = useState('')
-  const [aGuardarDecisao, setAGuardarDecisao] = useState(false)
-  const [mensagemDecisao, setMensagemDecisao] = useState('')
-  const [gruposPAOAbertos, setGruposPAOAbertos] = useState({})
-  const [secaoPAOAberta, setSecaoPAOAberta] = useState(null)
-  const [missaoPAOExpandida, setMissaoPAOExpandida] = useState(null)
-  const [objetivoPAOExpandido, setObjetivoPAOExpandido] = useState(null)
   const modoBloqueado = modoConsulta || modoReplay
-
-  useEffect(() => {
-    setIntencaoComandante(operacaoAtiva?.intencao_comandante || '')
-    setMensagemIntencao('')
-  }, [operacaoAtiva?.id, operacaoAtiva?.intencao_comandante])
-
-  useEffect(() => {
-    setNovaDecisaoOperacional('')
-    setMensagemDecisao('')
-    if (!operacaoAtiva?.id) {
-      setDecisoesOperacionais([])
-      return
-    }
-    fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`)
-      .then(r => r.ok ? r.json() : Promise.reject(new Error('Não foi possível carregar as decisões.')))
-      .then(setDecisoesOperacionais)
-      .catch(console.error)
-  }, [operacaoAtiva?.id])
 
   useEffect(() => {
     if (modoMapa.tipo === 'normal') return undefined
@@ -276,8 +242,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         modelosObjetivoData,
         setoresData,
         relatorioData,
-        elementosData,
-        resumoRecursosOperacionaisData
+        elementosData
       ] = await Promise.all([
         obterRecursos(),
         obterOcorrencias(),
@@ -289,8 +254,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         obterModelosObjetivo(),
         obterSetores(mostrarArquivadosSetores),
         obterRelatorio(),
-        obterElementos(),
-        fetch('http://127.0.0.1:8000/recursos-operacionais/resumo').then(r => r.ok ? r.json() : [])
+        obterElementos()
       ])
 
       // Evita que a atualização automática reponha a posição anterior durante o arrasto.
@@ -307,7 +271,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       setSetores(setoresData)
       setRelatorio(relatorioData)
       setElementos(elementosData)
-      setResumoRecursosOperacionais(resumoRecursosOperacionaisData)
     } catch (erro) {
       console.error('Erro ao atualizar dados:', erro)
     }
@@ -411,105 +374,87 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     if (!relatorio) return
 
     const doc = new jsPDF()
-    const dataAtual = new Date().toLocaleString()
+    const larguraPagina = 210
+    const margem = 20
+    const larguraTexto = larguraPagina - (margem * 2)
+    const dataAtual = new Date().toLocaleString('pt-PT', {
+      timeZone: 'Atlantic/Azores',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
 
-    doc.setFillColor(230, 230, 230)
-    doc.rect(0, 0, 210, 35, 'F')
+    const nomeOperacao = operacaoAtiva?.nome || 'Operação'
+    const estadoOperacao = modoReplay ? 'Replay' : (modoConsulta ? 'Encerrada' : 'Ativa')
+    const intencaoComandante =
+      operacaoAtiva?.intencao_comandante ||
+      relatorio?.intencao_comandante ||
+      'Não registada.'
 
-    doc.setFontSize(20)
-    doc.text('Centro de Operações e Simulacros', 20, 15)
+    // Cabeçalho institucional simples
+    doc.setFillColor(30, 41, 59)
+    doc.rect(0, 0, larguraPagina, 32, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(17)
+    doc.text('SGO — Sistema de Gestão Operacional', margem, 13)
+    doc.setFontSize(12)
+    doc.text('Relatório Operacional', margem, 23)
 
-    doc.setFontSize(16)
-    doc.text('Relatório Operacional', 20, 25)
+    doc.setTextColor(15, 23, 42)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.text(`Gerado em: ${dataAtual} — Hora dos Açores`, margem, 40)
+
+    // Identificação da operação
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.text('1. Identificação da operação', margem, 54)
+    doc.setDrawColor(148, 163, 184)
+    doc.line(margem, 58, 190, 58)
 
     doc.setFontSize(10)
-    doc.text(`Data: ${dataAtual}`, 150, 25)
+    doc.text('Operação:', margem, 69)
+    doc.text('Estado:', margem, 79)
 
-    doc.line(20, 38, 190, 38)
+    doc.setFont('helvetica', 'normal')
+    doc.text(String(nomeOperacao), 48, 69)
+    doc.text(String(estadoOperacao), 48, 79)
 
+    // Intenção do Comandante
+    doc.setFont('helvetica', 'bold')
     doc.setFontSize(14)
-    doc.text('Resumo', 20, 50)
+    doc.text('2. Intenção do Comandante', margem, 98)
+    doc.line(margem, 102, 190, 102)
 
-    doc.setFontSize(12)
-    doc.text('Recursos:', 25, 60)
-    doc.text(String(relatorio.recursos), 100, 60)
-
-    doc.text('Elementos:', 25, 70)
-    doc.text(String(relatorio.elementos ?? elementos.length), 100, 70)
-
-    doc.text('Ocorrências:', 25, 80)
-    doc.text(String(relatorio.ocorrencias), 100, 80)
-
-    doc.text('Ordens:', 25, 90)
-    doc.text(String(relatorio.ordens), 100, 90)
-
-    doc.setFontSize(14)
-    doc.text('Missões', 20, 110)
-
-    doc.setFontSize(12)
-    doc.text('Total:', 25, 120)
-    doc.text(String(relatorio.missoes_total), 100, 120)
-
-    doc.text('Ativas:', 25, 130)
-    doc.text(String(relatorio.missoes_ativas), 100, 130)
-
-    doc.text('Concluídas:', 25, 140)
-    doc.text(String(relatorio.missoes_concluidas), 100, 140)
-
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
-    doc.text('Centro de Operações e Simulacros', 20, 155)
+    const linhasIntencao = doc.splitTextToSize(String(intencaoComandante), larguraTexto)
+    doc.text(linhasIntencao, margem, 113)
 
-    doc.addPage()
-    doc.setFontSize(16)
-    doc.text('Recursos', 20, 20)
-    doc.setFontSize(11)
+    // Rodapé da primeira versão do relatório
+    doc.setDrawColor(203, 213, 225)
+    doc.line(margem, 282, 190, 282)
+    doc.setFontSize(8)
+    doc.setTextColor(100, 116, 139)
+    doc.text('SGO — Relatório Operacional', margem, 288)
+    doc.text('Página 1', 190, 288, { align: 'right' })
 
-    let y = 30
-    recursos.forEach((r, index) => {
-      doc.text(`${index + 1}. ${r.nome} (${r.tipo}) - ${r.estado}`, 20, y)
-      y += 8
-      if (y > 280) {
-        doc.addPage()
-        y = 20
-      }
-    })
+    const nomeSeguro = String(nomeOperacao)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toLowerCase() || 'operacao'
 
-    doc.addPage()
-    doc.setFontSize(16)
-    doc.text('Ocorrências', 20, 20)
-    doc.setFontSize(11)
-
-    y = 30
-    ocorrencias.forEach((o, index) => {
-      doc.text(`${index + 1}. ${o.titulo} (${o.tipo}) - ${o.estado}`, 20, y)
-      y += 8
-      if (y > 280) {
-        doc.addPage()
-        y = 20
-      }
-    })
-
-    doc.addPage()
-    doc.setFontSize(16)
-    doc.text('Missões', 20, 20)
-    doc.setFontSize(11)
-
-    y = 30
-    missoes.forEach((m, index) => {
-      doc.text(`${index + 1}. ${m.titulo} - ${m.estado}`, 20, y)
-      y += 8
-      if (y > 280) {
-        doc.addPage()
-        y = 20
-      }
-    })
-
-    doc.save('relatorio_operacional.pdf')
+    doc.save(`relatorio_operacional_${nomeSeguro}.pdf`)
   }
 
-  async function pedirDadosObjetivo(objetivo = null, ocorrenciaContexto = null) {
+  async function pedirDadosObjetivo(objetivo = null) {
     const modeloEscolhido = !objetivo && modelosObjetivo.length > 0
-      ? window.prompt(`MODELO DE OBJETIVO (opcional)\n\nPode escolher um modelo previamente guardado\nou deixar em branco para criar um objetivo novo.\n\n${modelosObjetivo.map(m => `${m.id} - ${m.nome}`).join('\n')}`, '')
+      ? window.prompt(`Modelo (opcional):\n${modelosObjetivo.map(m => `${m.id} - ${m.nome}`).join('\n')}`, '')
       : null
     const modelo = modelosObjetivo.find(m => String(m.id) === String(modeloEscolhido))
     const nome = window.prompt('Nome do objetivo:', objetivo?.nome || modelo?.nome || '')
@@ -518,9 +463,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     const prioridade = window.prompt('Prioridade: critica, alta, normal ou baixa', objetivo?.prioridade || modelo?.prioridade || 'normal') || 'normal'
     const estado = window.prompt('Estado: planeado, em_preparacao, em_execucao, suspenso, concluido ou cancelado', objetivo?.estado || 'planeado') || 'planeado'
     const responsavel = window.prompt('Responsável (opcional):', objetivo?.responsavel || '') || null
-    const ocorrenciaTexto = ocorrenciaContexto?.id
-      ? String(ocorrenciaContexto.id)
-      : window.prompt(`Ocorrência associada (ID, opcional):\n${ocorrencias.map(o => `${o.id} - ${o.titulo}`).join('\n')}`, objetivo?.ocorrencia_id || '')
+    const ocorrenciaTexto = window.prompt(`Ocorrência associada (ID, opcional):\n${ocorrencias.map(o => `${o.id} - ${o.titulo}`).join('\n')}`, objetivo?.ocorrencia_id || '')
     return {
       nome: nome.trim(), descricao, prioridade, estado, responsavel,
       ocorrencia_id: ocorrenciaTexto ? Number(ocorrenciaTexto) : null,
@@ -530,8 +473,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     }
   }
 
-  async function novoObjetivo(ocorrenciaContexto = null) {
-    const dados = await pedirDadosObjetivo(null, ocorrenciaContexto)
+  async function novoObjetivo() {
+    const dados = await pedirDadosObjetivo()
     if (!dados) return
     await criarObjetivo(dados)
     await atualizarDados()
@@ -541,24 +484,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     const dados = await pedirDadosObjetivo(objetivo)
     if (!dados) return
     await atualizarObjetivo(objetivo.id, dados)
-    await atualizarDados()
-  }
-
-  async function alterarEstadoObjetivoPAO(objetivo, novoEstado) {
-    if (modoBloqueado) return
-    await atualizarObjetivo(objetivo.id, {
-      nome: objetivo.nome,
-      descricao: objetivo.descricao || '',
-      prioridade: objetivo.prioridade || 'normal',
-      estado: novoEstado,
-      responsavel: objetivo.responsavel || null,
-      ocorrencia_id: objetivo.ocorrencia_id || null,
-      modelo_id: objetivo.modelo_id || null,
-      latitude: objetivo.latitude || null,
-      longitude: objetivo.longitude || null,
-      notas: objetivo.notas || null,
-      arquivado: objetivo.arquivado || false
-    })
     await atualizarDados()
   }
 
@@ -643,817 +568,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     await atualizarDados()
   }
 
-  async function guardarIntencaoComandante() {
-    if (!operacaoAtiva?.id || modoBloqueado) return
-    setAGuardarIntencao(true)
-    setMensagemIntencao('')
-    try {
-      const resposta = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/intencao-comandante`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intencao_comandante: intencaoComandante })
-      })
-      if (!resposta.ok) {
-        const erro = await resposta.json().catch(() => null)
-        throw new Error(erro?.detail || 'Não foi possível guardar a Intenção do Comandante.')
-      }
-      const dados = await resposta.json()
-      setIntencaoComandante(dados.intencao_comandante || '')
-      setMensagemIntencao('Intenção do Comandante guardada.')
-    } catch (erro) {
-      console.error(erro)
-      setMensagemIntencao(erro.message || 'Não foi possível guardar a Intenção do Comandante.')
-    } finally {
-      setAGuardarIntencao(false)
-    }
-  }
-
-  async function carregarDecisoesOperacionais() {
-    if (!operacaoAtiva?.id) return setDecisoesOperacionais([])
-    try {
-      const r = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`)
-      if (!r.ok) throw new Error('Não foi possível carregar as decisões.')
-      setDecisoesOperacionais(await r.json())
-    } catch (erro) { console.error(erro) }
-  }
-
-  async function guardarDecisaoOperacional() {
-    const texto = novaDecisaoOperacional.trim()
-    if (!texto || !operacaoAtiva?.id || modoBloqueado) return
-    setAGuardarDecisao(true); setMensagemDecisao('')
-    try {
-      const r = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto, autor: 'Comandante' })
-      })
-      if (!r.ok) { const e = await r.json().catch(()=>null); throw new Error(e?.detail || 'Não foi possível guardar a decisão.') }
-      setNovaDecisaoOperacional('')
-      setMensagemDecisao('Decisão operacional registada.')
-      await carregarDecisoesOperacionais()
-    } catch (erro) { setMensagemDecisao(erro.message) }
-    finally { setAGuardarDecisao(false) }
-  }
-
-  const totalObjetivosPAOEmAtencao = objetivos.filter((objetivo) => {
-    if (objetivo.arquivado) return false
-    return missoes.some((m) =>
-      Number(m.objetivo_id) === Number(objetivo.id) &&
-      !['concluida', 'cancelada'].includes(m.estado) &&
-      ['critica', 'necessita_reforco'].includes(m.situacao_operacional)
-    )
-  }).length
-
-  async function alternarDetalheRecursoOperacional(recurso) {
-    if (Number(recursoOperacionalExpandido) === Number(recurso.recurso_id)) {
-      setRecursoOperacionalExpandido(null)
-      setDetalheRecursoOperacional(null)
-      return
-    }
-
-    setRecursoOperacionalExpandido(recurso.recurso_id)
-    setDetalheRecursoOperacional(null)
-    try {
-      const historico = await obterHistoricoRecurso(recurso.recurso_id)
-      setDetalheRecursoOperacional(historico)
-    } catch (erro) {
-      console.error('Erro ao carregar detalhe operacional do recurso:', erro)
-    }
-  }
-
   function renderAba() {
-    if (abaAtiva === 'recursos_operacionais') {
-      const disponiveis = resumoRecursosOperacionais.filter(r => r.estado === 'disponivel').length
-      const emMissao = resumoRecursosOperacionais.filter(r => r.estado === 'em_missao').length
-      const formatarTempoEmpenhado = (segundos = 0) => {
-        const total = Math.max(0, Number(segundos) || 0)
-        const dias = Math.floor(total / 86400)
-        const horas = Math.floor((total % 86400) / 3600)
-        const minutos = Math.floor((total % 3600) / 60)
-        const segs = total % 60
-        if (dias > 0) return `${dias}d ${horas}h ${minutos}m`
-        if (horas > 0) return `${horas}h ${minutos}m ${segs}s`
-        if (minutos > 0) return `${minutos}m ${segs}s`
-        return `${segs}s`
-      }
-
-      return (
-        <>
-          <strong style={styles.sectionTitle}>📊 Recursos Operacionais</strong>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8, marginBottom:10 }}>
-            {[
-              ['Total', resumoRecursosOperacionais.length],
-              ['🟢 Disponíveis', disponiveis],
-              ['🔴 Em missão', emMissao]
-            ].map(([nome,total]) => (
-              <div key={nome} style={{ ...styles.itemCard, margin:0, textAlign:'center' }}>
-                <div style={{ fontSize:22, fontWeight:800 }}>{total}</div>
-                <div style={styles.itemSubtle}>{nome}</div>
-              </div>
-            ))}
-          </div>
-          {resumoRecursosOperacionais.length === 0 ? (
-            <div style={styles.itemSubtle}>Sem recursos na operação ativa.</div>
-          ) : resumoRecursosOperacionais.map(r => {
-            const expandido = Number(recursoOperacionalExpandido) === Number(r.recurso_id)
-            const periodosFechados = expandido ? (detalheRecursoOperacional?.ocorrencias_empenho || []) : []
-            return (
-              <div key={r.recurso_id} style={styles.itemCard}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  title="Ver detalhe do empenhamento"
-                  style={{ cursor:'pointer' }}
-                  onClick={() => alternarDetalheRecursoOperacional(r)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      alternarDetalheRecursoOperacional(r)
-                    }
-                  }}
-                >
-                  <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
-                    <div>
-                      <div style={styles.itemTitle}>{r.indicativo_radio || r.nome}</div>
-                      <div style={styles.itemSubtle}>{r.nome} · {r.tipo}</div>
-                    </div>
-                    <div style={{ display:'flex', gap:6, alignItems:'flex-start', fontWeight:700 }}>
-                      <span>{r.estado === 'disponivel' ? '🟢 Disponível' : r.estado === 'em_missao' ? '🔴 Em missão' : r.estado}</span>
-                      <span>{expandido ? '⌃' : '›'}</span>
-                    </div>
-                  </div>
-                  <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
-                    <div><div style={styles.itemMeta}>Ocorrência</div><div>{r.ocorrencia_atual || '—'}</div></div>
-                    <div><div style={styles.itemMeta}>Missões</div><div>{r.total_missoes}</div></div>
-                    <div>
-                  <div style={styles.itemMeta}>Tempo total</div>
-                  <div>{formatarTempoEmpenhado(r.tempo_total_empenhado_segundos)}</div>
-                  {r.estado === 'em_missao' && r.empenho_atual_segundos > 0 && (
-                    <div style={{ ...styles.itemSubtle, marginTop:3 }}>
-                      Atual: {formatarTempoEmpenhado(r.empenho_atual_segundos)}
-                    </div>
-                  )}
-                </div>
-                  </div>
-                </div>
-
-                {expandido && (
-                  <div style={{ marginTop:10, paddingTop:8, borderTop:'1px solid #e2e8f0' }}>
-                    <div style={{ ...styles.itemMeta, marginBottom:6 }}>Detalhe do empenhamento</div>
-                    {!detalheRecursoOperacional ? (
-                      <div style={styles.itemSubtle}>A carregar...</div>
-                    ) : (
-                      <>
-                        {r.estado === 'em_missao' && r.ocorrencia_id && (
-                          <div style={{ ...styles.itemCard, margin:'6px 0' }}>
-                            <div style={styles.itemTitle}>🔴 {r.ocorrencia_atual || `Ocorrência ${r.ocorrencia_id}`}</div>
-                            <div style={styles.itemSubtle}>
-                              Empenhamento atual · {formatarTempoEmpenhado(r.empenho_atual_segundos || 0)} · Em curso
-                            </div>
-                          </div>
-                        )}
-                        {periodosFechados.length === 0 && !(r.estado === 'em_missao' && r.ocorrencia_id) && (
-                          <div style={styles.itemSubtle}>Sem períodos de empenhamento concluídos.</div>
-                        )}
-                        {periodosFechados.map((p, indice) => (
-                          <div key={`${p.ocorrencia_id}-${p.libertado_em}-${indice}`} style={{ ...styles.itemCard, margin:'6px 0' }}>
-                            <div style={styles.itemTitle}>✓ {p.ocorrencia_titulo || `Ocorrência ${p.ocorrencia_id}`}</div>
-                            <div style={styles.itemSubtle}>
-                              {formatarDataHora(p.mobilizado_em)} → {formatarDataHora(p.libertado_em)}
-                            </div>
-                            <div style={{ ...styles.itemMeta, marginTop:3 }}>
-                              {formatarTempoEmpenhado(p.tempo_empenhado_segundos)}
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </>
-      )
-    }
-
-    if (abaAtiva === 'pao') {
-      return (
-        <>
-          <strong style={styles.sectionTitle}>Plano de Ação Operacional</strong>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-            {[
-              ['resumo', '📊 Resumo'],
-              ['intencao', '🧭 Intenção'],
-              ['situacao', `🚦 Situação${totalObjetivosPAOEmAtencao > 0 ? ` ${totalObjetivosPAOEmAtencao}` : ''}`],
-              ['decisoes', `📋 Decisões ${decisoesOperacionais.length}`]
-            ].map(([id, nome]) => (
-              <button
-                key={id}
-                style={{ ...styles.smallButton, fontWeight: secaoPAOAberta === id ? 700 : 500 }}
-                onClick={() => setSecaoPAOAberta((atual) => atual === id ? null : id)}
-              >
-                {nome}
-              </button>
-            ))}
-          </div>
-
-          {secaoPAOAberta === 'resumo' && (
-          <div style={styles.itemCard}>
-            <div style={styles.itemTitle}>Resumo do PAO</div>
-            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>Síntese automática do estado atual do Plano de Ação Operacional.</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))', gap: 8 }}>
-              {[
-                ['🎯','Objetivos ativos',objetivos.filter(o => !o.arquivado && !['concluido','cancelado'].includes(o.estado)).length],
-                ['🚩','Missões ativas',missoes.filter(m => !['concluida','cancelada'].includes(m.estado)).length],
-                ['🔴','Missões críticas',missoes.filter(m => !['concluida','cancelada'].includes(m.estado) && m.situacao_operacional === 'critica').length],
-                ['⚫','Necessitam reforço',missoes.filter(m => !['concluida','cancelada'].includes(m.estado) && m.situacao_operacional === 'necessita_reforco').length],
-                ['📋','Decisões registadas',decisoesOperacionais.length]
-              ].map(([icone,nome,total]) => (
-                <div key={nome} style={{ ...styles.itemCard, margin: 0, textAlign: 'center' }}>
-                  <div style={{ fontSize: 22 }}>{icone}</div>
-                  <div style={styles.itemTitle}>{total}</div>
-                  <div style={styles.itemSubtle}>{nome}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          )}
-
-          {secaoPAOAberta === 'intencao' && (
-          <div style={styles.itemCard}>
-            <div style={styles.itemTitle}>Intenção do Comandante</div>
-            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
-              Define a orientação geral da operação e serve de referência para os objetivos e missões.
-            </div>
-            <textarea
-              style={{ ...styles.input, minHeight: 120, resize: 'vertical' }}
-              value={intencaoComandante}
-              disabled={modoBloqueado || aGuardarIntencao}
-              placeholder="Registar a Intenção do Comandante..."
-              onChange={(e) => {
-                setIntencaoComandante(e.target.value)
-                setMensagemIntencao('')
-              }}
-            />
-            <div style={styles.buttonRow}>
-              <button
-                style={styles.smallButton}
-                disabled={modoBloqueado || aGuardarIntencao || !operacaoAtiva?.id}
-                onClick={guardarIntencaoComandante}
-              >
-                {aGuardarIntencao ? 'A guardar...' : 'Guardar'}
-              </button>
-            </div>
-            {mensagemIntencao && (
-              <div style={{ ...styles.itemSubtle, marginTop: 8 }}>{mensagemIntencao}</div>
-            )}
-          </div>
-          )}
-
-          {secaoPAOAberta === 'situacao' && (
-          <div style={styles.itemCard}>
-            <div style={styles.itemTitle}>Situação Operacional</div>
-            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
-              Distribuição das missões ativas pela respetiva situação operacional.
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))', gap: 8 }}>
-              {[
-                ['sob_controlo', '🟢', 'Sob controlo'],
-                ['estavel', '🟡', 'Estável'],
-                ['complexa', '🟠', 'Complexa'],
-                ['critica', '🔴', 'Crítica'],
-                ['necessita_reforco', '⚫', 'Necessita de reforço']
-              ].map(([id, icone, nome]) => {
-                const total = missoes.filter(
-                  (m) => !['concluida', 'cancelada'].includes(m.estado) &&
-                    (m.situacao_operacional || 'estavel') === id
-                ).length
-                return (
-                  <div key={id} style={{ ...styles.itemCard, margin: 0, textAlign: 'center' }}>
-                    <div style={{ fontSize: 22 }}>{icone}</div>
-                    <div style={styles.itemTitle}>{total}</div>
-                    <div style={styles.itemSubtle}>{nome}</div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {(() => {
-              const missoesAtivas = missoes.filter(
-                (m) => !['concluida', 'cancelada'].includes(m.estado)
-              )
-              const ocorrenciasEmAtencao = ocorrencias.map((ocorrencia) => {
-                const objetivosAtencao = objetivos.filter((o) => !o.arquivado).map((objetivo) => {
-                  const missoesObjetivo = missoesAtivas.filter((m) =>
-                    Number(m.objetivo_id) === Number(objetivo.id) &&
-                    Number(m.ocorrencia_id) === Number(ocorrencia.id)
-                  )
-                  const pertenceOcorrencia =
-                    Number(objetivo.ocorrencia_id) === Number(ocorrencia.id) ||
-                    missoesObjetivo.length > 0
-                  if (!pertenceOcorrencia) return null
-
-                  const necessitaReforco = missoesObjetivo.some(
-                    (m) => m.situacao_operacional === 'necessita_reforco'
-                  )
-                  const critica = missoesObjetivo.some(
-                    (m) => m.situacao_operacional === 'critica'
-                  )
-                  const situacao = necessitaReforco ? 'necessita_reforco' : critica ? 'critica' : null
-                  return situacao ? { objetivo, situacao } : null
-                }).filter(Boolean)
-
-                return objetivosAtencao.length ? { ocorrencia, objetivosAtencao } : null
-              }).filter(Boolean)
-
-              return (
-                <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ ...styles.itemTitle, marginBottom: 6 }}>⚠️ Pontos que exigem atenção</div>
-                  {ocorrenciasEmAtencao.length === 0 ? (
-                    <div style={styles.itemSubtle}>
-                      Não existem ocorrências com objetivos em situação crítica ou a necessitar de reforço.
-                    </div>
-                  ) : (
-                    ocorrenciasEmAtencao.map(({ ocorrencia, objetivosAtencao }) => (
-                      <div key={ocorrencia.id} style={{ ...styles.itemCard, marginTop: 6 }}>
-                        <div style={styles.itemTitle}>🔴 {ocorrencia.titulo}</div>
-                        {objetivosAtencao.map(({ objetivo, situacao }) => (
-                          <div
-                            key={objetivo.id}
-                            role="button"
-                            tabIndex={0}
-                            title="Abrir este objetivo no PAO"
-                            style={{ ...styles.itemSubtle, marginTop: 4, cursor: 'pointer' }}
-                            onClick={() => {
-                              const chaveGrupo = `ocorrencia-${ocorrencia.id}`
-                              setSecaoPAOAberta(null)
-                              setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: true }))
-                              setObjetivoPAOExpandido(objetivo.id)
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                const chaveGrupo = `ocorrencia-${ocorrencia.id}`
-                                setSecaoPAOAberta(null)
-                                setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: true }))
-                                setObjetivoPAOExpandido(objetivo.id)
-                              }
-                            }}
-                          >
-                            {situacao === 'necessita_reforco' ? '⚫' : '🔴'} 🎯 {objetivo.nome}
-                            {' · '}
-                            {situacao === 'necessita_reforco' ? 'Necessita de reforço' : 'Crítica'}
-                          </div>
-                        ))}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )
-            })()}
-          </div>
-          )}
-
-          {secaoPAOAberta === 'decisoes' && (
-          <div style={styles.itemCard}>
-            <div style={styles.itemTitle}>Decisões Operacionais</div>
-            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
-              Registo cronológico das decisões tomadas pelo Comandante durante a operação.
-            </div>
-            <textarea
-              style={{ ...styles.input, minHeight: 80, resize: 'vertical' }}
-              value={novaDecisaoOperacional}
-              disabled={modoBloqueado || aGuardarDecisao}
-              placeholder="Registar nova decisão operacional..."
-              onChange={(e) => { setNovaDecisaoOperacional(e.target.value); setMensagemDecisao('') }}
-            />
-            <div style={styles.buttonRow}>
-              <button style={styles.smallButton}
-                disabled={modoBloqueado || aGuardarDecisao || !novaDecisaoOperacional.trim()}
-                onClick={guardarDecisaoOperacional}>
-                {aGuardarDecisao ? 'A guardar...' : '➕ Registar decisão'}
-              </button>
-            </div>
-            {mensagemDecisao && <div style={{ ...styles.itemSubtle, marginTop: 8 }}>{mensagemDecisao}</div>}
-            <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
-              {decisoesOperacionais.length === 0 && <div style={styles.itemSubtle}>Ainda não existem decisões operacionais.</div>}
-              {decisoesOperacionais.map(d => (
-                <div key={d.id} style={{ ...styles.itemCard, marginTop: 6 }}>
-                  <div style={styles.itemTitle}>{d.texto}</div>
-                  <div style={styles.itemMeta}>
-                    {d.autor || 'Comandante'} · {new Date(d.criado_em).toLocaleString('pt-PT', { timeZone: 'Atlantic/Azores', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          )}
-
-          <div style={styles.itemCard}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <div style={styles.itemTitle}>Objetivos operacionais</div>
-              <button style={styles.smallButton} disabled={modoBloqueado} onClick={novoObjetivo}>
-                ➕ Novo objetivo
-              </button>
-            </div>
-            <div style={{ ...styles.itemSubtle, marginBottom: 8 }}>
-              Objetivos definidos para concretizar a Intenção do Comandante.
-            </div>
-            {objetivos.filter((o) => !o.arquivado).length === 0 && (
-              <div style={styles.itemSubtle}>Ainda não existem objetivos operacionais.</div>
-            )}
-            {(() => {
-              const objetivosAtivos = objetivos.filter((o) => !o.arquivado)
-
-              const gruposOcorrencia = ocorrencias
-                .map((oc) => ({
-                  ocorrencia: oc,
-                  objetivos: objetivosAtivos.filter((o) =>
-                    Number(o.ocorrencia_id) === Number(oc.id) ||
-                    missoes.some((m) =>
-                      Number(m.objetivo_id) === Number(o.id) &&
-                      Number(m.ocorrencia_id) === Number(oc.id)
-                    )
-                  )
-                }))
-                .filter((grupo) => grupo.objetivos.length > 0)
-
-              const objetivosSemOcorrencia = objetivosAtivos.filter((o) =>
-                !o.ocorrencia_id ||
-                missoes.some((m) =>
-                  Number(m.objetivo_id) === Number(o.id) && !m.ocorrencia_id
-                )
-              )
-
-              const renderObjetivoPAO = (o, ocorrenciaContexto = null) => {
-                const missoesDoObjetivo = missoes.filter((m) => {
-                  if (Number(m.objetivo_id) !== Number(o.id)) return false
-                  if (ocorrenciaContexto) {
-                    return Number(m.ocorrencia_id) === Number(ocorrenciaContexto.id)
-                  }
-                  return !m.ocorrencia_id
-                })
-
-                const pesosSituacaoObjetivo = {
-                  necessita_reforco: 5,
-                  critica: 4,
-                  complexa: 3,
-                  estavel: 2,
-                  sob_controlo: 1
-                }
-                const situacaoObjetivo = missoesDoObjetivo
-                  .filter((m) => !['concluida', 'cancelada'].includes(m.estado))
-                  .reduce((maisGrave, m) => {
-                    const atual = m.situacao_operacional || 'estavel'
-                    return (pesosSituacaoObjetivo[atual] || 0) >
-                      (pesosSituacaoObjetivo[maisGrave] || 0)
-                      ? atual
-                      : maisGrave
-                  }, null)
-                const iconeSituacaoObjetivo = {
-                  necessita_reforco: '⚫',
-                  critica: '🔴',
-                  complexa: '🟠',
-                  estavel: '🟡',
-                  sob_controlo: '🟢'
-                }[situacaoObjetivo] || '⚪'
-                const totalMissoesAtivasObjetivo = missoesDoObjetivo.filter(
-                  (m) => !['concluida', 'cancelada'].includes(m.estado)
-                ).length
-                const objetivoConcluidoComMissoesAtivas =
-                  o.estado === 'concluido' && totalMissoesAtivasObjetivo > 0
-
-                return (
-                    <div key={o.id} style={{ ...styles.itemCard, marginTop: 8, borderLeft: `5px solid ${{ critica: '#dc2626', alta: '#ea580c', normal: '#2563eb', baixa: '#16a34a' }[o.prioridade] || '#64748b'}` }}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
-                  onClick={() => setObjetivoPAOExpandido((atual) => Number(atual) === Number(o.id) ? null : o.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      setObjetivoPAOExpandido((atual) => Number(atual) === Number(o.id) ? null : o.id)
-                    }
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={styles.itemTitle}>🎯 {o.nome}</div>
-                    <div style={{ ...styles.itemMeta, display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <span>{missoesDoObjetivo.length} {missoesDoObjetivo.length === 1 ? 'missão' : 'missões'}</span>
-                      <span title="Situação mais grave entre as missões ativas">{iconeSituacaoObjetivo}</span>
-                      {['critica', 'necessita_reforco'].includes(situacaoObjetivo) && (
-                        <span
-                          title={situacaoObjetivo === 'critica' ? 'Existe pelo menos uma missão crítica' : 'Existe pelo menos uma missão que necessita de reforço'}
-                          style={{ fontWeight: 800, fontSize: 11 }}
-                        >
-                          ATENÇÃO
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 700 }}>{Number(objetivoPAOExpandido) === Number(o.id) ? '⌃' : '›'}</div>
-                </div>
-
-                {Number(objetivoPAOExpandido) === Number(o.id) && (<>
-                  <div style={{ ...styles.itemMeta, marginTop: 7, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                    <span>{o.prioridade}</span>
-                    <span>{{
-                      planeado: '📝 Planeado',
-                      em_preparacao: '🛠️ Em preparação',
-                      em_execucao: '▶️ Em execução',
-                      suspenso: '⏸️ Suspenso',
-                      concluido: '✅ Concluído',
-                      cancelado: '⛔ Cancelado'
-                    }[o.estado] || o.estado}</span>
-                  </div>
-                  {o.estado === 'planeado' && (
-                    <div style={{ marginTop: 6 }}>
-                      <button
-                        style={styles.smallButton}
-                        disabled={modoBloqueado}
-                        onClick={() => alterarEstadoObjetivoPAO(o, 'em_execucao')}
-                      >
-                        ▶️ Iniciar objetivo
-                      </button>
-                    </div>
-                  )}
-                  {o.estado === 'em_execucao' && (
-                    <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button
-                        style={styles.smallButton}
-                        disabled={modoBloqueado}
-                        onClick={async () => {
-                          if (!window.confirm(`Suspender o objetivo "${o.nome}"?\n\nAs missões associadas não serão alteradas.`)) return
-                          await alterarEstadoObjetivoPAO(o, 'suspenso')
-                        }}
-                      >
-                        ⏸️ Suspender objetivo
-                      </button>
-                      <button
-                        style={styles.smallButton}
-                        disabled={modoBloqueado}
-                        onClick={async () => {
-                          const missoesAtivas = missoesDoObjetivo.filter(
-                            (m) => !['concluida', 'cancelada'].includes(m.estado)
-                          )
-                          const totalAtivas = missoesAtivas.length
-                          const mensagem = totalAtivas > 0
-                            ? `⚠️ Este objetivo ainda tem ${totalAtivas} ${totalAtivas === 1 ? 'missão ativa' : 'missões ativas'}.\n\nPretende mesmo concluir o objetivo "${o.nome}"?\n\nAs missões não serão alteradas automaticamente.`
-                            : `Concluir o objetivo "${o.nome}"?`
-                          if (!window.confirm(mensagem)) return
-                          await alterarEstadoObjetivoPAO(o, 'concluido')
-                        }}
-                      >
-                        ✅ Concluir objetivo
-                      </button>
-                    </div>
-                  )}
-                  {o.estado === 'suspenso' && (
-                    <div style={{ marginTop: 6 }}>
-                      <button style={styles.smallButton} disabled={modoBloqueado}
-                        onClick={() => alterarEstadoObjetivoPAO(o, 'em_execucao')}>
-                        ▶️ Retomar objetivo
-                      </button>
-                    </div>
-                  )}
-                  {!['concluido', 'cancelado'].includes(o.estado) && (
-                    <div style={{ marginTop: 6 }}>
-                      <button
-                        style={styles.smallButton}
-                        disabled={modoBloqueado}
-                        onClick={async () => {
-                          const totalAtivas = missoesDoObjetivo.filter(
-                            (m) => !['concluida', 'cancelada'].includes(m.estado)
-                          ).length
-                          const mensagem = totalAtivas > 0
-                            ? `⚠️ Este objetivo ainda tem ${totalAtivas} ${totalAtivas === 1 ? 'missão ativa' : 'missões ativas'}.\n\nPretende mesmo cancelar o objetivo "${o.nome}"?\n\nAs missões associadas NÃO serão canceladas nem alteradas automaticamente.`
-                            : `Cancelar o objetivo "${o.nome}"?\n\nAs missões associadas não serão alteradas automaticamente.`
-                          if (!window.confirm(mensagem)) return
-                          await alterarEstadoObjetivoPAO(o, 'cancelado')
-                        }}
-                      >
-                        ⛔ Cancelar objetivo
-                      </button>
-                    </div>
-                  )}
-                  {o.estado === 'cancelado' && (
-                    <div style={{ marginTop: 6 }}>
-                      <button
-                        style={styles.smallButton}
-                        disabled={modoBloqueado}
-                        onClick={async () => {
-                          if (!window.confirm(`Reabrir o objetivo "${o.nome}"?\n\nO objetivo voltará ao estado Em execução. As missões associadas não serão alteradas.`)) return
-                          await alterarEstadoObjetivoPAO(o, 'em_execucao')
-                        }}
-                      >
-                        ↩️ Reabrir objetivo
-                      </button>
-                    </div>
-                  )}
-                  {o.estado === 'concluido' && (
-                    <div style={{ marginTop: 6 }}>
-                      <button
-                        style={styles.smallButton}
-                        disabled={modoBloqueado}
-                        onClick={async () => {
-                          if (!window.confirm(`Reabrir o objetivo "${o.nome}"?\n\nO objetivo voltará ao estado Em execução. As missões associadas não serão alteradas.`)) return
-                          await alterarEstadoObjetivoPAO(o, 'em_execucao')
-                        }}
-                      >
-                        ↩️ Reabrir objetivo
-                      </button>
-                    </div>
-                  )}
-                  {objetivoConcluidoComMissoesAtivas && (
-                    <div
-                      title={`${totalMissoesAtivasObjetivo} ${totalMissoesAtivasObjetivo === 1 ? 'missão ativa' : 'missões ativas'} neste objetivo concluído`}
-                      style={{ marginTop: 6, fontSize: 11, fontWeight: 700 }}
-                    >
-                      ⚠️ Objetivo concluído com missões ativas
-                    </div>
-                  )}
-                  {o.responsavel && <div style={styles.itemSubtle}>Responsável: {o.responsavel}</div>}
-                  {o.descricao && <div style={styles.itemSubtle}>{o.descricao}</div>}
-
-                <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ ...styles.itemMeta, marginBottom: 6 }}>Missões associadas</div>
-                  {missoesDoObjetivo.length === 0 && (
-                    <div style={styles.itemSubtle}>Sem missões associadas nesta ocorrência.</div>
-                  )}
-                  {missoesDoObjetivo.map((m) => {
-                    const expandida = Number(missaoPAOExpandida) === Number(m.id)
-                    const situacaoTexto = {
-                      sob_controlo: '🟢 Sob controlo', estavel: '🟡 Estável',
-                      complexa: '🟠 Complexa', critica: '🔴 Crítica',
-                      necessita_reforco: '⚫ Necessita de reforço'
-                    }[m.situacao_operacional] || '🟡 Estável'
-                    const estadoTexto = {
-                      recebida: '📥 Recebida', planeada: '📝 Planeada',
-                      em_execucao: '▶️ Em execução', concluida: '✅ Concluída',
-                      cancelada: '⛔ Cancelada'
-                    }[m.estado] || m.estado
-                    return (
-                      <div key={m.id} style={{ ...styles.itemCard, marginTop: 6 }}>
-                        <div role="button" tabIndex={0}
-                          style={{ cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}
-                          onClick={() => setMissaoPAOExpandida(a => Number(a) === Number(m.id) ? null : m.id)}
-                          onKeyDown={(e) => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); setMissaoPAOExpandida(a => Number(a)===Number(m.id)?null:m.id) } }}>
-                          <div style={{minWidth:0}}>
-                            <div style={styles.itemTitle}>↳ {m.titulo}</div>
-                            <div style={{ ...styles.itemMeta, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                              <span>{estadoTexto}</span><span>{situacaoTexto}</span>
-                            </div>
-                          </div>
-                          <div style={{fontWeight:700}}>{expandida ? '⌃' : '›'}</div>
-                        </div>
-                        {m.estado === 'planeada' && !expandida && (
-                          <div style={{marginTop:6}}>
-                            <button style={styles.smallButton} disabled={modoBloqueado}
-                              onClick={async(e)=>{e.stopPropagation();await alterarEstadoMissao(m.id,'em_execucao');await refresh()}}>
-                              ▶️ Iniciar
-                            </button>
-                          </div>
-                        )}
-                        {expandida && (
-                          <div style={{marginTop:8,paddingTop:8,borderTop:'1px solid #e2e8f0'}}>
-                            <div style={styles.itemMeta}>Prioridade: {{
-                              baixa:'🟢 Baixa', media:'🔵 Média', alta:'🟠 Alta', critica:'🔴 Crítica'
-                            }[m.prioridade] || '🔵 Média'}</div>
-                            {m.responsavel && <div style={styles.itemSubtle}>Responsável: {m.responsavel}</div>}
-                            {(() => {
-                              const ids=(m.recurso_ids||[]).map(Number)
-                              const rs=recursos.filter(r=>ids.includes(Number(r.id))||Number(r.missao_id)===Number(m.id))
-                              return <div style={{marginTop:7}}>
-                                <div style={{...styles.itemMeta,marginBottom:4}}>Recursos atribuídos</div>
-                                {rs.length===0 ? <div style={styles.itemSubtle}>Sem recursos atribuídos.</div> :
-                                  rs.map(r=><div key={r.id} style={styles.itemSubtle}>{obterIconeRecurso(r.tipo)} {r.indicativo_radio||r.nome} · {r.estado}</div>)}
-                              </div>
-                            })()}
-                            <div style={{ ...styles.buttonRow, flexWrap: 'wrap' }}>
-                              <button style={styles.smallButton} onClick={(e)=>{e.stopPropagation();setDetalhe({tipo:'missao',dados:m})}}>Abrir</button>
-                              {m.estado==='planeada' && <button style={styles.smallButton} disabled={modoBloqueado}
-                                onClick={async(e)=>{e.stopPropagation();await alterarEstadoMissao(m.id,'em_execucao');await refresh()}}>▶️ Iniciar</button>}
-                              <button style={styles.smallButton} disabled={modoBloqueado||['concluida','cancelada'].includes(m.estado)}
-                                onClick={async(e)=>{e.stopPropagation();const s=window.prompt('Situação: sob_controlo, estavel, complexa, critica ou necessita_reforco',m.situacao_operacional||'estavel');if(!s)return;const v=['sob_controlo','estavel','complexa','critica','necessita_reforco'];if(!v.includes(s)){window.alert('Situação inválida.');return}await alterarSituacaoMissao(m.id,s);await refresh()}}>Situação</button>
-                              <button style={styles.smallButton} disabled={modoBloqueado||['concluida','cancelada'].includes(m.estado)}
-                                onClick={async(e)=>{e.stopPropagation();if(!window.confirm(`Concluir a missão "${m.titulo}"?`))return;await concluirMissao(m.id);await refresh()}}>Concluir</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <div style={styles.buttonRow}>
-                  <button
-                    style={styles.smallButton}
-                    disabled={modoBloqueado}
-                    onClick={() => {
-                      setFormMissao({
-                        titulo: '',
-                        descricao: '',
-                        prioridade: 'media',
-                        estado: 'planeada',
-                        responsavel: '',
-                        notas: '',
-                        situacao_operacional: 'estavel',
-                        ocorrencia_id: ocorrenciaContexto?.id || null,
-                        objetivo_id: o.id
-                      })
-                      setMostrarFormMissao(true)
-                    }}
-                  >
-                    ➕ Nova missão
-                  </button>
-                  <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => editarObjetivo(o)}>
-                    Editar
-                  </button>
-                </div>
-                </>)}
-              </div>
-                )
-              }
-
-              return (
-                <>
-                  {gruposOcorrencia.map(({ ocorrencia, objetivos: objetivosGrupo }) => {
-                    const chaveGrupo = `ocorrencia-${ocorrencia.id}`
-                    const grupoAberto = !!gruposPAOAbertos[chaveGrupo]
-                    const missoesGrupo = missoes.filter((m) => Number(m.ocorrencia_id) === Number(ocorrencia.id) && objetivosGrupo.some((o) => Number(o.id) === Number(m.objetivo_id)))
-                    const totalMissoesGrupo = missoesGrupo.length
-                    const pesosSituacao = { necessita_reforco: 5, critica: 4, complexa: 3, estavel: 2, sob_controlo: 1 }
-                    const situacaoMaisGrave = missoesGrupo.filter((m) => !['concluida', 'cancelada'].includes(m.estado)).reduce((a, m) => {
-                      const atual = m.situacao_operacional || 'estavel'
-                      return (pesosSituacao[atual] || 0) > (pesosSituacao[a] || 0) ? atual : a
-                    }, null)
-                    const iconeSituacao = { necessita_reforco: '⚫', critica: '🔴', complexa: '🟠', estavel: '🟡', sob_controlo: '🟢' }[situacaoMaisGrave] || '⚪'
-                    const objetivosEmAtencao = objetivosGrupo.filter((objetivo) =>
-                      missoesGrupo.some((m) =>
-                        Number(m.objetivo_id) === Number(objetivo.id) &&
-                        !['concluida', 'cancelada'].includes(m.estado) &&
-                        ['critica', 'necessita_reforco'].includes(m.situacao_operacional)
-                      )
-                    ).length
-                    return (
-                      <div key={chaveGrupo} style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #dc2626' }}>
-                        <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap', minWidth: 0 }}
-                          onClick={() => setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto }))}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto })) } }}>
-                          <div style={{ minWidth: 0, flex: '1 1 110px' }}>
-                            <div style={{ ...styles.itemTitle, overflowWrap: 'anywhere' }}>{grupoAberto ? '▼' : '▶'} 🔴 {ocorrencia.titulo}</div>
-                            <div style={{ ...styles.itemSubtle, overflowWrap: 'anywhere' }}>{ocorrencia.tipo} · {ocorrencia.estado}</div>
-                          </div>
-                          <div style={{ ...styles.itemMeta, flex: '1 1 120px', minWidth: 0, textAlign: 'right', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
-                            {iconeSituacao} · {totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}
-                            {objetivosEmAtencao > 0 && (
-                              <> · {objetivosEmAtencao} {objetivosEmAtencao === 1 ? 'objetivo em atenção' : 'objetivos em atenção'}</>
-                            )}
-                          </div>
-                        </div>
-                        {grupoAberto && (<>
-                          <div style={styles.buttonRow}>
-                            <button style={styles.smallButton} onClick={() => { setDetalhe({ tipo: 'ocorrencia', dados: ocorrencia }); if (ocorrencia.latitude && ocorrencia.longitude && mapRef.current) mapRef.current.setView([ocorrencia.latitude, ocorrencia.longitude], 13) }}>Abrir ocorrência</button>
-                            <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => novoObjetivo(ocorrencia)}>➕ Novo objetivo</button>
-                          </div>
-                          <div style={{ marginTop: 8 }}>{objetivosGrupo.map((o) => renderObjetivoPAO(o, ocorrencia))}</div>
-                        </>)}
-                      </div>
-                    )
-                  })}
-
-                  {objetivosSemOcorrencia.length > 0 && (() => {
-                    const chaveGrupo = 'sem-ocorrencia'
-                    const grupoAberto = !!gruposPAOAbertos[chaveGrupo]
-                    const missoesGrupo = missoes.filter((m) => !m.ocorrencia_id && objetivosSemOcorrencia.some((o) => Number(o.id) === Number(m.objetivo_id)))
-                    const totalMissoesGrupo = missoesGrupo.length
-                    const pesosSituacao = { necessita_reforco: 5, critica: 4, complexa: 3, estavel: 2, sob_controlo: 1 }
-                    const situacaoMaisGrave = missoesGrupo.filter((m) => !['concluida', 'cancelada'].includes(m.estado)).reduce((a, m) => {
-                      const atual = m.situacao_operacional || 'estavel'
-                      return (pesosSituacao[atual] || 0) > (pesosSituacao[a] || 0) ? atual : a
-                    }, null)
-                    const iconeSituacao = { necessita_reforco: '⚫', critica: '🔴', complexa: '🟠', estavel: '🟡', sob_controlo: '🟢' }[situacaoMaisGrave] || '⚪'
-                    return (
-                      <div style={{ ...styles.itemCard, marginTop: 10, borderLeft: '5px solid #94a3b8' }}>
-                        <div role="button" tabIndex={0} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
-                          onClick={() => setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto }))}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGruposPAOAbertos((atuais) => ({ ...atuais, [chaveGrupo]: !grupoAberto })) } }}>
-                          <div style={styles.itemTitle}>{grupoAberto ? '▼' : '▶'} ⚪ Sem ocorrência associada</div>
-                          <div style={{ ...styles.itemMeta, whiteSpace: 'nowrap' }}>{iconeSituacao} · {totalMissoesGrupo} {totalMissoesGrupo === 1 ? 'missão' : 'missões'}</div>
-                        </div>
-                        {grupoAberto && <div style={{ marginTop: 8 }}>{objetivosSemOcorrencia.map((o) => renderObjetivoPAO(o, null))}</div>}
-                      </div>
-                    )
-                  })()}
-                </>
-              )
-            })()}
-          </div>
-        </>
-      )
-    }
-
     if (abaAtiva === 'recursos') {
       return (
         <>
@@ -1877,7 +992,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       {mostrarPainelDireito && (
         <div style={styles.rightPanel}>
         <div style={styles.tabBar}>
-          {['recursos', 'recursos_operacionais', 'ocorrencias', 'pao', 'setores', 'objetivos', 'missoes', 'ordens', 'timeline'].map((aba) => (
+          {['recursos', 'ocorrencias', 'setores', 'objetivos', 'missoes', 'ordens', 'timeline'].map((aba) => (
             <button
               key={aba}
               style={{
@@ -1886,7 +1001,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               }}
               onClick={() => setAbaAtiva(aba)}
             >
-              {aba === 'recursos_operacionais' ? '📊 recursos' : aba}
+              {aba}
             </button>
           ))}
         </div>
@@ -2724,21 +1839,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         <div style={styles.detailPanel}>
           <div style={styles.panelTitle}>Nova missão</div>
 
-          {(formMissao.ocorrencia_id || formMissao.objetivo_id) && (
-            <div style={{ ...styles.itemCard, marginBottom: 10, background: '#f8fafc' }}>
-              {formMissao.ocorrencia_id && (
-                <div style={styles.itemSubtle}>
-                  <strong>🔴 Ocorrência:</strong> {ocorrencias.find((o) => Number(o.id) === Number(formMissao.ocorrencia_id))?.titulo || `ID ${formMissao.ocorrencia_id}`}
-                </div>
-              )}
-              {formMissao.objetivo_id && (
-                <div style={{ ...styles.itemSubtle, marginTop: formMissao.ocorrencia_id ? 4 : 0 }}>
-                  <strong>🎯 Objetivo:</strong> {objetivos.find((o) => Number(o.id) === Number(formMissao.objetivo_id))?.nome || `ID ${formMissao.objetivo_id}`}
-                </div>
-              )}
-            </div>
-          )}
-
           <input
             style={styles.input}
             placeholder="Título"
@@ -2789,17 +1889,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <select
             style={styles.input}
-            value={formMissao.estado || 'planeada'}
-            onChange={(e) =>
-              setFormMissao({ ...formMissao, estado: e.target.value })
-            }
-          >
-            <option value="planeada">Estado inicial: Planeada</option>
-            <option value="em_execucao">Estado inicial: Em execução</option>
-          </select>
-
-          <select
-            style={styles.input}
             value={formMissao.prioridade}
             onChange={(e) =>
               setFormMissao({ ...formMissao, prioridade: e.target.value })
@@ -2815,21 +1904,17 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             onClick={async () => {
               if (!formMissao.titulo) return
 
-              const novaMissao = await criarMissao({
+              await criarMissao({
                 titulo: formMissao.titulo,
                 descricao: formMissao.descricao,
                 prioridade: formMissao.prioridade,
-                estado: formMissao.estado || 'planeada',
+                estado: 'planeada',
                 responsavel: formMissao.responsavel || null,
                 notas: formMissao.notas || null,
                 situacao_operacional: formMissao.situacao_operacional || 'estavel',
                 recurso_id: null,
                 ocorrencia_id: formMissao.ocorrencia_id
               })
-
-              if (formMissao.objetivo_id && novaMissao?.id) {
-                await associarObjetivoMissao(novaMissao.id, formMissao.objetivo_id)
-              }
 
               await refresh()
 
@@ -2842,8 +1927,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 responsavel: '',
                 notas: '',
                 situacao_operacional: 'estavel',
-                ocorrencia_id: null,
-                objetivo_id: null
+                ocorrencia_id: null
               })
             }}
           >
@@ -3626,14 +2710,11 @@ const styles = {
     boxSizing: 'border-box',
     overflow: 'hidden',
     boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-    display: 'flex',
-    flexDirection: 'column',
   },
   rightPanelContent: {
     padding: '12px',
     overflowY: 'auto',
-    flex: 1,
-    minHeight: 0,
+    height: 'calc(100% - 48px)',
     boxSizing: 'border-box',
   },
   tabBar: {
@@ -4376,7 +3457,6 @@ function App() {
 }
 
 export default App
-
 
 
 
