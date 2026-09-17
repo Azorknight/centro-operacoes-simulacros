@@ -107,6 +107,8 @@ function criarIconeMissao(cor, selecionada = false) {
 function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null }) {
   const [recursos, setRecursos] = useState([])
   const [resumoRecursosOperacionais, setResumoRecursosOperacionais] = useState([])
+  const [recursoOperacionalExpandido, setRecursoOperacionalExpandido] = useState(null)
+  const [detalheRecursoOperacional, setDetalheRecursoOperacional] = useState(null)
   const [ocorrencias, setOcorrencias] = useState([])
   const [bases, setBases] = useState([])
   const [timeline, setTimeline] = useState([])
@@ -701,6 +703,23 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     )
   }).length
 
+  async function alternarDetalheRecursoOperacional(recurso) {
+    if (Number(recursoOperacionalExpandido) === Number(recurso.recurso_id)) {
+      setRecursoOperacionalExpandido(null)
+      setDetalheRecursoOperacional(null)
+      return
+    }
+
+    setRecursoOperacionalExpandido(recurso.recurso_id)
+    setDetalheRecursoOperacional(null)
+    try {
+      const historico = await obterHistoricoRecurso(recurso.recurso_id)
+      setDetalheRecursoOperacional(historico)
+    } catch (erro) {
+      console.error('Erro ao carregar detalhe operacional do recurso:', erro)
+    }
+  }
+
   function renderAba() {
     if (abaAtiva === 'recursos_operacionais') {
       const disponiveis = resumoRecursosOperacionais.filter(r => r.estado === 'disponivel').length
@@ -734,24 +753,77 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           </div>
           {resumoRecursosOperacionais.length === 0 ? (
             <div style={styles.itemSubtle}>Sem recursos na operação ativa.</div>
-          ) : resumoRecursosOperacionais.map(r => (
-            <div key={r.recurso_id} style={styles.itemCard}>
-              <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
-                <div>
-                  <div style={styles.itemTitle}>{r.indicativo_radio || r.nome}</div>
-                  <div style={styles.itemSubtle}>{r.nome} · {r.tipo}</div>
+          ) : resumoRecursosOperacionais.map(r => {
+            const expandido = Number(recursoOperacionalExpandido) === Number(r.recurso_id)
+            const periodosFechados = expandido ? (detalheRecursoOperacional?.ocorrencias_empenho || []) : []
+            return (
+              <div key={r.recurso_id} style={styles.itemCard}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  title="Ver detalhe do empenhamento"
+                  style={{ cursor:'pointer' }}
+                  onClick={() => alternarDetalheRecursoOperacional(r)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      alternarDetalheRecursoOperacional(r)
+                    }
+                  }}
+                >
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
+                    <div>
+                      <div style={styles.itemTitle}>{r.indicativo_radio || r.nome}</div>
+                      <div style={styles.itemSubtle}>{r.nome} · {r.tipo}</div>
+                    </div>
+                    <div style={{ display:'flex', gap:6, alignItems:'flex-start', fontWeight:700 }}>
+                      <span>{r.estado === 'disponivel' ? '🟢 Disponível' : r.estado === 'em_missao' ? '🔴 Em missão' : r.estado}</span>
+                      <span>{expandido ? '⌃' : '›'}</span>
+                    </div>
+                  </div>
+                  <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
+                    <div><div style={styles.itemMeta}>Ocorrência</div><div>{r.ocorrencia_atual || '—'}</div></div>
+                    <div><div style={styles.itemMeta}>Missões</div><div>{r.total_missoes}</div></div>
+                    <div><div style={styles.itemMeta}>Tempo empenhado</div><div>{formatarTempoEmpenhado(r.tempo_total_empenhado_segundos)}</div></div>
+                  </div>
                 </div>
-                <div style={{ fontWeight:700 }}>
-                  {r.estado === 'disponivel' ? '🟢 Disponível' : r.estado === 'em_missao' ? '🔴 Em missão' : r.estado}
-                </div>
+
+                {expandido && (
+                  <div style={{ marginTop:10, paddingTop:8, borderTop:'1px solid #e2e8f0' }}>
+                    <div style={{ ...styles.itemMeta, marginBottom:6 }}>Detalhe do empenhamento</div>
+                    {!detalheRecursoOperacional ? (
+                      <div style={styles.itemSubtle}>A carregar...</div>
+                    ) : (
+                      <>
+                        {r.estado === 'em_missao' && r.ocorrencia_id && (
+                          <div style={{ ...styles.itemCard, margin:'6px 0' }}>
+                            <div style={styles.itemTitle}>🔴 {r.ocorrencia_atual || `Ocorrência ${r.ocorrencia_id}`}</div>
+                            <div style={styles.itemSubtle}>
+                              Em curso · {formatarTempoEmpenhado(r.empenho_atual_segundos || 0)}
+                            </div>
+                          </div>
+                        )}
+                        {periodosFechados.length === 0 && !(r.estado === 'em_missao' && r.ocorrencia_id) && (
+                          <div style={styles.itemSubtle}>Sem períodos de empenhamento concluídos.</div>
+                        )}
+                        {periodosFechados.map((p, indice) => (
+                          <div key={`${p.ocorrencia_id}-${p.libertado_em}-${indice}`} style={{ ...styles.itemCard, margin:'6px 0' }}>
+                            <div style={styles.itemTitle}>✓ {p.ocorrencia_titulo || `Ocorrência ${p.ocorrencia_id}`}</div>
+                            <div style={styles.itemSubtle}>
+                              {formatarDataHora(p.mobilizado_em)} → {formatarDataHora(p.libertado_em)}
+                            </div>
+                            <div style={{ ...styles.itemMeta, marginTop:3 }}>
+                              {formatarTempoEmpenhado(p.tempo_empenhado_segundos)}
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
-              <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
-                <div><div style={styles.itemMeta}>Ocorrência</div><div>{r.ocorrencia_atual || '—'}</div></div>
-                <div><div style={styles.itemMeta}>Missões</div><div>{r.total_missoes}</div></div>
-                <div><div style={styles.itemMeta}>Tempo empenhado</div><div>{formatarTempoEmpenhado(r.tempo_total_empenhado_segundos)}</div></div>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </>
       )
     }
