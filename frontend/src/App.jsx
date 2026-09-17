@@ -940,6 +940,60 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       })
     }
 
+
+    y += 6
+
+    // 7. Decisões Operacionais
+    y = tituloSecao(7, 'Decisões Operacionais', y)
+
+    const decisoesOrdenadas = [...decisoesOperacionais].sort((a, b) => {
+      const dataA = new Date(a.criado_em || 0).getTime()
+      const dataB = new Date(b.criado_em || 0).getTime()
+      return dataA - dataB
+    })
+
+    if (decisoesOrdenadas.length === 0) {
+      y = escreverTexto('Não existem decisões operacionais registadas nesta operação.', margem, y)
+    } else {
+      decisoesOrdenadas.forEach((decisao, indice) => {
+        const dataHora = decisao.criado_em
+          ? new Date(decisao.criado_em).toLocaleString('pt-PT', {
+              timeZone: 'Atlantic/Azores',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          : 'Data/hora não disponível'
+
+        const autor = decisao.autor || 'Comandante'
+        const textoDecisao = String(decisao.texto || '—')
+        const linhasDecisao = doc.splitTextToSize(textoDecisao, larguraTexto - 10)
+        const alturaBloco = 17 + (linhasDecisao.length * 4.2)
+
+        y = garantirEspaco(y, alturaBloco)
+
+        doc.setDrawColor(218, 223, 230)
+        doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'S')
+
+        doc.setFillColor(...azulPSP)
+        doc.rect(margem, y - 4, 2, alturaBloco - 2, 'F')
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(8.6)
+        doc.setTextColor(...azulPSP)
+        doc.text(`${indice + 1}. ${dataHora}  |  ${autor}`, margem + 5, y + 2)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(35, 35, 35)
+        doc.text(linhasDecisao, margem + 5, y + 9, { lineHeightFactor: 1.3 })
+
+        y += alturaBloco + 4
+      })
+    }
+
     // Rodapé em todas as páginas
     const totalPaginas = doc.getNumberOfPages()
     for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
