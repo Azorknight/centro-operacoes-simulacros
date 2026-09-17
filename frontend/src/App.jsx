@@ -994,6 +994,62 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       })
     }
 
+
+    y += 6
+
+    // 8. Cronologia Operacional
+    y = tituloSecao(8, 'Cronologia Operacional', y)
+
+    const cronologiaOrdenada = [...timeline].sort((a, b) => {
+      const dataA = new Date(a.criado_em || 0).getTime()
+      const dataB = new Date(b.criado_em || 0).getTime()
+      return dataA - dataB
+    })
+
+    if (cronologiaOrdenada.length === 0) {
+      y = escreverTexto('Não existem acontecimentos registados na cronologia desta operação.', margem, y)
+    } else {
+      cronologiaOrdenada.forEach((evento) => {
+        const dataHora = evento.criado_em
+          ? new Date(evento.criado_em).toLocaleString('pt-PT', {
+              timeZone: 'Atlantic/Azores',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          : 'Data/hora não disponível'
+
+        const tipoEvento = evento.tipo
+          ? String(evento.tipo).replaceAll('_', ' ').replace(/\b\w/g, letra => letra.toUpperCase())
+          : 'Evento'
+        const descricaoEvento = String(evento.descricao || '—')
+        const linhasDescricao = doc.splitTextToSize(descricaoEvento, larguraTexto - 10)
+        const alturaBloco = 15 + (linhasDescricao.length * 4.1)
+
+        y = garantirEspaco(y, alturaBloco)
+
+        doc.setDrawColor(225, 228, 233)
+        doc.line(margem + 2, y - 2, margem + 2, y + alturaBloco - 5)
+
+        doc.setFillColor(...azulPSP)
+        doc.circle(margem + 2, y, 1.6, 'F')
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(8.3)
+        doc.setTextColor(...azulPSP)
+        doc.text(`${dataHora}  |  ${tipoEvento}`, margem + 7, y + 1)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.8)
+        doc.setTextColor(40, 40, 40)
+        doc.text(linhasDescricao, margem + 7, y + 7, { lineHeightFactor: 1.28 })
+
+        y += alturaBloco
+      })
+    }
+
     // Rodapé em todas as páginas
     const totalPaginas = doc.getNumberOfPages()
     for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
