@@ -2720,12 +2720,75 @@ def historico_recurso(recurso_id: int):
 
         chegadas_ids = [linha[0] for linha in chegadas_registadas]
 
+        # Tempo empenhado: da primeira ordem de deslocação até à libertação
+        # do recurso na mesma ocorrência.
+        periodos_empenho = conn.execute(
+            text("""
+                WITH libertacoes AS (
+                    SELECT id, ocorrencia_id, criado_em AS libertado_em
+                    FROM timeline_eventos
+                    WHERE recurso_id = :recurso_id
+                      AND operacao_id = :operacao_id
+                      AND tipo = 'recurso'
+                      AND descricao LIKE 'Recurso libertado:%'
+                      AND ocorrencia_id IS NOT NULL
+                )
+                SELECT
+                    l.ocorrencia_id,
+                    o.titulo AS ocorrencia_titulo,
+                    (
+                        SELECT MIN(t.criado_em)
+                        FROM timeline_eventos t
+                        WHERE t.recurso_id = :recurso_id
+                          AND t.operacao_id = :operacao_id
+                          AND t.ocorrencia_id = l.ocorrencia_id
+                          AND t.tipo = 'ordem'
+                          AND t.criado_em <= l.libertado_em
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM timeline_eventos lib_anterior
+                              WHERE lib_anterior.recurso_id = :recurso_id
+                                AND lib_anterior.operacao_id = :operacao_id
+                                AND lib_anterior.ocorrencia_id = l.ocorrencia_id
+                                AND lib_anterior.tipo = 'recurso'
+                                AND lib_anterior.descricao LIKE 'Recurso libertado:%'
+                                AND lib_anterior.criado_em < l.libertado_em
+                                AND t.criado_em <= lib_anterior.criado_em
+                          )
+                    ) AS mobilizado_em,
+                    l.libertado_em
+                FROM libertacoes l
+                LEFT JOIN ocorrencias o ON o.id = l.ocorrencia_id
+                ORDER BY l.libertado_em
+            """),
+            {"recurso_id": recurso_id, "operacao_id": operacao_id}
+        ).mappings().all()
+
+        ocorrencias_empenho = []
+        tempo_total_empenhado_segundos = 0
+        for periodo in periodos_empenho:
+            mobilizado_em = periodo["mobilizado_em"]
+            libertado_em = periodo["libertado_em"]
+            if mobilizado_em is None or libertado_em is None:
+                continue
+            segundos = max(0, int((libertado_em - mobilizado_em).total_seconds()))
+            tempo_total_empenhado_segundos += segundos
+            ocorrencias_empenho.append({
+                "ocorrencia_id": periodo["ocorrencia_id"],
+                "ocorrencia_titulo": periodo["ocorrencia_titulo"],
+                "mobilizado_em": mobilizado_em,
+                "libertado_em": libertado_em,
+                "tempo_empenhado_segundos": segundos
+            })
+
         return {
             "recurso_id": recurso_id,
             "total_ocorrencias": total_ocorrencias,
             "total_missoes": total_missoes,
             "ordens_executadas": ordens_executadas,
             "chegadas_registadas": chegadas_ids,
+            "tempo_total_empenhado_segundos": tempo_total_empenhado_segundos,
+            "ocorrencias_empenho": ocorrencias_empenho,
             "eventos": [dict(linha._mapping) for linha in eventos]
         }
 
