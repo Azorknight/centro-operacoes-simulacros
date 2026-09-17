@@ -784,7 +784,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
                     <div><div style={styles.itemMeta}>Ocorrência</div><div>{r.ocorrencia_atual || '—'}</div></div>
                     <div><div style={styles.itemMeta}>Missões</div><div>{r.total_missoes}</div></div>
-                    <div><div style={styles.itemMeta}>Tempo empenhado</div><div>{formatarTempoEmpenhado(r.tempo_total_empenhado_segundos)}</div></div>
+                    <div>
+                  <div style={styles.itemMeta}>Tempo total</div>
+                  <div>{formatarTempoEmpenhado(r.tempo_total_empenhado_segundos)}</div>
+                  {r.estado === 'em_missao' && r.empenho_atual_segundos > 0 && (
+                    <div style={{ ...styles.itemSubtle, marginTop:3 }}>
+                      Atual: {formatarTempoEmpenhado(r.empenho_atual_segundos)}
+                    </div>
+                  )}
+                </div>
                   </div>
                 </div>
 
@@ -799,7 +807,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                           <div style={{ ...styles.itemCard, margin:'6px 0' }}>
                             <div style={styles.itemTitle}>🔴 {r.ocorrencia_atual || `Ocorrência ${r.ocorrencia_id}`}</div>
                             <div style={styles.itemSubtle}>
-                              Em curso · {formatarTempoEmpenhado(r.empenho_atual_segundos || 0)}
+                              Empenhamento atual · {formatarTempoEmpenhado(r.empenho_atual_segundos || 0)} · Em curso
                             </div>
                           </div>
                         )}
