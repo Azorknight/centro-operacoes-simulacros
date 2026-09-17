@@ -2659,6 +2659,100 @@ def reembarcar_elemento(elemento_id: int, recurso_id: int):
 
     return {"ok": True}
 
+@app.get("/recursos-operacionais/resumo")
+def resumo_recursos_operacionais():
+    """Resumo dos recursos da operação ativa para o quadro operacional."""
+    with engine.connect() as conn:
+        operacao_id = exigir_operacao_ativa_id(conn)
+
+        recursos = conn.execute(text("""
+            SELECT
+                r.id AS recurso_id,
+                r.nome,
+                r.tipo,
+                r.indicativo_radio,
+                r.estado,
+                r.ocorrencia_id,
+                o.titulo AS ocorrencia_atual
+            FROM recursos r
+            LEFT JOIN ocorrencias o
+              ON o.id = r.ocorrencia_id
+             AND o.operacao_id = r.operacao_id
+            WHERE r.operacao_id = :operacao_id
+            ORDER BY COALESCE(r.indicativo_radio, r.nome), r.id
+        """), {"operacao_id": operacao_id}).mappings().all()
+
+        resumo = []
+        for recurso in recursos:
+            recurso_id = recurso["recurso_id"]
+
+            total_missoes = int(conn.execute(text("""
+                SELECT COUNT(DISTINCT mr.missao_id)
+                FROM missao_recursos mr
+                JOIN missoes m ON m.id = mr.missao_id
+                WHERE mr.recurso_id = :recurso_id
+                  AND m.operacao_id = :operacao_id
+            """), {
+                "recurso_id": recurso_id,
+                "operacao_id": operacao_id
+            }).scalar() or 0)
+
+            periodos = conn.execute(text("""
+                WITH libertacoes AS (
+                    SELECT id, ocorrencia_id, criado_em AS libertado_em
+                    FROM timeline_eventos
+                    WHERE recurso_id = :recurso_id
+                      AND operacao_id = :operacao_id
+                      AND tipo = 'recurso'
+                      AND descricao LIKE 'Recurso libertado:%'
+                      AND ocorrencia_id IS NOT NULL
+                )
+                SELECT
+                    (
+                        SELECT MIN(t.criado_em)
+                        FROM timeline_eventos t
+                        WHERE t.recurso_id = :recurso_id
+                          AND t.operacao_id = :operacao_id
+                          AND t.ocorrencia_id = l.ocorrencia_id
+                          AND t.tipo = 'ordem'
+                          AND t.criado_em <= l.libertado_em
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM timeline_eventos lib_anterior
+                              WHERE lib_anterior.recurso_id = :recurso_id
+                                AND lib_anterior.operacao_id = :operacao_id
+                                AND lib_anterior.ocorrencia_id = l.ocorrencia_id
+                                AND lib_anterior.tipo = 'recurso'
+                                AND lib_anterior.descricao LIKE 'Recurso libertado:%'
+                                AND lib_anterior.criado_em < l.libertado_em
+                                AND t.criado_em <= lib_anterior.criado_em
+                          )
+                    ) AS mobilizado_em,
+                    l.libertado_em
+                FROM libertacoes l
+            """), {
+                "recurso_id": recurso_id,
+                "operacao_id": operacao_id
+            }).mappings().all()
+
+            tempo_total = 0
+            for periodo in periodos:
+                if periodo["mobilizado_em"] is None or periodo["libertado_em"] is None:
+                    continue
+                tempo_total += max(
+                    0,
+                    int((periodo["libertado_em"] - periodo["mobilizado_em"]).total_seconds())
+                )
+
+            resumo.append({
+                **dict(recurso),
+                "total_missoes": total_missoes,
+                "tempo_total_empenhado_segundos": tempo_total
+            })
+
+        return resumo
+
+
 @app.get("/recursos/{recurso_id}/historico")
 def historico_recurso(recurso_id: int):
     with engine.connect() as conn:
