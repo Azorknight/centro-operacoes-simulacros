@@ -377,6 +377,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     const larguraPagina = 210
     const margem = 20
     const larguraTexto = larguraPagina - (margem * 2)
+    const limiteInferior = 274
     const azulPSP = [0, 44, 119]
     const begePSP = [202, 176, 139]
     const cinzentoClaro = [226, 226, 226]
@@ -398,10 +399,87 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       relatorio?.intencao_comandante ||
       'Não registada.'
 
-    // Identidade visual baseada no Manual de Normas Gráficas da PSP
+    const textoEstado = (estado) => {
+      const mapa = {
+        ativa: 'Ativa',
+        aberto: 'Aberto',
+        aberta: 'Aberta',
+        em_curso: 'Em curso',
+        planeado: 'Planeado',
+        em_preparacao: 'Em preparação',
+        em_execucao: 'Em execução',
+        suspenso: 'Suspenso',
+        concluido: 'Concluído',
+        concluida: 'Concluída',
+        cancelado: 'Cancelado',
+        cancelada: 'Cancelada',
+        fechada: 'Fechada',
+        encerrada: 'Encerrada'
+      }
+      return mapa[estado] || String(estado || 'Não definido').replaceAll('_', ' ')
+    }
+
+    const textoPrioridade = (prioridade) => {
+      const mapa = { critica: 'Crítica', alta: 'Alta', normal: 'Normal', media: 'Média', baixa: 'Baixa' }
+      return mapa[prioridade] || String(prioridade || 'Não definida')
+    }
+
+    const cabecalhoContinuacao = () => {
+      doc.setFillColor(...azulPSP)
+      doc.rect(0, 0, larguraPagina, 7, 'F')
+      doc.addImage(logoPSP, 'PNG', margem, 13, 43, 10.3)
+
+      doc.setTextColor(...azulPSP)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.text('RELATÓRIO OPERACIONAL', 190, 18, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(95, 95, 95)
+      doc.text(nomeOperacao, 190, 24, { align: 'right' })
+
+      doc.setFillColor(...begePSP)
+      doc.rect(margem, 31, 28, 1, 'F')
+      doc.setFillColor(...azulPSP)
+      doc.rect(48, 31, 142, 1, 'F')
+    }
+
+    const novaPagina = () => {
+      doc.addPage()
+      cabecalhoContinuacao()
+      return 43
+    }
+
+    const garantirEspaco = (y, alturaNecessaria) => {
+      if (y + alturaNecessaria > limiteInferior) return novaPagina()
+      return y
+    }
+
+    const tituloSecao = (numero, titulo, y) => {
+      y = garantirEspaco(y, 18)
+      doc.setFillColor(...begePSP)
+      doc.rect(margem, y - 4.2, 9, 1.1, 'F')
+      doc.setFillColor(...azulPSP)
+      doc.rect(30, y - 4.2, 160, 1.1, 'F')
+      doc.setTextColor(15, 23, 42)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(13)
+      doc.text(`${numero}. ${titulo}`, margem, y + 4)
+      return y + 15
+    }
+
+    const escreverTexto = (texto, x, y, largura = larguraTexto, tamanho = 9.5) => {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(tamanho)
+      doc.setTextColor(35, 35, 35)
+      const linhas = doc.splitTextToSize(String(texto || ''), largura)
+      doc.text(linhas, x, y, { lineHeightFactor: 1.35 })
+      return y + (linhas.length * tamanho * 0.47)
+    }
+
+    // Primeira página — identidade visual PSP já validada
     doc.setFillColor(...azulPSP)
     doc.rect(0, 0, larguraPagina, 7, 'F')
-
     doc.addImage(logoPSP, 'PNG', margem, 14, 57, 13.6)
 
     doc.setTextColor(...azulPSP)
@@ -426,17 +504,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     doc.setTextColor(90, 90, 90)
     doc.text(`Gerado em: ${dataAtual} - Hora dos Açores`, margem, 57)
 
-    const tituloSecao = (numero, titulo, y) => {
-      doc.setFillColor(...begePSP)
-      doc.rect(margem, y - 4.2, 9, 1.1, 'F')
-      doc.setFillColor(...azulPSP)
-      doc.rect(30, y - 4.2, 160, 1.1, 'F')
-      doc.setTextColor(15, 23, 42)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(13)
-      doc.text(`${numero}. ${titulo}`, margem, y + 4)
-    }
-
     tituloSecao(1, 'Identificação da operação', 70)
 
     doc.setFontSize(9.5)
@@ -458,22 +525,146 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     const linhasIntencao = doc.splitTextToSize(String(intencaoComandante), larguraTexto)
     doc.text(linhasIntencao, margem, 137, { lineHeightFactor: 1.45 })
 
-    // Rodapé institucional discreto
-    doc.setFillColor(...cinzentoClaro)
-    doc.rect(0, 282, larguraPagina, 1, 'F')
-    doc.setFillColor(...azulPSP)
-    doc.rect(0, 283, 45, 1.4, 'F')
-    doc.setFillColor(...begePSP)
-    doc.rect(45, 283, 18, 1.4, 'F')
+    let y = 137 + (linhasIntencao.length * 5.2) + 12
 
-    doc.setFontSize(7.5)
-    doc.setTextColor(95, 95, 95)
-    doc.text('SGO - Sistema de Gestão Operacional', margem, 290)
-    doc.text('Página 1', 190, 290, { align: 'right' })
+    // 3. Ocorrências
+    y = tituloSecao(3, 'Ocorrências', y)
+
+    if (ocorrencias.length === 0) {
+      y = escreverTexto('Não existem ocorrências registadas.', margem, y)
+    } else {
+      ocorrencias.forEach((ocorrencia, indice) => {
+        const descricao = ocorrencia.descricao ? String(ocorrencia.descricao) : ''
+        const linhasDescricao = descricao ? doc.splitTextToSize(descricao, larguraTexto - 6) : []
+        const alturaBloco = 17 + (linhasDescricao.length * 4.5)
+
+        y = garantirEspaco(y, alturaBloco)
+
+        doc.setFillColor(247, 248, 250)
+        doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'F')
+
+        doc.setFillColor(...azulPSP)
+        doc.rect(margem, y - 4, 2, alturaBloco - 2, 'F')
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10.5)
+        doc.setTextColor(...azulPSP)
+        doc.text(`${indice + 1}. ${ocorrencia.titulo || `Ocorrência ${ocorrencia.id}`}`, margem + 6, y + 2)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.5)
+        doc.setTextColor(75, 75, 75)
+        const meta = [
+          ocorrencia.tipo ? `Tipo: ${ocorrencia.tipo}` : null,
+          `Estado: ${textoEstado(ocorrencia.estado)}`
+        ].filter(Boolean).join('  |  ')
+        doc.text(meta, margem + 6, y + 8)
+
+        if (linhasDescricao.length > 0) {
+          doc.setTextColor(35, 35, 35)
+          doc.setFontSize(9)
+          doc.text(linhasDescricao, margem + 6, y + 14, { lineHeightFactor: 1.3 })
+        }
+
+        y += alturaBloco + 4
+      })
+    }
+
+    y += 6
+
+    // 4. Objetivos Operacionais — agrupados por ocorrência
+    y = tituloSecao(4, 'Objetivos Operacionais', y)
+
+    const objetivosVisiveis = objetivos.filter((objetivo) => !objetivo.arquivado)
+
+    if (objetivosVisiveis.length === 0) {
+      y = escreverTexto('Não existem objetivos operacionais registados.', margem, y)
+    } else {
+      const grupos = [
+        ...ocorrencias.map((ocorrencia) => ({
+          ocorrencia,
+          objetivos: objetivosVisiveis.filter((objetivo) => Number(objetivo.ocorrencia_id) === Number(ocorrencia.id))
+        })).filter((grupo) => grupo.objetivos.length > 0),
+        {
+          ocorrencia: null,
+          objetivos: objetivosVisiveis.filter((objetivo) => !objetivo.ocorrencia_id)
+        }
+      ].filter((grupo) => grupo.objetivos.length > 0)
+
+      grupos.forEach((grupo) => {
+        y = garantirEspaco(y, 14)
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10.5)
+        doc.setTextColor(...azulPSP)
+        doc.text(
+          grupo.ocorrencia ? grupo.ocorrencia.titulo : 'Sem ocorrência associada',
+          margem,
+          y
+        )
+        y += 7
+
+        grupo.objetivos.forEach((objetivo) => {
+          const descricao = objetivo.descricao ? String(objetivo.descricao) : ''
+          const linhasDescricao = descricao ? doc.splitTextToSize(descricao, larguraTexto - 10) : []
+          const alturaBloco = 20 + (linhasDescricao.length * 4.4)
+
+          y = garantirEspaco(y, alturaBloco)
+
+          doc.setDrawColor(218, 223, 230)
+          doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'S')
+
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(9.8)
+          doc.setTextColor(25, 25, 25)
+          doc.text(objetivo.nome || `Objetivo ${objetivo.id}`, margem + 5, y + 2)
+
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(8.2)
+          doc.setTextColor(80, 80, 80)
+          const metaObjetivo = [
+            `Estado: ${textoEstado(objetivo.estado)}`,
+            `Prioridade: ${textoPrioridade(objetivo.prioridade)}`,
+            objetivo.responsavel ? `Responsável: ${objetivo.responsavel}` : null
+          ].filter(Boolean).join('  |  ')
+          const linhasMeta = doc.splitTextToSize(metaObjetivo, larguraTexto - 10)
+          doc.text(linhasMeta, margem + 5, y + 8, { lineHeightFactor: 1.25 })
+
+          let yDescricao = y + 8 + (linhasMeta.length * 3.8)
+          if (linhasDescricao.length > 0) {
+            doc.setFontSize(8.8)
+            doc.setTextColor(45, 45, 45)
+            doc.text(linhasDescricao, margem + 5, yDescricao + 3, { lineHeightFactor: 1.3 })
+          }
+
+          y += alturaBloco + 4
+        })
+
+        y += 3
+      })
+    }
+
+    // Rodapé em todas as páginas
+    const totalPaginas = doc.getNumberOfPages()
+    for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
+      doc.setPage(pagina)
+      doc.setFillColor(...cinzentoClaro)
+      doc.rect(0, 282, larguraPagina, 1, 'F')
+      doc.setFillColor(...azulPSP)
+      doc.rect(0, 283, 45, 1.4, 'F')
+      doc.setFillColor(...begePSP)
+      doc.rect(45, 283, 18, 1.4, 'F')
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(95, 95, 95)
+      doc.text('SGO - Sistema de Gestão Operacional', margem, 290)
+      doc.text(`Página ${pagina} de ${totalPaginas}`, 190, 290, { align: 'right' })
+    }
 
     const nomeSeguro = String(nomeOperacao)
       .normalize('NFD')
-      .replace(/[\\u0300-\\u036f]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9_-]+/g, '_')
       .replace(/^_+|_+$/g, '')
       .toLowerCase() || 'operacao'
