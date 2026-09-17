@@ -2744,10 +2744,46 @@ def resumo_recursos_operacionais():
                     int((periodo["libertado_em"] - periodo["mobilizado_em"]).total_seconds())
                 )
 
+            # Se o recurso continua empenhado, soma também o período ainda em curso.
+            empenho_atual_segundos = 0
+            mobilizado_em_atual = None
+            if recurso["estado"] != "disponivel" and recurso["ocorrencia_id"] is not None:
+                mobilizado_em_atual = conn.execute(text("""
+                    SELECT MIN(t.criado_em)
+                    FROM timeline_eventos t
+                    WHERE t.recurso_id = :recurso_id
+                      AND t.operacao_id = :operacao_id
+                      AND t.ocorrencia_id = :ocorrencia_id
+                      AND t.tipo = 'ordem'
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM timeline_eventos l
+                          WHERE l.recurso_id = t.recurso_id
+                            AND l.operacao_id = t.operacao_id
+                            AND l.ocorrencia_id = t.ocorrencia_id
+                            AND l.tipo = 'recurso'
+                            AND l.descricao LIKE 'Recurso libertado:%'
+                            AND l.criado_em >= t.criado_em
+                      )
+                """), {
+                    "recurso_id": recurso_id,
+                    "operacao_id": operacao_id,
+                    "ocorrencia_id": recurso["ocorrencia_id"]
+                }).scalar()
+
+                if mobilizado_em_atual is not None:
+                    agora = datetime.now()
+                    empenho_atual_segundos = max(
+                        0, int((agora - mobilizado_em_atual).total_seconds())
+                    )
+                    tempo_total += empenho_atual_segundos
+
             resumo.append({
                 **dict(recurso),
                 "total_missoes": total_missoes,
-                "tempo_total_empenhado_segundos": tempo_total
+                "tempo_total_empenhado_segundos": tempo_total,
+                "empenho_atual_segundos": empenho_atual_segundos,
+                "mobilizado_em_atual": mobilizado_em_atual
             })
 
         return resumo
