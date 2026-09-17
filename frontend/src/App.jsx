@@ -1050,6 +1050,95 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       })
     }
 
+
+    y += 6
+
+    // 9. Síntese Final
+    y = tituloSecao(9, 'Síntese Final', y)
+
+    const ocorrenciasAtivasRelatorio = ocorrencias.filter((o) => o.estado !== 'fechada').length
+    const objetivosAtivosRelatorio = objetivos.filter(
+      (o) => !['concluido', 'cancelado'].includes(o.estado)
+    ).length
+    const missoesAtivasRelatorio = missoes.filter(
+      (m) => !['concluida', 'cancelada'].includes(m.estado)
+    ).length
+    const recursosEmMissaoRelatorio = resumoRecursosOperacionais.filter(
+      (r) => r.estado === 'em_missao'
+    ).length
+
+    const estadoFinalOperacao = operacaoAtiva?.estado
+      ? textoEstado(operacaoAtiva.estado)
+      : (relatorio?.operacao?.estado ? textoEstado(relatorio.operacao.estado) : '—')
+
+    y = garantirEspaco(y, 42)
+
+    doc.setFillColor(247, 248, 250)
+    doc.roundedRect(margem, y - 4, larguraTexto, 35, 1.5, 1.5, 'F')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(...azulPSP)
+    doc.text('Estado da operação', margem + 5, y + 3)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(35, 35, 35)
+    doc.text(estadoFinalOperacao, margem + 5, y + 9)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...azulPSP)
+    doc.text('Resumo quantitativo', margem + 5, y + 17)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(35, 35, 35)
+    doc.text(
+      `Ocorrências: ${ocorrencias.length} (${ocorrenciasAtivasRelatorio} ativas)   |   ` +
+      `Objetivos: ${objetivos.length} (${objetivosAtivosRelatorio} ativos)`,
+      margem + 5,
+      y + 23
+    )
+    doc.text(
+      `Missões: ${missoes.length} (${missoesAtivasRelatorio} ativas)   |   ` +
+      `Recursos: ${resumoRecursosOperacionais.length} (${recursosEmMissaoRelatorio} em missão)`,
+      margem + 5,
+      y + 29
+    )
+
+    y += 44
+    y = garantirEspaco(y, 34)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(...azulPSP)
+    doc.text('Observações / Conclusão', margem, y)
+
+    doc.setDrawColor(205, 210, 218)
+    doc.roundedRect(margem, y + 4, larguraTexto, 23, 1.5, 1.5, 'S')
+
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(8.2)
+    doc.setTextColor(120, 120, 120)
+    doc.text('Espaço reservado para observações ou conclusão do responsável pela operação.', margem + 5, y + 11)
+
+    y += 36
+    y = garantirEspaco(y, 14)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(90, 90, 90)
+    doc.text(
+      `Relatório gerado em ${new Date().toLocaleString('pt-PT', {
+        timeZone: 'Atlantic/Azores',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}.`,
+      margem,
+      y
+    )
+
     // Rodapé em todas as páginas
     const totalPaginas = doc.getNumberOfPages()
     for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
