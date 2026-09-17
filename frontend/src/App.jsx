@@ -829,6 +829,117 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       })
     }
 
+
+    y += 6
+
+    // 6. Recursos Operacionais
+    y = tituloSecao(6, 'Recursos Operacionais', y)
+
+    const formatarTempoRelatorio = (segundos = 0) => {
+      const total = Math.max(0, Math.floor(Number(segundos) || 0))
+      const dias = Math.floor(total / 86400)
+      const horas = Math.floor((total % 86400) / 3600)
+      const minutos = Math.floor((total % 3600) / 60)
+      const segs = total % 60
+
+      if (dias > 0) return `${dias}d ${horas}h ${minutos}m`
+      if (horas > 0) return `${horas}h ${minutos}m`
+      if (minutos > 0) return `${minutos}m ${segs}s`
+      return `${segs}s`
+    }
+
+    if (resumoRecursosOperacionais.length === 0) {
+      y = escreverTexto('Não existem recursos operacionais registados nesta operação.', margem, y)
+    } else {
+      const totalRecursos = resumoRecursosOperacionais.length
+      const totalDisponiveis = resumoRecursosOperacionais.filter(
+        (recurso) => recurso.estado === 'disponivel'
+      ).length
+      const totalEmMissao = resumoRecursosOperacionais.filter(
+        (recurso) => recurso.estado === 'em_missao'
+      ).length
+
+      y = garantirEspaco(y, 17)
+
+      doc.setFillColor(247, 248, 250)
+      doc.roundedRect(margem, y - 4, larguraTexto, 13, 1.5, 1.5, 'F')
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9)
+      doc.setTextColor(...azulPSP)
+      doc.text(`Total: ${totalRecursos}`, margem + 5, y + 3)
+      doc.text(`Disponíveis: ${totalDisponiveis}`, 82, y + 3)
+      doc.text(`Em missão: ${totalEmMissao}`, 142, y + 3)
+
+      y += 19
+
+      resumoRecursosOperacionais.forEach((recurso) => {
+        const nomeRecurso = recurso.indicativo_radio || recurso.nome || `Recurso ${recurso.recurso_id}`
+        const identificacao = recurso.indicativo_radio && recurso.nome
+          ? `${recurso.indicativo_radio} — ${recurso.nome}`
+          : nomeRecurso
+
+        const estadoRecurso = recurso.estado === 'disponivel'
+          ? 'Disponível'
+          : recurso.estado === 'em_missao'
+            ? 'Em missão'
+            : textoEstado(recurso.estado)
+
+        const linhaPrincipal = [
+          recurso.tipo ? `Tipo: ${recurso.tipo}` : null,
+          `Estado: ${estadoRecurso}`,
+          `Missões: ${Number(recurso.total_missoes) || 0}`
+        ].filter(Boolean).join('  |  ')
+
+        const linhaOcorrencia = recurso.ocorrencia_atual
+          ? `Ocorrência atual: ${recurso.ocorrencia_atual}`
+          : 'Ocorrência atual: —'
+
+        const linhaTempo = recurso.estado === 'em_missao' && Number(recurso.empenho_atual_segundos) > 0
+          ? `Tempo total empenhado: ${formatarTempoRelatorio(recurso.tempo_total_empenhado_segundos)}  |  Empenhamento atual: ${formatarTempoRelatorio(recurso.empenho_atual_segundos)}`
+          : `Tempo total empenhado: ${formatarTempoRelatorio(recurso.tempo_total_empenhado_segundos)}`
+
+        const linhasPrincipal = doc.splitTextToSize(linhaPrincipal, larguraTexto - 10)
+        const linhasOcorrencia = doc.splitTextToSize(linhaOcorrencia, larguraTexto - 10)
+        const linhasTempo = doc.splitTextToSize(linhaTempo, larguraTexto - 10)
+
+        const alturaBloco =
+          17 +
+          (linhasPrincipal.length * 3.8) +
+          (linhasOcorrencia.length * 3.8) +
+          (linhasTempo.length * 3.8)
+
+        y = garantirEspaco(y, alturaBloco)
+
+        doc.setDrawColor(218, 223, 230)
+        doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'S')
+
+        doc.setFillColor(...azulPSP)
+        doc.rect(margem, y - 4, 2, alturaBloco - 2, 'F')
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9.8)
+        doc.setTextColor(25, 25, 25)
+        doc.text(identificacao, margem + 5, y + 2)
+
+        let yLinha = y + 8
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.2)
+        doc.setTextColor(80, 80, 80)
+        doc.text(linhasPrincipal, margem + 5, yLinha, { lineHeightFactor: 1.25 })
+        yLinha += linhasPrincipal.length * 3.8
+
+        doc.text(linhasOcorrencia, margem + 5, yLinha, { lineHeightFactor: 1.25 })
+        yLinha += linhasOcorrencia.length * 3.8
+
+        doc.setTextColor(...azulPSP)
+        doc.text(linhasTempo, margem + 5, yLinha, { lineHeightFactor: 1.25 })
+
+        y += alturaBloco + 4
+      })
+    }
+
     // Rodapé em todas as páginas
     const totalPaginas = doc.getNumberOfPages()
     for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
