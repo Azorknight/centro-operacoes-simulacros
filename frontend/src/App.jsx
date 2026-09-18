@@ -2157,32 +2157,49 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       return (
         <>
           <strong style={styles.sectionTitle}>Ordens</strong>
-          {ordens.map((o) => (
-            <div key={o.id} style={styles.itemCard}>
-              <div style={styles.itemTitle}>{o.titulo}</div>
-              <div style={styles.itemMeta}>{o.estado}</div>
-              <div style={styles.buttonRow}>
-                <button
-                  style={styles.smallButton}
-                  onClick={() => {
-                    alterarEstadoOrdem(o.id, 'executada')
-                      .then(() => atualizarDados())
-                  }}
-                >
-                  Executar
-                </button>
-                <button
-                  style={styles.smallButton}
-                  onClick={() => {
-                    alterarEstadoOrdem(o.id, 'concluida')
-                      .then(() => atualizarDados())
-                  }}
-                >
-                  Concluir
-                </button>
+          {ordens.map((o) => {
+            const recursoOrdem = recursos.find((r) => Number(r.id) === Number(o.recurso_id))
+            const ocorrenciaOrdem = ocorrencias.find((oc) => Number(oc.id) === Number(o.ocorrencia_id))
+            const nomeRecursoOrdem = recursoOrdem
+              ? [recursoOrdem.indicativo_radio, recursoOrdem.nome]
+                  .filter(Boolean)
+                  .filter((valor, indice, lista) => lista.indexOf(valor) === indice)
+                  .join(' — ')
+              : (o.recurso_id ? `Recurso ${o.recurso_id}` : 'Sem recurso associado')
+
+            return (
+              <div key={o.id} style={styles.itemCard}>
+                <div style={styles.itemTitle}>{o.titulo}</div>
+                <div style={styles.itemMeta}>🚓 Recurso: {nomeRecursoOrdem}</div>
+                <div style={styles.itemMeta}>📍 Ocorrência: {ocorrenciaOrdem?.titulo || (o.ocorrencia_id ? `Ocorrência ${o.ocorrencia_id}` : 'Sem ocorrência associada')}</div>
+                <div style={styles.itemMeta}>Estado: {o.estado}</div>
+                <div style={styles.buttonRow}>
+                  {o.estado === 'emitida' && (
+                    <button
+                      style={styles.smallButton}
+                      onClick={() => {
+                        alterarEstadoOrdem(o.id, 'executada')
+                          .then(() => atualizarDados())
+                      }}
+                    >
+                      Executar
+                    </button>
+                  )}
+                  {o.estado !== 'concluida' && (
+                    <button
+                      style={styles.smallButton}
+                      onClick={() => {
+                        alterarEstadoOrdem(o.id, 'concluida')
+                          .then(() => atualizarDados())
+                      }}
+                    >
+                      Concluir
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </>
       )
     }
