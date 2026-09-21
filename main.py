@@ -2213,8 +2213,42 @@ def _libertar_recurso_se_sem_missao_ativa(conn, recurso_id: int):
           AND m.estado NOT IN ('concluida', 'cancelada')
         LIMIT 1
     """), {"recurso_id": recurso_id}).scalar()
+
     if not ainda_ativo:
-        conn.execute(text("UPDATE recursos SET estado = 'disponivel' WHERE id = :id"), {"id": recurso_id})
+        recurso = conn.execute(text("""
+            SELECT nome, indicativo_radio, estado, ocorrencia_id, operacao_id
+            FROM recursos
+            WHERE id = :id
+        """), {"id": recurso_id}).mappings().first()
+
+        if not recurso:
+            return
+
+        ocorrencia_id = recurso["ocorrencia_id"]
+        nome = recurso["indicativo_radio"] or recurso["nome"]
+
+        if recurso["estado"] != "disponivel" and ocorrencia_id is not None:
+            conn.execute(text("""
+                INSERT INTO timeline_eventos (
+                    tipo, descricao, recurso_id, ocorrencia_id, operacao_id
+                )
+                VALUES (
+                    'recurso', :descricao, :recurso_id,
+                    :ocorrencia_id, :operacao_id
+                )
+            """), {
+                "descricao": f"Recurso libertado: {nome}",
+                "recurso_id": recurso_id,
+                "ocorrencia_id": ocorrencia_id,
+                "operacao_id": recurso["operacao_id"]
+            })
+
+        conn.execute(text("""
+            UPDATE recursos
+            SET estado = 'disponivel',
+                ocorrencia_id = NULL
+            WHERE id = :id
+        """), {"id": recurso_id})
 
 
 @app.post("/missoes")
