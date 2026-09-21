@@ -2404,7 +2404,7 @@ def adicionar_nota_missao(missao_id: int, nota: NotaMissao):
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"Nova nota na missÃƒÆ’Ã‚Â£o {missao['titulo']}: {texto_nota}",
+        """), {"descricao": f"Nova nota na missão {missao['titulo']}: {texto_nota}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
     return {"mensagem": "Nota registada", "id": nota_id}
 
