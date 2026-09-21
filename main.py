@@ -1539,7 +1539,7 @@ def criar_ocorrencia(ocorrencia: Ocorrencia):
             INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
             VALUES ('ocorrencia', :descricao, :ocorrencia_id, :operacao_id)
         """), {
-            "descricao": f"OcorrÃƒÆ’Ã‚Âªncia recebida: {ocorrencia.titulo}",
+            "descricao": f"Ocorrência recebida: {ocorrencia.titulo}",
             "ocorrencia_id": nova,
             "operacao_id": operacao_id
         })
@@ -1586,7 +1586,7 @@ def atualizar_estado_ocorrencia_interno(conn, ocorrencia_id: int, novo_estado: s
         INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
         VALUES ('ocorrencia', :descricao, :ocorrencia_id, :operacao_id)
     """), {
-        "descricao": f"OcorrÃƒÆ’Ã‚Âªncia {atual.titulo}: estado alterado para {ROTULO_ESTADO[novo_estado]}",
+        "descricao": f"Ocorrência {atual.titulo}: estado alterado para {ROTULO_ESTADO[novo_estado]}",
         "ocorrencia_id": ocorrencia_id,
         "operacao_id": operacao_id
     })
