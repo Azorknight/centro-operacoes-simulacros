@@ -79,7 +79,7 @@ class ParticipacaoElemento(BaseModel):
     recurso_catalogo_id: int | None = None
 
 app = FastAPI(
-    title="Centro de Operações e Simulacros"
+    title="Centro de OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes e Simulacros"
 )
 
 app.add_middleware(
@@ -92,7 +92,7 @@ app.add_middleware(
 
 @app.get("/")
 def inicio():
-    return {"mensagem": "Centro de Operações e Simulacros ativo"}
+    return {"mensagem": "Centro de OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes e Simulacros ativo"}
 
 @app.get("/teste-bd")
 def teste_bd():
@@ -101,7 +101,7 @@ def teste_bd():
 
 @app.get("/diagnostico")
 def diagnostico_sistema():
-    """Diagnóstico simples e não destrutivo dos principais serviços do SGO."""
+    """DiagnÃƒÆ’Ã‚Â³stico simples e nÃƒÆ’Ã‚Â£o destrutivo dos principais serviÃƒÆ’Ã‚Â§os do SGO."""
     verificado_em = datetime.now(ZoneInfo("Atlantic/Azores")).isoformat()
     try:
         with engine.connect() as conn:
@@ -134,7 +134,7 @@ def diagnostico_sistema():
                 "api": {"ok": True, "mensagem": "Ligada"},
                 "base_dados": {"ok": True, "mensagem": "Ligada"},
                 "timeline": {"ok": True, "mensagem": "Operacional", "eventos": contagens["timeline"]},
-                "replay": {"ok": True, "mensagem": "Disponível"},
+                "replay": {"ok": True, "mensagem": "DisponÃƒÆ’Ã‚Â­vel"},
                 "polling": {"ok": True, "intervalo_segundos": 5},
                 "operacao": operacao,
                 "contagens": contagens,
@@ -144,9 +144,9 @@ def diagnostico_sistema():
             "ok": False,
             "verificado_em": verificado_em,
             "api": {"ok": True, "mensagem": "Ligada"},
-            "base_dados": {"ok": False, "mensagem": "Erro de ligação"},
-            "timeline": {"ok": False, "mensagem": "Indisponível"},
-            "replay": {"ok": False, "mensagem": "Indisponível"},
+            "base_dados": {"ok": False, "mensagem": "Erro de ligaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o"},
+            "timeline": {"ok": False, "mensagem": "IndisponÃƒÆ’Ã‚Â­vel"},
+            "replay": {"ok": False, "mensagem": "IndisponÃƒÆ’Ã‚Â­vel"},
             "polling": {"ok": True, "intervalo_segundos": 5},
             "operacao": None,
             "contagens": {},
@@ -202,10 +202,10 @@ def _desserializar_backup(valor):
 
 def _caminho_backup(nome: str) -> Path:
     if not BACKUP_NAME_RE.fullmatch(nome or ""):
-        raise HTTPException(status_code=400, detail="Nome de backup inválido")
+        raise HTTPException(status_code=400, detail="Nome de backup invÃƒÆ’Ã‚Â¡lido")
     caminho = (BACKUP_DIR / nome).resolve()
     if caminho.parent != BACKUP_DIR.resolve():
-        raise HTTPException(status_code=400, detail="Caminho de backup inválido")
+        raise HTTPException(status_code=400, detail="Caminho de backup invÃƒÆ’Ã‚Â¡lido")
     return caminho
 
 @app.get("/backups")
@@ -268,16 +268,16 @@ def restaurar_backup(nome: str, dados: ConfirmacaoRestauro):
         raise HTTPException(status_code=400, detail="Escreva RESTAURAR para confirmar")
     caminho = _caminho_backup(nome)
     if not caminho.exists():
-        raise HTTPException(status_code=404, detail="Backup não encontrado")
+        raise HTTPException(status_code=404, detail="Backup nÃƒÆ’Ã‚Â£o encontrado")
     try:
         conteudo = json.loads(caminho.read_text(encoding="utf-8"))
     except Exception as erro:
-        raise HTTPException(status_code=400, detail=f"Backup inválido: {erro}")
+        raise HTTPException(status_code=400, detail=f"Backup invÃƒÆ’Ã‚Â¡lido: {erro}")
     if conteudo.get("formato") != "SGO_BACKUP" or conteudo.get("versao_formato") != 1:
-        raise HTTPException(status_code=400, detail="Formato de backup não suportado")
+        raise HTTPException(status_code=400, detail="Formato de backup nÃƒÆ’Ã‚Â£o suportado")
     tabelas_dados = conteudo.get("tabelas")
     if not isinstance(tabelas_dados, dict):
-        raise HTTPException(status_code=400, detail="Backup sem tabelas válidas")
+        raise HTTPException(status_code=400, detail="Backup sem tabelas vÃƒÆ’Ã‚Â¡lidas")
 
     metadata = MetaData()
     inspector = inspect(engine)
@@ -303,7 +303,7 @@ def restaurar_backup(nome: str, dados: ConfirmacaoRestauro):
             for nome_tabela in ordem_insercao:
                 linhas = tabelas_dados.get(nome_tabela, [])
                 if not isinstance(linhas, list):
-                    raise ValueError(f"Dados inválidos na tabela {nome_tabela}")
+                    raise ValueError(f"Dados invÃƒÆ’Ã‚Â¡lidos na tabela {nome_tabela}")
                 registos = [
                     {chave: _desserializar_backup(valor) for chave, valor in linha.items()}
                     for linha in linhas
@@ -332,13 +332,13 @@ def restaurar_backup(nome: str, dados: ConfirmacaoRestauro):
     except HTTPException:
         raise
     except Exception as erro:
-        raise HTTPException(status_code=500, detail=f"Falha no restauro; nenhuma alteração foi aplicada: {erro}")
+        raise HTTPException(status_code=500, detail=f"Falha no restauro; nenhuma alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o foi aplicada: {erro}")
 
 @app.delete("/backups/{nome}")
 def eliminar_backup(nome: str):
     caminho = _caminho_backup(nome)
     if not caminho.exists():
-        raise HTTPException(status_code=404, detail="Backup não encontrado")
+        raise HTTPException(status_code=404, detail="Backup nÃƒÆ’Ã‚Â£o encontrado")
     caminho.unlink()
     return {"ok": True, "nome": nome}
 
@@ -356,7 +356,7 @@ def obter_operacao_ativa_id(conn):
 def exigir_operacao_ativa_id(conn):
     operacao_id = obter_operacao_ativa_id(conn)
     if operacao_id is None:
-        raise HTTPException(status_code=409, detail="Nenhuma operação ativa")
+        raise HTTPException(status_code=409, detail="Nenhuma operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ativa")
     return operacao_id
 
 
@@ -364,14 +364,14 @@ def exigir_operacao_editavel_id(conn):
     operacao_id = exigir_operacao_ativa_id(conn)
     estado = conn.execute(text("SELECT estado FROM operacoes WHERE id = :id"), {"id": operacao_id}).scalar()
     if estado == "concluida":
-        raise HTTPException(status_code=409, detail="A operação está concluída e encontra-se em modo de consulta")
+        raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ concluÃƒÆ’Ã‚Â­da e encontra-se em modo de consulta")
     return operacao_id
 
 
 def preparar_separacao_por_operacao():
     """Atualiza a estrutura sem apagar dados antigos."""
     with engine.begin() as conn:
-        # PAO: intenção do comandante associada à operação.
+        # PAO: intenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do comandante associada ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.
         conn.execute(text("ALTER TABLE operacoes ADD COLUMN IF NOT EXISTS intencao_comandante TEXT"))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS decisoes_operacionais (
@@ -386,7 +386,7 @@ def preparar_separacao_por_operacao():
         for tabela in ("recursos", "ocorrencias", "missoes", "ordens", "timeline_eventos", "elementos"):
             conn.execute(text(f"ALTER TABLE {tabela} ADD COLUMN IF NOT EXISTS operacao_id INTEGER"))
 
-        # Estrutura da Ocorrência Inteligente. As colunas são acrescentadas sem apagar dados.
+        # Estrutura da OcorrÃƒÆ’Ã‚Âªncia Inteligente. As colunas sÃƒÆ’Ã‚Â£o acrescentadas sem apagar dados.
         for coluna in (
             "recebida_em TIMESTAMP",
             "despachada_em TIMESTAMP",
@@ -399,9 +399,9 @@ def preparar_separacao_por_operacao():
         conn.execute(text("UPDATE ocorrencias SET recebida_em = COALESCE(recebida_em, criado_em)"))
         conn.execute(text("UPDATE ocorrencias SET estado = 'recebida' WHERE estado IS NULL OR TRIM(estado) = ''"))
         conn.execute(text("UPDATE ocorrencias SET estado = 'recebida' WHERE LOWER(estado) IN ('aberta', 'aberto')"))
-        conn.execute(text("UPDATE ocorrencias SET estado = 'encerrada', encerrada_em = COALESCE(encerrada_em, criado_em) WHERE LOWER(estado) IN ('fechada', 'fechado', 'concluida', 'concluído', 'concluido')"))
+        conn.execute(text("UPDATE ocorrencias SET estado = 'encerrada', encerrada_em = COALESCE(encerrada_em, criado_em) WHERE LOWER(estado) IN ('fechada', 'fechado', 'concluida', 'concluÃƒÆ’Ã‚Â­do', 'concluido')"))
 
-        # Estrutura de Missões v1: acrescenta metadados sem eliminar missões existentes.
+        # Estrutura de MissÃƒÆ’Ã‚Âµes v1: acrescenta metadados sem eliminar missÃƒÆ’Ã‚Âµes existentes.
         for coluna in (
             "responsavel TEXT",
             "notas TEXT",
@@ -429,7 +429,7 @@ def preparar_separacao_por_operacao():
         conn.execute(text("UPDATE missoes SET iniciada_em = COALESCE(iniciada_em, criado_em) WHERE estado = 'em_execucao'"))
         conn.execute(text("UPDATE missoes SET concluida_em = COALESCE(concluida_em, criado_em) WHERE estado = 'concluida'"))
 
-        # Sprint 10.1: setores operacionais editáveis.
+        # Sprint 10.1: setores operacionais editÃƒÆ’Ã‚Â¡veis.
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS setores (
                 id SERIAL PRIMARY KEY,
@@ -446,7 +446,7 @@ def preparar_separacao_por_operacao():
             )
         """))
 
-        # Sprint 9.1: objetivos operacionais e modelos editáveis.
+        # Sprint 9.1: objetivos operacionais e modelos editÃƒÆ’Ã‚Â¡veis.
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS objetivo_modelos (
                 id SERIAL PRIMARY KEY,
@@ -482,7 +482,7 @@ def preparar_separacao_por_operacao():
         conn.execute(text("ALTER TABLE missoes ADD COLUMN IF NOT EXISTS objetivo_id INTEGER REFERENCES objetivos(id) ON DELETE SET NULL"))
         conn.execute(text("ALTER TABLE missoes ADD COLUMN IF NOT EXISTS setor_id INTEGER REFERENCES setores(id) ON DELETE SET NULL"))
 
-        # Sprint 8.2: uma missão pode ter vários recursos associados.
+        # Sprint 8.2: uma missÃƒÆ’Ã‚Â£o pode ter vÃƒÆ’Ã‚Â¡rios recursos associados.
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS missao_recursos (
                 id SERIAL PRIMARY KEY,
@@ -580,9 +580,9 @@ def preparar_separacao_por_operacao():
             ON CONFLICT (operacao_id, elemento_catalogo_id) DO NOTHING
         """))
 
-        # Liga cada recurso operacional ao respetivo recurso permanente do catálogo.
+        # Liga cada recurso operacional ao respetivo recurso permanente do catÃƒÆ’Ã‚Â¡logo.
         conn.execute(text("ALTER TABLE recursos ADD COLUMN IF NOT EXISTS recurso_catalogo_id INTEGER"))
-        # Copia para o catálogo os recursos já conhecidos, sem duplicar.
+        # Copia para o catÃƒÆ’Ã‚Â¡logo os recursos jÃƒÆ’Ã‚Â¡ conhecidos, sem duplicar.
         conn.execute(text("""
             INSERT INTO recursos_catalogo (nome, tipo, ilha)
             SELECT DISTINCT r.nome, r.tipo, r.ilha
@@ -591,7 +591,7 @@ def preparar_separacao_por_operacao():
             ON CONFLICT (nome, tipo) DO NOTHING
         """))
 
-        # Associa os recursos operacionais já existentes ao catálogo.
+        # Associa os recursos operacionais jÃƒÆ’Ã‚Â¡ existentes ao catÃƒÆ’Ã‚Â¡logo.
         conn.execute(text("""
             UPDATE recursos r
             SET recurso_catalogo_id = rc.id
@@ -601,7 +601,7 @@ def preparar_separacao_por_operacao():
               AND rc.tipo = r.tipo
         """))
 
-        # Preserva os recursos que já estavam nas operações, criando a respetiva participação.
+        # Preserva os recursos que jÃƒÆ’Ã‚Â¡ estavam nas operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes, criando a respetiva participaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.
         conn.execute(text("""
             INSERT INTO operacao_recursos (
                 operacao_id, recurso_catalogo_id, indicativo_operacional, estado
@@ -613,8 +613,8 @@ def preparar_separacao_por_operacao():
             ON CONFLICT (operacao_id, recurso_catalogo_id) DO NOTHING
         """))
 
-        # Materializa no Centro de Operações todos os recursos já preparados.
-        # Quando ainda não existe posição guardada, usa um ponto inicial aproximado da ilha.
+        # Materializa no Centro de OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes todos os recursos jÃƒÆ’Ã‚Â¡ preparados.
+        # Quando ainda nÃƒÆ’Ã‚Â£o existe posiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o guardada, usa um ponto inicial aproximado da ilha.
         conn.execute(text("""
             INSERT INTO recursos (
                 nome, tipo, estado, indicativo_radio, ilha, localizacao,
@@ -631,12 +631,12 @@ def preparar_separacao_por_operacao():
                      LIMIT 1),
                     ST_SetSRID(ST_MakePoint(
                         CASE LOWER(COALESCE(rc.ilha, ''))
-                            WHEN 'são miguel' THEN -25.50
+                            WHEN 'sÃƒÆ’Ã‚Â£o miguel' THEN -25.50
                             WHEN 'sao miguel' THEN -25.50
                             WHEN 'santa maria' THEN -25.10
                             WHEN 'terceira' THEN -27.22
                             WHEN 'graciosa' THEN -28.02
-                            WHEN 'são jorge' THEN -28.05
+                            WHEN 'sÃƒÆ’Ã‚Â£o jorge' THEN -28.05
                             WHEN 'sao jorge' THEN -28.05
                             WHEN 'pico' THEN -28.32
                             WHEN 'faial' THEN -28.63
@@ -645,12 +645,12 @@ def preparar_separacao_por_operacao():
                             ELSE -27.22
                         END,
                         CASE LOWER(COALESCE(rc.ilha, ''))
-                            WHEN 'são miguel' THEN 37.78
+                            WHEN 'sÃƒÆ’Ã‚Â£o miguel' THEN 37.78
                             WHEN 'sao miguel' THEN 37.78
                             WHEN 'santa maria' THEN 36.97
                             WHEN 'terceira' THEN 38.66
                             WHEN 'graciosa' THEN 39.05
-                            WHEN 'são jorge' THEN 38.65
+                            WHEN 'sÃƒÆ’Ã‚Â£o jorge' THEN 38.65
                             WHEN 'sao jorge' THEN 38.65
                             WHEN 'pico' THEN 38.47
                             WHEN 'faial' THEN 38.58
@@ -705,7 +705,7 @@ def preparar_separacao_por_operacao():
                 legado_id = conn.execute(text("""
                     INSERT INTO operacoes (nome, tipo, descricao, estado)
                     VALUES ('Dados anteriores ao SGO 2.0', 'Arquivo',
-                            'Dados criados antes da separação por operações.', 'arquivada')
+                            'Dados criados antes da separaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o por operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes.', 'arquivada')
                     RETURNING id
                 """)).scalar_one()
             for tabela in ("recursos", "ocorrencias", "missoes", "ordens", "timeline_eventos", "elementos"):
@@ -785,7 +785,7 @@ def atualizar_intencao_comandante(operacao_id: int, dados: IntencaoComandante):
     with engine.begin() as conn:
         operacao_ativa_id = exigir_operacao_editavel_id(conn)
         if operacao_ativa_id != operacao_id:
-            raise HTTPException(status_code=409, detail="A operação indicada não é a operação ativa")
+            raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o indicada nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© a operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ativa")
 
         atualizado = conn.execute(text("""
             UPDATE operacoes
@@ -798,7 +798,7 @@ def atualizar_intencao_comandante(operacao_id: int, dados: IntencaoComandante):
         }).mappings().first()
 
         if not atualizado:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         return dict(atualizado)
 
@@ -808,7 +808,7 @@ def listar_decisoes_operacionais(operacao_id: int):
     with engine.connect() as conn:
         existe = conn.execute(text("SELECT id FROM operacoes WHERE id = :id"), {"id": operacao_id}).scalar()
         if existe is None:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         resultado = conn.execute(text("""
             SELECT id, operacao_id, texto, autor, criado_em
             FROM decisoes_operacionais
@@ -822,11 +822,11 @@ def listar_decisoes_operacionais(operacao_id: int):
 def criar_decisao_operacional(operacao_id: int, dados: DecisaoOperacional):
     texto_decisao = dados.texto.strip()
     if not texto_decisao:
-        raise HTTPException(status_code=400, detail="A decisão não pode ficar vazia")
+        raise HTTPException(status_code=400, detail="A decisÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o pode ficar vazia")
     with engine.begin() as conn:
         operacao_ativa_id = exigir_operacao_editavel_id(conn)
         if operacao_ativa_id != operacao_id:
-            raise HTTPException(status_code=409, detail="A operação indicada não é a operação ativa")
+            raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o indicada nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© a operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ativa")
         nova = conn.execute(text("""
             INSERT INTO decisoes_operacionais (operacao_id, texto, autor, criado_em)
             VALUES (:operacao_id, :texto, :autor, NOW())
@@ -848,10 +848,10 @@ def ativar_operacao(operacao_id: int):
         ).fetchone()
 
         if not operacao:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         if operacao[2] == "arquivada":
-            raise HTTPException(status_code=409, detail="Restaure a operação antes de a abrir")
+            raise HTTPException(status_code=409, detail="Restaure a operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o antes de a abrir")
 
         conn.execute(text("""
             INSERT INTO configuracao (chave, valor)
@@ -861,7 +861,7 @@ def ativar_operacao(operacao_id: int):
         """), {"valor": str(operacao_id)})
 
         return {
-            "mensagem": "Operação ativada",
+            "mensagem": "OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ativada",
             "operacao_id": operacao_id,
             "nome": operacao[1]
         }
@@ -886,7 +886,7 @@ def eliminar_operacao(operacao_id: int, dados: ConfirmacaoEliminacao):
     if dados.confirmacao.strip().upper() != "ELIMINAR":
         raise HTTPException(
             status_code=400,
-            detail="Confirmação inválida. Escreva ELIMINAR."
+            detail="ConfirmaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o invÃƒÆ’Ã‚Â¡lida. Escreva ELIMINAR."
         )
 
     with engine.begin() as conn:
@@ -896,22 +896,22 @@ def eliminar_operacao(operacao_id: int, dados: ConfirmacaoEliminacao):
         ).fetchone()
 
         if not operacao:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         if operacao[2] != "arquivada":
             raise HTTPException(
                 status_code=409,
-                detail="Apenas operações arquivadas podem ser eliminadas"
+                detail="Apenas operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes arquivadas podem ser eliminadas"
             )
 
         operacao_ativa_id = obter_operacao_ativa_id(conn)
         if operacao_ativa_id == operacao_id:
             raise HTTPException(
                 status_code=409,
-                detail="A operação ativa não pode ser eliminada"
+                detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ativa nÃƒÆ’Ã‚Â£o pode ser eliminada"
             )
 
-        # Apagar primeiro os registos dependentes, preservando as outras operações.
+        # Apagar primeiro os registos dependentes, preservando as outras operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes.
         contagens = {}
         for tabela in (
             "timeline_eventos",
@@ -933,7 +933,7 @@ def eliminar_operacao(operacao_id: int, dados: ConfirmacaoEliminacao):
         )
 
         return {
-            "mensagem": "Operação eliminada definitivamente",
+            "mensagem": "OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o eliminada definitivamente",
             "operacao_id": operacao_id,
             "nome": operacao[1],
             "registos_eliminados": contagens
@@ -949,10 +949,10 @@ def restaurar_operacao(operacao_id: int):
         ).fetchone()
 
         if not operacao:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         if operacao[2] != 'arquivada':
-            raise HTTPException(status_code=409, detail="A operação não está arquivada")
+            raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ arquivada")
 
         conn.execute(
             text("UPDATE operacoes SET estado = 'planeada' WHERE id = :id"),
@@ -960,7 +960,7 @@ def restaurar_operacao(operacao_id: int):
         )
 
         return {
-            "mensagem": "Operação restaurada",
+            "mensagem": "OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o restaurada",
             "operacao_id": operacao_id,
             "nome": operacao[1]
         }
@@ -971,11 +971,11 @@ def encerrar_operacao(operacao_id: int):
     with engine.begin() as conn:
         operacao = conn.execute(text("SELECT id, nome, estado FROM operacoes WHERE id = :id"), {"id": operacao_id}).fetchone()
         if not operacao:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if operacao[2] == "arquivada":
-            raise HTTPException(status_code=409, detail="Uma operação arquivada não pode ser encerrada")
+            raise HTTPException(status_code=409, detail="Uma operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o arquivada nÃƒÆ’Ã‚Â£o pode ser encerrada")
         conn.execute(text("UPDATE operacoes SET estado = 'concluida', data_fim = NOW() WHERE id = :id"), {"id": operacao_id})
-        return {"mensagem": "Operação encerrada", "operacao_id": operacao_id, "nome": operacao[1]}
+        return {"mensagem": "OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o encerrada", "operacao_id": operacao_id, "nome": operacao[1]}
 
 
 @app.put("/operacoes/{operacao_id}/reabrir")
@@ -983,11 +983,11 @@ def reabrir_operacao(operacao_id: int):
     with engine.begin() as conn:
         operacao = conn.execute(text("SELECT id, nome, estado FROM operacoes WHERE id = :id"), {"id": operacao_id}).fetchone()
         if not operacao:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if operacao[2] != "concluida":
-            raise HTTPException(status_code=409, detail="A operação não está concluída")
+            raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ concluÃƒÆ’Ã‚Â­da")
         conn.execute(text("UPDATE operacoes SET estado = 'planeada', data_fim = NULL WHERE id = :id"), {"id": operacao_id})
-        return {"mensagem": "Operação reaberta", "operacao_id": operacao_id, "nome": operacao[1]}
+        return {"mensagem": "OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o reaberta", "operacao_id": operacao_id, "nome": operacao[1]}
 
 
 @app.put("/operacoes/{operacao_id}/arquivar")
@@ -999,13 +999,13 @@ def arquivar_operacao(operacao_id: int):
         ).fetchone()
 
         if not operacao:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         operacao_ativa_id = obter_operacao_ativa_id(conn)
         if operacao_ativa_id == operacao_id:
             raise HTTPException(
                 status_code=409,
-                detail="Feche a operação antes de a arquivar"
+                detail="Feche a operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o antes de a arquivar"
             )
 
         conn.execute(
@@ -1014,7 +1014,7 @@ def arquivar_operacao(operacao_id: int):
         )
 
         return {
-            "mensagem": "Operação arquivada",
+            "mensagem": "OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o arquivada",
             "operacao_id": operacao_id,
             "nome": operacao[1]
         }
@@ -1030,7 +1030,7 @@ def desativar_operacao():
             DO UPDATE SET valor = NULL
         """))
 
-    return {"mensagem": "Operação fechada"}
+    return {"mensagem": "OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o fechada"}
 
 @app.get("/catalogo-recursos")
 def listar_catalogo_recursos():
@@ -1066,7 +1066,7 @@ def listar_recursos_participantes(operacao_id: int):
     with engine.connect() as conn:
         existe = conn.execute(text("SELECT id FROM operacoes WHERE id=:id"), {"id": operacao_id}).scalar()
         if not existe:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         resultado = conn.execute(text("""
             SELECT opr.id AS participacao_id, opr.operacao_id,
                    rc.id AS recurso_catalogo_id, rc.nome, rc.tipo, rc.ilha,
@@ -1088,12 +1088,12 @@ def adicionar_recurso_participante(operacao_id: int, dados: ParticipacaoRecurso)
     with engine.begin() as conn:
         operacao = conn.execute(text("SELECT estado FROM operacoes WHERE id=:id"), {"id": operacao_id}).scalar()
         if operacao is None:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if operacao in ("concluida", "arquivada"):
-            raise HTTPException(status_code=409, detail="A operação não permite alterar participantes")
+            raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o permite alterar participantes")
         recurso = conn.execute(text("SELECT id FROM recursos_catalogo WHERE id=:id AND estado='ativo'"), {"id": dados.recurso_catalogo_id}).scalar()
         if recurso is None:
-            raise HTTPException(status_code=404, detail="Recurso não encontrado no catálogo")
+            raise HTTPException(status_code=404, detail="Recurso nÃƒÆ’Ã‚Â£o encontrado no catÃƒÆ’Ã‚Â¡logo")
         participacao = conn.execute(text("""
             INSERT INTO operacao_recursos (
                 operacao_id, recurso_catalogo_id, indicativo_operacional, funcao, estado, saida_em
@@ -1111,7 +1111,7 @@ def adicionar_recurso_participante(operacao_id: int, dados: ParticipacaoRecurso)
             **dados.model_dump()
         }).scalar_one()
 
-        # Cria ou atualiza a representação operacional que aparece no mapa.
+        # Cria ou atualiza a representaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o operacional que aparece no mapa.
         conn.execute(text("""
             INSERT INTO recursos (
                 nome, tipo, estado, indicativo_radio, ilha, localizacao,
@@ -1128,16 +1128,16 @@ def adicionar_recurso_participante(operacao_id: int, dados: ParticipacaoRecurso)
                      LIMIT 1),
                     ST_SetSRID(ST_MakePoint(
                         CASE LOWER(COALESCE(rc.ilha, ''))
-                            WHEN 'são miguel' THEN -25.50 WHEN 'sao miguel' THEN -25.50
+                            WHEN 'sÃƒÆ’Ã‚Â£o miguel' THEN -25.50 WHEN 'sao miguel' THEN -25.50
                             WHEN 'santa maria' THEN -25.10 WHEN 'terceira' THEN -27.22
-                            WHEN 'graciosa' THEN -28.02 WHEN 'são jorge' THEN -28.05
+                            WHEN 'graciosa' THEN -28.02 WHEN 'sÃƒÆ’Ã‚Â£o jorge' THEN -28.05
                             WHEN 'sao jorge' THEN -28.05 WHEN 'pico' THEN -28.32
                             WHEN 'faial' THEN -28.63 WHEN 'flores' THEN -31.20
                             WHEN 'corvo' THEN -31.11 ELSE -27.22 END,
                         CASE LOWER(COALESCE(rc.ilha, ''))
-                            WHEN 'são miguel' THEN 37.78 WHEN 'sao miguel' THEN 37.78
+                            WHEN 'sÃƒÆ’Ã‚Â£o miguel' THEN 37.78 WHEN 'sao miguel' THEN 37.78
                             WHEN 'santa maria' THEN 36.97 WHEN 'terceira' THEN 38.66
-                            WHEN 'graciosa' THEN 39.05 WHEN 'são jorge' THEN 38.65
+                            WHEN 'graciosa' THEN 39.05 WHEN 'sÃƒÆ’Ã‚Â£o jorge' THEN 38.65
                             WHEN 'sao jorge' THEN 38.65 WHEN 'pico' THEN 38.47
                             WHEN 'faial' THEN 38.58 WHEN 'flores' THEN 39.45
                             WHEN 'corvo' THEN 39.70 ELSE 38.66 END
@@ -1167,7 +1167,7 @@ def adicionar_recurso_participante(operacao_id: int, dados: ParticipacaoRecurso)
             "indicativo_operacional": dados.indicativo_operacional
         })
 
-        return {"mensagem": "Recurso adicionado à operação", "participacao_id": participacao}
+        return {"mensagem": "Recurso adicionado ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o", "participacao_id": participacao}
 
 
 @app.delete("/operacoes/{operacao_id}/recursos-participantes/{recurso_catalogo_id}")
@@ -1175,9 +1175,9 @@ def retirar_recurso_participante(operacao_id: int, recurso_catalogo_id: int):
     with engine.begin() as conn:
         estado = conn.execute(text("SELECT estado FROM operacoes WHERE id=:id"), {"id": operacao_id}).scalar()
         if estado is None:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if estado in ("concluida", "arquivada"):
-            raise HTTPException(status_code=409, detail="A operação não permite alterar participantes")
+            raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o permite alterar participantes")
         resultado = conn.execute(text("""
             UPDATE operacao_recursos
             SET saida_em = NOW(), estado = 'retirado'
@@ -1186,7 +1186,7 @@ def retirar_recurso_participante(operacao_id: int, recurso_catalogo_id: int):
               AND saida_em IS NULL
         """), {"operacao_id": operacao_id, "recurso_catalogo_id": recurso_catalogo_id})
         if resultado.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Participação não encontrada")
+            raise HTTPException(status_code=404, detail="ParticipaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         conn.execute(text("""
             UPDATE operacao_elementos
@@ -1207,7 +1207,7 @@ def retirar_recurso_participante(operacao_id: int, recurso_catalogo_id: int):
               )
         """), {"operacao_id": operacao_id, "recurso_catalogo_id": recurso_catalogo_id})
 
-        return {"mensagem": "Recurso retirado da operação"}
+        return {"mensagem": "Recurso retirado da operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o"}
 
 
 @app.get("/catalogo-elementos")
@@ -1239,7 +1239,7 @@ def listar_elementos_participantes(operacao_id: int):
     with engine.connect() as conn:
         existe = conn.execute(text("SELECT id FROM operacoes WHERE id=:id"), {"id": operacao_id}).scalar()
         if not existe:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         resultado = conn.execute(text("""
             SELECT ope.id AS participacao_id, ope.operacao_id,
                    ec.id AS elemento_catalogo_id, ec.nome, ec.entidade,
@@ -1266,13 +1266,13 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
     with engine.begin() as conn:
         estado_operacao = conn.execute(text("SELECT estado FROM operacoes WHERE id=:id"), {"id": operacao_id}).scalar()
         if estado_operacao is None:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if estado_operacao in ("concluida", "arquivada"):
-            raise HTTPException(status_code=409, detail="A operação não permite alterar participantes")
+            raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o permite alterar participantes")
 
         elemento = conn.execute(text("SELECT id FROM elementos_catalogo WHERE id=:id AND estado='ativo'"), {"id": dados.elemento_catalogo_id}).scalar()
         if elemento is None:
-            raise HTTPException(status_code=404, detail="Elemento não encontrado no catálogo")
+            raise HTTPException(status_code=404, detail="Elemento nÃƒÆ’Ã‚Â£o encontrado no catÃƒÆ’Ã‚Â¡logo")
 
         if dados.recurso_catalogo_id is not None:
             recurso_participante = conn.execute(text("""
@@ -1286,7 +1286,7 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
                 "recurso_catalogo_id": dados.recurso_catalogo_id
             }).scalar()
             if not recurso_participante:
-                raise HTTPException(status_code=409, detail="A viatura selecionada não participa nesta operação")
+                raise HTTPException(status_code=409, detail="A viatura selecionada nÃƒÆ’Ã‚Â£o participa nesta operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o")
 
         conn.execute(text("""
             INSERT INTO operacao_elementos (
@@ -1352,7 +1352,7 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
               AND ope.elemento_catalogo_id = :elemento_catalogo_id
         """), {"operacao_id": operacao_id, "elemento_catalogo_id": dados.elemento_catalogo_id})
 
-        return {"mensagem": "Elemento adicionado à operação"}
+        return {"mensagem": "Elemento adicionado ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o"}
 
 
 @app.delete("/operacoes/{operacao_id}/elementos-participantes/{elemento_catalogo_id}")
@@ -1360,9 +1360,9 @@ def retirar_elemento_participante(operacao_id: int, elemento_catalogo_id: int):
     with engine.begin() as conn:
         estado_operacao = conn.execute(text("SELECT estado FROM operacoes WHERE id=:id"), {"id": operacao_id}).scalar()
         if estado_operacao is None:
-            raise HTTPException(status_code=404, detail="Operação não encontrada")
+            raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if estado_operacao in ("concluida", "arquivada"):
-            raise HTTPException(status_code=409, detail="A operação não permite alterar participantes")
+            raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o permite alterar participantes")
 
         resultado = conn.execute(text("""
             UPDATE operacao_elementos
@@ -1372,14 +1372,14 @@ def retirar_elemento_participante(operacao_id: int, elemento_catalogo_id: int):
               AND saida_em IS NULL
         """), {"operacao_id": operacao_id, "elemento_catalogo_id": elemento_catalogo_id})
         if resultado.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Participação não encontrada")
+            raise HTTPException(status_code=404, detail="ParticipaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         conn.execute(text("""
             DELETE FROM elementos
             WHERE operacao_id = :operacao_id
               AND elemento_catalogo_id = :elemento_catalogo_id
         """), {"operacao_id": operacao_id, "elemento_catalogo_id": elemento_catalogo_id})
-        return {"mensagem": "Elemento retirado da operação"}
+        return {"mensagem": "Elemento retirado da operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o"}
 
 
 @app.get("/recursos")
@@ -1492,7 +1492,7 @@ def criar_recurso(recurso: Recurso):
             "operacao_id": operacao_id
         })
 
-    return {"mensagem": "Recurso criado e adicionado à operação"}
+    return {"mensagem": "Recurso criado e adicionado ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o"}
 
 
 @app.get("/ocorrencias")
@@ -1539,11 +1539,11 @@ def criar_ocorrencia(ocorrencia: Ocorrencia):
             INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
             VALUES ('ocorrencia', :descricao, :ocorrencia_id, :operacao_id)
         """), {
-            "descricao": f"Ocorrência recebida: {ocorrencia.titulo}",
+            "descricao": f"OcorrÃƒÆ’Ã‚Âªncia recebida: {ocorrencia.titulo}",
             "ocorrencia_id": nova,
             "operacao_id": operacao_id
         })
-    return {"mensagem": "Ocorrência criada com sucesso", "id": nova}
+    return {"mensagem": "OcorrÃƒÆ’Ã‚Âªncia criada com sucesso", "id": nova}
 
 
 ESTADOS_OCORRENCIA = ["recebida", "despachada", "em_curso", "sob_controlo", "encerrada", "arquivada"]
@@ -1567,13 +1567,13 @@ ROTULO_ESTADO = {
 
 def atualizar_estado_ocorrencia_interno(conn, ocorrencia_id: int, novo_estado: str, operacao_id: int):
     if novo_estado not in ESTADOS_OCORRENCIA:
-        raise HTTPException(status_code=400, detail="Estado de ocorrência inválido")
+        raise HTTPException(status_code=400, detail="Estado de ocorrÃƒÆ’Ã‚Âªncia invÃƒÆ’Ã‚Â¡lido")
     atual = conn.execute(text("""
         SELECT titulo, estado FROM ocorrencias
         WHERE id=:id AND operacao_id=:operacao_id
     """), {"id": ocorrencia_id, "operacao_id": operacao_id}).fetchone()
     if not atual:
-        raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+        raise HTTPException(status_code=404, detail="OcorrÃƒÆ’Ã‚Âªncia nÃƒÆ’Ã‚Â£o encontrada")
     if atual.estado == novo_estado:
         return
     coluna = COLUNA_HORA_ESTADO[novo_estado]
@@ -1586,7 +1586,7 @@ def atualizar_estado_ocorrencia_interno(conn, ocorrencia_id: int, novo_estado: s
         INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
         VALUES ('ocorrencia', :descricao, :ocorrencia_id, :operacao_id)
     """), {
-        "descricao": f"Ocorrência {atual.titulo}: estado alterado para {ROTULO_ESTADO[novo_estado]}",
+        "descricao": f"OcorrÃƒÆ’Ã‚Âªncia {atual.titulo}: estado alterado para {ROTULO_ESTADO[novo_estado]}",
         "ocorrencia_id": ocorrencia_id,
         "operacao_id": operacao_id
     })
@@ -1597,7 +1597,7 @@ def alterar_estado_ocorrencia(ocorrencia_id: int, dados: EstadoOcorrencia):
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
         atualizar_estado_ocorrencia_interno(conn, ocorrencia_id, dados.estado, operacao_id)
-    return {"mensagem": "Estado da ocorrência atualizado"}
+    return {"mensagem": "Estado da ocorrÃƒÆ’Ã‚Âªncia atualizado"}
 
 
 @app.get("/ocorrencias/{ocorrencia_id}/timeline")
@@ -1623,7 +1623,7 @@ def estatisticas_ocorrencia(ocorrencia_id: int):
             FROM ocorrencias WHERE id=:id AND operacao_id=:operacao_id
         """), {"id": ocorrencia_id, "operacao_id": operacao_id}).fetchone()
         if not o:
-            raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+            raise HTTPException(status_code=404, detail="OcorrÃƒÆ’Ã‚Âªncia nÃƒÆ’Ã‚Â£o encontrada")
         recursos = conn.execute(text("""
             SELECT COUNT(DISTINCT recurso_id) FROM timeline_eventos
             WHERE ocorrencia_id=:id AND operacao_id=:operacao_id AND recurso_id IS NOT NULL
@@ -1688,33 +1688,84 @@ def listar_timeline():
     
 @app.put("/recursos/{recurso_id}/estado")
 def atualizar_estado(recurso_id: int, dados: dict):
-    with engine.connect() as conn:
-        conn.execute(
-            text("""
-                UPDATE recursos
-                SET estado = :estado
-                WHERE id = :id
-            """),
-            {
-                "estado": dados["estado"],
-                "id": recurso_id
-            }
-        )
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
 
-        conn.execute(
-            text("""
-                INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
-                VALUES ('estado', :descricao, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
-            """),
-            {
-                "descricao": f"Recurso {recurso_id} mudou estado para {dados['estado']}"
-            }
-        )
+        recurso = conn.execute(text("""
+            SELECT nome, indicativo_radio, estado, ocorrencia_id
+            FROM recursos
+            WHERE id = :recurso_id
+              AND operacao_id = :operacao_id
+        """), {
+            "recurso_id": recurso_id,
+            "operacao_id": operacao_id
+        }).fetchone()
 
-        conn.commit()
+        if not recurso:
+            raise HTTPException(
+                status_code=404,
+                detail="Recurso nÃƒÂ£o encontrado nesta operaÃƒÂ§ÃƒÂ£o"
+            )
+
+        estado_anterior = recurso[2]
+        novo_estado = dados["estado"]
+        ocorrencia_id = recurso[3]
+        nome = recurso[1] or recurso[0]
+
+        # Ao terminar um empenhamento atravÃƒÂ©s de "Marcar disponÃƒÂ­vel",
+        # regista a libertaÃƒÂ§ÃƒÂ£o antes de retirar a associaÃƒÂ§ÃƒÂ£o ÃƒÂ  ocorrÃƒÂªncia.
+        # Este evento fecha o perÃƒÂ­odo usado no cÃƒÂ¡lculo do tempo empenhado.
+        if (
+            estado_anterior != "disponivel"
+            and novo_estado == "disponivel"
+            and ocorrencia_id is not None
+        ):
+            conn.execute(text("""
+                INSERT INTO timeline_eventos (
+                    tipo, descricao, recurso_id, ocorrencia_id, operacao_id
+                )
+                VALUES (
+                    'recurso', :descricao, :recurso_id,
+                    :ocorrencia_id, :operacao_id
+                )
+            """), {
+                "descricao": f"Recurso libertado: {nome}",
+                "recurso_id": recurso_id,
+                "ocorrencia_id": ocorrencia_id,
+                "operacao_id": operacao_id
+            })
+
+        conn.execute(text("""
+            UPDATE recursos
+            SET estado = :estado,
+                ocorrencia_id = CASE
+                    WHEN :estado = 'disponivel' THEN NULL
+                    ELSE ocorrencia_id
+                END
+            WHERE id = :recurso_id
+              AND operacao_id = :operacao_id
+        """), {
+            "estado": novo_estado,
+            "recurso_id": recurso_id,
+            "operacao_id": operacao_id
+        })
+
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (
+                tipo, descricao, recurso_id, ocorrencia_id, operacao_id
+            )
+            VALUES (
+                'estado', :descricao, :recurso_id,
+                :ocorrencia_id, :operacao_id
+            )
+        """), {
+            "descricao": f"Recurso {nome} mudou estado para {novo_estado}",
+            "recurso_id": recurso_id,
+            "ocorrencia_id": ocorrencia_id,
+            "operacao_id": operacao_id
+        })
 
     return {"mensagem": "Estado atualizado"}
-
 @app.put("/recursos/{recurso_id}/libertar")
 def libertar_recurso(recurso_id: int):
     with engine.begin() as conn:
@@ -1725,7 +1776,7 @@ def libertar_recurso(recurso_id: int):
             WHERE id = :recurso_id AND operacao_id = :operacao_id
         """), {"recurso_id": recurso_id, "operacao_id": operacao_id}).fetchone()
         if not recurso:
-            raise HTTPException(status_code=404, detail="Recurso não encontrado nesta operação")
+            raise HTTPException(status_code=404, detail="Recurso nÃƒÆ’Ã‚Â£o encontrado nesta operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o")
 
         conn.execute(text("""
             UPDATE recursos
@@ -1834,7 +1885,7 @@ def atualizar_posicao(recurso_id: int, dados: dict):
                     }
                 )
 
-    return {"mensagem": "Posição atualizada"}
+    return {"mensagem": "PosiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o atualizada"}
 
 @app.put("/recursos/{recurso_id}/confirmar-chegada")
 def confirmar_chegada(recurso_id: int):
@@ -1850,7 +1901,7 @@ def confirmar_chegada(recurso_id: int):
         ).fetchone()
 
         if not recurso:
-            return {"erro": "Recurso não encontrado"}
+            return {"erro": "Recurso nÃƒÆ’Ã‚Â£o encontrado"}
 
         nome_recurso = recurso[0]
         indicativo = recurso[1] or ""
@@ -1858,7 +1909,7 @@ def confirmar_chegada(recurso_id: int):
         titulo_ocorrencia = recurso[3]
 
         if not ocorrencia_id:
-            return {"erro": "Recurso não tem ocorrência associada"}
+            return {"erro": "Recurso nÃƒÆ’Ã‚Â£o tem ocorrÃƒÆ’Ã‚Âªncia associada"}
 
         texto_recurso = f"{nome_recurso} ({indicativo})" if indicativo else nome_recurso
 
@@ -1878,7 +1929,7 @@ def confirmar_chegada(recurso_id: int):
         ).fetchone()
 
         if chegada_existente:
-            return {"mensagem": "Chegada já registada"}
+            return {"mensagem": "Chegada jÃƒÆ’Ã‚Â¡ registada"}
 
         conn.execute(
             text("""
@@ -1886,7 +1937,7 @@ def confirmar_chegada(recurso_id: int):
                 VALUES ('chegada', :descricao, :recurso_id, :ocorrencia_id, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
             """),
             {
-                "descricao": f"Chegada ao local: {texto_recurso} chegou à ocorrência {titulo_ocorrencia}",
+                "descricao": f"Chegada ao local: {texto_recurso} chegou ÃƒÆ’Ã‚Â  ocorrÃƒÆ’Ã‚Âªncia {titulo_ocorrencia}",
                 "recurso_id": recurso_id,
                 "ocorrencia_id": ocorrencia_id
             }
@@ -1937,7 +1988,7 @@ def listar_bases():
     
 @app.put("/recursos/{recurso_id}/atribuir-ocorrencia/{ocorrencia_id}")
 def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
-    print(">>> ENTROU NA FUNÇÃO ATRIBUIR_OCORRENCIA")
+    print(">>> ENTROU NA FUNÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã†â€™O ATRIBUIR_OCORRENCIA")
     try:
         with engine.begin() as conn:
             recurso = conn.execute(
@@ -1952,7 +2003,7 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
 
             nome_recurso = recurso[0] if recurso else f"Recurso {recurso_id}"
             indicativo = recurso[1] if recurso and recurso[1] else ""
-            titulo_ocorrencia = ocorrencia[0] if ocorrencia else f"Ocorrência {ocorrencia_id}"
+            titulo_ocorrencia = ocorrencia[0] if ocorrencia else f"OcorrÃƒÆ’Ã‚Âªncia {ocorrencia_id}"
 
             texto_recurso = f"{nome_recurso} ({indicativo})" if indicativo else nome_recurso
             hora = agora_acores()
@@ -1983,7 +2034,7 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
                             (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
                 """),
                 {
-                    "titulo": "Deslocação para ocorrência",
+                    "titulo": "DeslocaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o para ocorrÃƒÆ’Ã‚Âªncia",
                     "descricao": f"Ordem direta para {texto_recurso} se deslocar para: {titulo_ocorrencia}",
                     "recurso_id": recurso_id,
                     "ocorrencia_id": ocorrencia_id
@@ -2002,7 +2053,7 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
                 }
             )
 
-        return {"mensagem": "Ordem de deslocação criada"}
+        return {"mensagem": "Ordem de deslocaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o criada"}
 
     except Exception as e:
         return {"erro": str(e)}
@@ -2204,16 +2255,16 @@ def criar_missao(missao: Missao):
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"Missão criada: {missao.titulo.strip()}",
+        """), {"descricao": f"MissÃƒÆ’Ã‚Â£o criada: {missao.titulo.strip()}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao.ocorrencia_id})
-    return {"mensagem": "Missão criada com sucesso", "id": missao_id}
+    return {"mensagem": "MissÃƒÆ’Ã‚Â£o criada com sucesso", "id": missao_id}
 
 
 @app.put("/missoes/{missao_id}/estado")
 def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
     estados_validos = {"recebida", "planeada", "em_execucao", "concluida", "cancelada"}
     if dados.estado not in estados_validos:
-        raise HTTPException(status_code=400, detail="Estado de missão inválido")
+        raise HTTPException(status_code=400, detail="Estado de missÃƒÆ’Ã‚Â£o invÃƒÆ’Ã‚Â¡lido")
 
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
@@ -2223,7 +2274,7 @@ def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
             WHERE id = :id AND operacao_id = :operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         conn.execute(text("""
             UPDATE missoes
@@ -2245,21 +2296,21 @@ def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
                 _libertar_recurso_se_sem_missao_ativa(conn, recurso_id)
 
         rotulos = {"recebida": "Recebida", "planeada": "Planeada",
-                   "em_execucao": "Em execução", "concluida": "Concluída",
+                   "em_execucao": "Em execuÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o", "concluida": "ConcluÃƒÆ’Ã‚Â­da",
                    "cancelada": "Cancelada"}
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"Missão {missao['titulo']} alterada para {rotulos[dados.estado]}",
+        """), {"descricao": f"MissÃƒÆ’Ã‚Â£o {missao['titulo']} alterada para {rotulos[dados.estado]}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
-    return {"mensagem": "Estado da missão atualizado"}
+    return {"mensagem": "Estado da missÃƒÆ’Ã‚Â£o atualizado"}
 
 
 @app.put("/missoes/{missao_id}/situacao")
 def alterar_situacao_missao(missao_id: int, dados: SituacaoMissao):
     situacoes_validas = {"sob_controlo", "estavel", "complexa", "critica", "necessita_reforco"}
     if dados.situacao_operacional not in situacoes_validas:
-        raise HTTPException(status_code=400, detail="Situação operacional inválida")
+        raise HTTPException(status_code=400, detail="SituaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o operacional invÃƒÆ’Ã‚Â¡lida")
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
         missao = conn.execute(text("""
@@ -2267,20 +2318,20 @@ def alterar_situacao_missao(missao_id: int, dados: SituacaoMissao):
             WHERE id=:id AND operacao_id=:operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         conn.execute(text("""
             UPDATE missoes SET situacao_operacional=:situacao, atualizada_em=NOW() WHERE id=:id
         """), {"situacao": dados.situacao_operacional, "id": missao_id})
         rotulos = {
-            "sob_controlo": "Sob controlo", "estavel": "Estável", "complexa": "Complexa",
-            "critica": "Crítica", "necessita_reforco": "Necessita de reforço"
+            "sob_controlo": "Sob controlo", "estavel": "EstÃƒÆ’Ã‚Â¡vel", "complexa": "Complexa",
+            "critica": "CrÃƒÆ’Ã‚Â­tica", "necessita_reforco": "Necessita de reforÃƒÆ’Ã‚Â§o"
         }
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"Situação da missão {missao['titulo']}: {rotulos[dados.situacao_operacional]}",
+        """), {"descricao": f"SituaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da missÃƒÆ’Ã‚Â£o {missao['titulo']}: {rotulos[dados.situacao_operacional]}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
-    return {"mensagem": "Situação operacional atualizada"}
+    return {"mensagem": "SituaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o operacional atualizada"}
 
 
 @app.get("/missoes/{missao_id}/notas")
@@ -2290,7 +2341,7 @@ def listar_notas_missao(missao_id: int):
         existe = conn.execute(text("SELECT 1 FROM missoes WHERE id=:id AND operacao_id=:operacao_id"),
                               {"id": missao_id, "operacao_id": operacao_id}).scalar()
         if not existe:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         rows = conn.execute(text("""
             SELECT id, autor, texto, criado_em FROM missao_notas
             WHERE missao_id=:id ORDER BY criado_em DESC, id DESC
@@ -2302,7 +2353,7 @@ def listar_notas_missao(missao_id: int):
 def adicionar_nota_missao(missao_id: int, nota: NotaMissao):
     texto_nota = nota.texto.strip()
     if not texto_nota:
-        raise HTTPException(status_code=400, detail="A nota não pode estar vazia")
+        raise HTTPException(status_code=400, detail="A nota nÃƒÆ’Ã‚Â£o pode estar vazia")
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
         missao = conn.execute(text("""
@@ -2310,7 +2361,7 @@ def adicionar_nota_missao(missao_id: int, nota: NotaMissao):
             WHERE id=:id AND operacao_id=:operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         nota_id = conn.execute(text("""
             INSERT INTO missao_notas (missao_id, autor, texto)
             VALUES (:missao_id, :autor, :texto) RETURNING id
@@ -2319,7 +2370,7 @@ def adicionar_nota_missao(missao_id: int, nota: NotaMissao):
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"Nova nota na missão {missao['titulo']}: {texto_nota[:120]}",
+        """), {"descricao": f"Nova nota na missÃƒÆ’Ã‚Â£o {missao['titulo']}: {texto_nota[:120]}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
     return {"mensagem": "Nota registada", "id": nota_id}
 
@@ -2334,7 +2385,7 @@ def estatisticas_missao(missao_id: int):
             FROM missoes m WHERE m.id=:id AND m.operacao_id=:operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         total_recursos = conn.execute(text("SELECT COUNT(*) FROM missao_recursos WHERE missao_id=:id"), {"id": missao_id}).scalar() or 0
         total_elementos = conn.execute(text("""
             SELECT COUNT(DISTINCT e.id) FROM elementos e
@@ -2357,7 +2408,7 @@ def timeline_missao(missao_id: int):
         missao = conn.execute(text("SELECT id, titulo, ocorrencia_id, criado_em FROM missoes WHERE id=:id AND operacao_id=:operacao_id"),
                               {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         rows = conn.execute(text("""
             SELECT id, tipo, descricao, criado_em FROM timeline_eventos
             WHERE operacao_id=:operacao_id AND tipo='missao'
@@ -2375,7 +2426,7 @@ def listar_recursos_missao(missao_id: int):
             "SELECT 1 FROM missoes WHERE id=:id AND operacao_id=:operacao_id"
         ), {"id": missao_id, "operacao_id": operacao_id}).scalar()
         if not existe:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         resultado = conn.execute(text("""
             SELECT r.*, mr.atribuido_em
             FROM missao_recursos mr
@@ -2395,13 +2446,13 @@ def atribuir_recurso_missao(missao_id: int, recurso_id: int):
             FROM missoes WHERE id=:id AND operacao_id=:operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         recurso = conn.execute(text("""
             SELECT id, nome, indicativo_radio FROM recursos
             WHERE id=:id AND operacao_id=:operacao_id
         """), {"id": recurso_id, "operacao_id": operacao_id}).mappings().first()
         if not recurso:
-            raise HTTPException(status_code=404, detail="Recurso não encontrado na operação ativa")
+            raise HTTPException(status_code=404, detail="Recurso nÃƒÆ’Ã‚Â£o encontrado na operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ativa")
         conn.execute(text("""
             INSERT INTO missao_recursos (missao_id, recurso_id)
             VALUES (:missao_id, :recurso_id)
@@ -2414,9 +2465,9 @@ def atribuir_recurso_missao(missao_id: int, recurso_id: int):
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"{nome_recurso} adicionado à missão {missao['titulo']}",
+        """), {"descricao": f"{nome_recurso} adicionado ÃƒÆ’Ã‚Â  missÃƒÆ’Ã‚Â£o {missao['titulo']}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
-    return {"mensagem": "Recurso adicionado à missão"}
+    return {"mensagem": "Recurso adicionado ÃƒÆ’Ã‚Â  missÃƒÆ’Ã‚Â£o"}
 
 
 @app.delete("/missoes/{missao_id}/recursos/{recurso_id}")
@@ -2428,23 +2479,23 @@ def remover_recurso_missao(missao_id: int, recurso_id: int):
             WHERE id=:id AND operacao_id=:operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         recurso = conn.execute(text("SELECT nome, indicativo_radio FROM recursos WHERE id=:id"), {"id": recurso_id}).mappings().first()
         resultado = conn.execute(text("""
             DELETE FROM missao_recursos
             WHERE missao_id=:missao_id AND recurso_id=:recurso_id
         """), {"missao_id": missao_id, "recurso_id": recurso_id})
         if resultado.rowcount == 0:
-            raise HTTPException(status_code=404, detail="O recurso não está associado à missão")
+            raise HTTPException(status_code=404, detail="O recurso nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ associado ÃƒÆ’Ã‚Â  missÃƒÆ’Ã‚Â£o")
         _atualizar_recurso_principal_missao(conn, missao_id)
         _libertar_recurso_se_sem_missao_ativa(conn, recurso_id)
         nome_recurso = ((recurso or {}).get("indicativo_radio") or (recurso or {}).get("nome") or f"Recurso {recurso_id}")
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"{nome_recurso} removido da missão {missao['titulo']}",
+        """), {"descricao": f"{nome_recurso} removido da missÃƒÆ’Ã‚Â£o {missao['titulo']}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
-    return {"mensagem": "Recurso removido da missão"}
+    return {"mensagem": "Recurso removido da missÃƒÆ’Ã‚Â£o"}
 
 
 @app.put("/missoes/{missao_id}/concluir")
@@ -2603,7 +2654,7 @@ def atualizar_posicao_elemento(elemento_id: int, dados: dict):
         ).fetchone()
 
         if not elemento:
-            return {"erro": "Elemento não encontrado"}
+            return {"erro": "Elemento nÃƒÆ’Ã‚Â£o encontrado"}
 
         nome = elemento[0]
         indicativo = elemento[1] or ""
@@ -2661,7 +2712,7 @@ def reembarcar_elemento(elemento_id: int, recurso_id: int):
 
 @app.get("/recursos-operacionais/resumo")
 def resumo_recursos_operacionais():
-    """Resumo dos recursos da operação ativa para o quadro operacional."""
+    """Resumo dos recursos da operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ativa para o quadro operacional."""
     with engine.connect() as conn:
         operacao_id = exigir_operacao_ativa_id(conn)
 
@@ -2709,7 +2760,7 @@ def resumo_recursos_operacionais():
                 )
                 SELECT
                     (
-                        SELECT MIN(t.criado_em)
+                        SELECT MAX(t.criado_em)
                         FROM timeline_eventos t
                         WHERE t.recurso_id = :recurso_id
                           AND t.operacao_id = :operacao_id
@@ -2744,12 +2795,12 @@ def resumo_recursos_operacionais():
                     int((periodo["libertado_em"] - periodo["mobilizado_em"]).total_seconds())
                 )
 
-            # Se o recurso continua empenhado, soma também o período ainda em curso.
+            # Se o recurso continua empenhado, soma tambÃƒÆ’Ã‚Â©m o perÃƒÆ’Ã‚Â­odo ainda em curso.
             empenho_atual_segundos = 0
             mobilizado_em_atual = None
             if recurso["estado"] != "disponivel" and recurso["ocorrencia_id"] is not None:
                 mobilizado_em_atual = conn.execute(text("""
-                    SELECT MIN(t.criado_em)
+                    SELECT MAX(t.criado_em)
                     FROM timeline_eventos t
                     WHERE t.recurso_id = :recurso_id
                       AND t.operacao_id = :operacao_id
@@ -2850,8 +2901,8 @@ def historico_recurso(recurso_id: int):
 
         chegadas_ids = [linha[0] for linha in chegadas_registadas]
 
-        # Tempo empenhado: da primeira ordem de deslocação até à libertação
-        # do recurso na mesma ocorrência.
+        # Tempo empenhado: da primeira ordem de deslocaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o atÃƒÆ’Ã‚Â© ÃƒÆ’Ã‚Â  libertaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o
+        # do recurso na mesma ocorrÃƒÆ’Ã‚Âªncia.
         periodos_empenho = conn.execute(
             text("""
                 WITH libertacoes AS (
@@ -2867,7 +2918,7 @@ def historico_recurso(recurso_id: int):
                     l.ocorrencia_id,
                     o.titulo AS ocorrencia_titulo,
                     (
-                        SELECT MIN(t.criado_em)
+                        SELECT MAX(t.criado_em)
                         FROM timeline_eventos t
                         WHERE t.recurso_id = :recurso_id
                           AND t.operacao_id = :operacao_id
@@ -2923,7 +2974,7 @@ def historico_recurso(recurso_id: int):
         }
 
 
-# ==================== SETORES OPERACIONAIS — SPRINT 10.1 ====================
+# ==================== SETORES OPERACIONAIS ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SPRINT 10.1 ====================
 class SetorOperacional(BaseModel):
     nome: str
     descricao: str = ""
@@ -2941,11 +2992,11 @@ class AssociacaoSetor(BaseModel):
 def _validar_setor(dados):
     estados = {"planeado", "ativo", "suspenso", "encerrado"}
     if dados.estado not in estados:
-        raise HTTPException(status_code=400, detail="Estado de setor inválido")
+        raise HTTPException(status_code=400, detail="Estado de setor invÃƒÆ’Ã‚Â¡lido")
     if not dados.nome.strip():
-        raise HTTPException(status_code=400, detail="O nome do setor é obrigatório")
+        raise HTTPException(status_code=400, detail="O nome do setor ÃƒÆ’Ã‚Â© obrigatÃƒÆ’Ã‚Â³rio")
     if not dados.cor or not dados.cor.startswith("#") or len(dados.cor) not in (4, 7):
-        raise HTTPException(status_code=400, detail="Cor do setor inválida")
+        raise HTTPException(status_code=400, detail="Cor do setor invÃƒÆ’Ã‚Â¡lida")
 
 @app.get("/setores")
 def listar_setores(incluir_arquivados: bool = False):
@@ -2994,7 +3045,7 @@ def atualizar_setor(setor_id: int, dados: SetorAtualizacao):
             RETURNING id
         """), {**dados.model_dump(), "id": setor_id, "op": operacao_id, "nome": dados.nome.strip()}).scalar()
         if not atualizado:
-            raise HTTPException(status_code=404, detail="Setor não encontrado")
+            raise HTTPException(status_code=404, detail="Setor nÃƒÆ’Ã‚Â£o encontrado")
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo,descricao,operacao_id)
             VALUES ('setor',:descricao,:op)
@@ -3015,12 +3066,12 @@ def eliminar_setor(setor_id: int):
                 UPDATE setores SET arquivado=TRUE,atualizado_em=NOW()
                 WHERE id=:id AND operacao_id=:op
             """), {"id": setor_id, "op": operacao_id})
-            return {"mensagem": "Setor arquivado porque possui objetivos ou missões associados", "arquivado": True}
+            return {"mensagem": "Setor arquivado porque possui objetivos ou missÃƒÆ’Ã‚Âµes associados", "arquivado": True}
         apagado = conn.execute(text("""
             DELETE FROM setores WHERE id=:id AND operacao_id=:op RETURNING id
         """), {"id": setor_id, "op": operacao_id}).scalar()
         if not apagado:
-            raise HTTPException(status_code=404, detail="Setor não encontrado")
+            raise HTTPException(status_code=404, detail="Setor nÃƒÆ’Ã‚Â£o encontrado")
     return {"mensagem": "Setor eliminado", "arquivado": False}
 
 @app.put("/objetivos/{objetivo_id}/setor")
@@ -3033,14 +3084,14 @@ def associar_setor_objetivo(objetivo_id: int, dados: AssociacaoSetor):
                 WHERE id=:id AND operacao_id=:op AND arquivado=FALSE
             """), {"id": dados.setor_id, "op": operacao_id}).scalar()
             if not existe:
-                raise HTTPException(status_code=404, detail="Setor não encontrado")
+                raise HTTPException(status_code=404, detail="Setor nÃƒÆ’Ã‚Â£o encontrado")
         objetivo = conn.execute(text("""
             UPDATE objetivos SET setor_id=:setor_id,atualizado_em=NOW()
             WHERE id=:id AND operacao_id=:op
             RETURNING nome,ocorrencia_id
         """), {"setor_id": dados.setor_id, "id": objetivo_id, "op": operacao_id}).mappings().first()
         if not objetivo:
-            raise HTTPException(status_code=404, detail="Objetivo não encontrado")
+            raise HTTPException(status_code=404, detail="Objetivo nÃƒÆ’Ã‚Â£o encontrado")
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id)
             VALUES ('setor',:descricao,:op,:oc)
@@ -3057,21 +3108,21 @@ def associar_setor_missao(missao_id: int, dados: AssociacaoSetor):
                 WHERE id=:id AND operacao_id=:op AND arquivado=FALSE
             """), {"id": dados.setor_id, "op": operacao_id}).scalar()
             if not existe:
-                raise HTTPException(status_code=404, detail="Setor não encontrado")
+                raise HTTPException(status_code=404, detail="Setor nÃƒÆ’Ã‚Â£o encontrado")
         missao = conn.execute(text("""
             UPDATE missoes SET setor_id=:setor_id,atualizada_em=NOW()
             WHERE id=:id AND operacao_id=:op
             RETURNING titulo,ocorrencia_id
         """), {"setor_id": dados.setor_id, "id": missao_id, "op": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="Missão não encontrada")
+            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id)
             VALUES ('setor',:descricao,:op,:oc)
-        """), {"descricao": f"Setor da missão {missao['titulo']} atualizado", "op": operacao_id, "oc": missao["ocorrencia_id"]})
-    return {"mensagem": "Setor da missão atualizado"}
+        """), {"descricao": f"Setor da missÃƒÆ’Ã‚Â£o {missao['titulo']} atualizado", "op": operacao_id, "oc": missao["ocorrencia_id"]})
+    return {"mensagem": "Setor da missÃƒÆ’Ã‚Â£o atualizado"}
 
-# ==================== OBJETIVOS OPERACIONAIS — SPRINT 9.1 ====================
+# ==================== OBJETIVOS OPERACIONAIS ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SPRINT 9.1 ====================
 class ObjetivoOperacional(BaseModel):
     nome: str
     descricao: str = ""
@@ -3100,11 +3151,11 @@ def _validar_objetivo(dados):
     prioridades = {"critica", "alta", "normal", "baixa"}
     estados = {"planeado", "em_preparacao", "em_execucao", "suspenso", "concluido", "cancelado"}
     if dados.prioridade not in prioridades:
-        raise HTTPException(status_code=400, detail="Prioridade de objetivo inválida")
+        raise HTTPException(status_code=400, detail="Prioridade de objetivo invÃƒÆ’Ã‚Â¡lida")
     if dados.estado not in estados:
-        raise HTTPException(status_code=400, detail="Estado de objetivo inválido")
+        raise HTTPException(status_code=400, detail="Estado de objetivo invÃƒÆ’Ã‚Â¡lido")
     if not dados.nome.strip():
-        raise HTTPException(status_code=400, detail="O nome do objetivo é obrigatório")
+        raise HTTPException(status_code=400, detail="O nome do objetivo ÃƒÆ’Ã‚Â© obrigatÃƒÆ’Ã‚Â³rio")
 
 @app.get("/objetivos")
 def listar_objetivos(incluir_arquivados: bool = False):
@@ -3139,7 +3190,7 @@ def atualizar_objetivo(objetivo_id:int, dados: ObjetivoAtualizacao):
     with engine.begin() as conn:
         operacao_id=exigir_operacao_editavel_id(conn)
         existe=conn.execute(text("SELECT 1 FROM objetivos WHERE id=:id AND operacao_id=:op"),{"id":objetivo_id,"op":operacao_id}).scalar()
-        if not existe: raise HTTPException(status_code=404, detail="Objetivo não encontrado")
+        if not existe: raise HTTPException(status_code=404, detail="Objetivo nÃƒÆ’Ã‚Â£o encontrado")
         conn.execute(text("""UPDATE objetivos SET ocorrencia_id=:ocorrencia_id,modelo_id=:modelo_id,nome=:nome,descricao=:descricao,prioridade=:prioridade,estado=:estado,responsavel=:responsavel,latitude=:latitude,longitude=:longitude,notas=:notas,arquivado=:arquivado,atualizado_em=NOW(),concluido_em=CASE WHEN :estado='concluido' THEN COALESCE(concluido_em,NOW()) ELSE concluido_em END WHERE id=:id"""), {**dados.model_dump(),"id":objetivo_id,"nome":dados.nome.strip()})
         conn.execute(text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"),{"d":f"Objetivo atualizado: {dados.nome.strip()}","op":operacao_id,"oc":dados.ocorrencia_id})
     return {"mensagem":"Objetivo atualizado"}
@@ -3151,9 +3202,9 @@ def eliminar_objetivo(objetivo_id:int):
         total=conn.execute(text("SELECT COUNT(*) FROM missoes WHERE objetivo_id=:id"),{"id":objetivo_id}).scalar() or 0
         if total:
             conn.execute(text("UPDATE objetivos SET arquivado=TRUE,atualizado_em=NOW() WHERE id=:id AND operacao_id=:op"),{"id":objetivo_id,"op":operacao_id})
-            return {"mensagem":"Objetivo arquivado porque possui missões associadas","arquivado":True}
+            return {"mensagem":"Objetivo arquivado porque possui missÃƒÆ’Ã‚Âµes associadas","arquivado":True}
         apagado=conn.execute(text("DELETE FROM objetivos WHERE id=:id AND operacao_id=:op RETURNING id"),{"id":objetivo_id,"op":operacao_id}).scalar()
-        if not apagado: raise HTTPException(status_code=404, detail="Objetivo não encontrado")
+        if not apagado: raise HTTPException(status_code=404, detail="Objetivo nÃƒÆ’Ã‚Â£o encontrado")
     return {"mensagem":"Objetivo eliminado","arquivado":False}
 
 @app.put("/missoes/{missao_id}/objetivo")
@@ -3162,11 +3213,11 @@ def associar_objetivo_missao(missao_id:int, dados:AssociacaoObjetivoMissao):
         operacao_id=exigir_operacao_editavel_id(conn)
         if dados.objetivo_id is not None:
             ok=conn.execute(text("SELECT 1 FROM objetivos WHERE id=:id AND operacao_id=:op AND arquivado=FALSE"),{"id":dados.objetivo_id,"op":operacao_id}).scalar()
-            if not ok: raise HTTPException(status_code=404, detail="Objetivo não encontrado")
+            if not ok: raise HTTPException(status_code=404, detail="Objetivo nÃƒÆ’Ã‚Â£o encontrado")
         atualizado=conn.execute(text("UPDATE missoes SET objetivo_id=:oid,atualizada_em=NOW() WHERE id=:id AND operacao_id=:op RETURNING titulo,ocorrencia_id"),{"oid":dados.objetivo_id,"id":missao_id,"op":operacao_id}).mappings().first()
-        if not atualizado: raise HTTPException(status_code=404, detail="Missão não encontrada")
-        conn.execute(text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"),{"d":f"Objetivo da missão {atualizado['titulo']} atualizado","op":operacao_id,"oc":atualizado['ocorrencia_id']})
-    return {"mensagem":"Objetivo da missão atualizado"}
+        if not atualizado: raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
+        conn.execute(text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"),{"d":f"Objetivo da missÃƒÆ’Ã‚Â£o {atualizado['titulo']} atualizado","op":operacao_id,"oc":atualizado['ocorrencia_id']})
+    return {"mensagem":"Objetivo da missÃƒÆ’Ã‚Â£o atualizado"}
 
 @app.get("/objetivo-modelos")
 def listar_modelos_objetivo(incluir_inativos:bool=False):
@@ -3176,7 +3227,7 @@ def listar_modelos_objetivo(incluir_inativos:bool=False):
 
 @app.post("/objetivo-modelos")
 def criar_modelo_objetivo(dados:ModeloObjetivo):
-    if not dados.nome.strip(): raise HTTPException(status_code=400,detail="O nome é obrigatório")
+    if not dados.nome.strip(): raise HTTPException(status_code=400,detail="O nome ÃƒÆ’Ã‚Â© obrigatÃƒÆ’Ã‚Â³rio")
     with engine.begin() as conn:
         exigir_operacao_editavel_id(conn)
         mid=conn.execute(text("INSERT INTO objetivo_modelos (nome,descricao,prioridade,ativo) VALUES (:nome,:descricao,:prioridade,:ativo) RETURNING id"),{**dados.model_dump(),"nome":dados.nome.strip()}).scalar_one()
@@ -3187,7 +3238,7 @@ def atualizar_modelo_objetivo(modelo_id:int,dados:ModeloObjetivo):
     with engine.begin() as conn:
         exigir_operacao_editavel_id(conn)
         ok=conn.execute(text("UPDATE objetivo_modelos SET nome=:nome,descricao=:descricao,prioridade=:prioridade,ativo=:ativo,atualizado_em=NOW() WHERE id=:id RETURNING id"),{**dados.model_dump(),"id":modelo_id,"nome":dados.nome.strip()}).scalar()
-        if not ok: raise HTTPException(status_code=404,detail="Modelo não encontrado")
+        if not ok: raise HTTPException(status_code=404,detail="Modelo nÃƒÆ’Ã‚Â£o encontrado")
     return {"mensagem":"Modelo atualizado"}
 
 @app.delete("/objetivo-modelos/{modelo_id}")
@@ -3195,5 +3246,5 @@ def eliminar_modelo_objetivo(modelo_id:int):
     with engine.begin() as conn:
         exigir_operacao_editavel_id(conn)
         ok=conn.execute(text("DELETE FROM objetivo_modelos WHERE id=:id RETURNING id"),{"id":modelo_id}).scalar()
-        if not ok: raise HTTPException(status_code=404,detail="Modelo não encontrado")
+        if not ok: raise HTTPException(status_code=404,detail="Modelo nÃƒÆ’Ã‚Â£o encontrado")
     return {"mensagem":"Modelo eliminado"}
