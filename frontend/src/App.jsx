@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -2923,8 +2923,18 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         onClick={async () => {
                           await alterarEstadoOcorrencia(ocorrenciaAtual.id, id)
                           await atualizarDados()
-                          const atualizada = (await obterOcorrencias()).find(o => o.id === ocorrenciaAtual.id)
+
+                          const [ocorrenciasAtualizadas, estatisticas, eventos] = await Promise.all([
+                            obterOcorrencias(),
+                            obterEstatisticasOcorrencia(ocorrenciaAtual.id),
+                            obterTimelineOcorrencia(ocorrenciaAtual.id)
+                          ])
+
+                          const atualizada = ocorrenciasAtualizadas.find(o => o.id === ocorrenciaAtual.id)
                           if (atualizada) setDetalhe({ tipo: 'ocorrencia', dados: atualizada })
+
+                          setEstatisticasOcorrencia(estatisticas)
+                          setTimelineOcorrencia(eventos)
                         }}
                         style={{
                           ...styles.smallButton,
