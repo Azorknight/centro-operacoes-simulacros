@@ -370,7 +370,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   )
 
   const ocorrenciasFiltradas = useMemo(
-    () => ocorrencias.filter((o) => !mostrarSoAtivos || o.estado !== 'fechada'),
+    () => ocorrencias.filter((o) => !mostrarSoAtivos || !['fechada', 'encerrada', 'arquivada'].includes(o.estado)),
     [ocorrencias, mostrarSoAtivos]
   )
 
@@ -1056,7 +1056,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     // 9. Síntese Final
     y = tituloSecao(9, 'Síntese Final', y)
 
-    const ocorrenciasAtivasRelatorio = ocorrencias.filter((o) => o.estado !== 'fechada').length
+    const ocorrenciasAtivasRelatorio = ocorrencias.filter((o) => !['fechada', 'encerrada', 'arquivada'].includes(o.estado)).length
     const objetivosAtivosRelatorio = objetivos.filter(
       (o) => !['concluido', 'cancelado'].includes(o.estado)
     ).length
@@ -1067,9 +1067,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       (r) => r.estado === 'em_missao'
     ).length
 
-    const estadoFinalOperacao = operacaoAtiva?.estado
-      ? textoEstado(operacaoAtiva.estado)
-      : (relatorio?.operacao?.estado ? textoEstado(relatorio.operacao.estado) : '—')
+    const estadoFinalOperacao =
+      operacaoAtiva?.estado === 'concluida'
+        ? 'Conclu?da'
+        : operacaoAtiva?.estado === 'arquivada'
+          ? 'Arquivada'
+          : operacaoAtiva
+            ? 'Ativa'
+            : 'N?o definido'
 
     y = garantirEspaco(y, 42)
 
@@ -3702,7 +3707,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           <br />
 
           {ocorrencias
-            .filter(o => o.estado !== 'fechada')
+            .filter(o => !['fechada', 'encerrada', 'arquivada'].includes(o.estado))
             .map(o => (
               <div
                 key={o.id}
