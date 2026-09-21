@@ -2143,6 +2143,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 if (o.latitude && o.longitude && mapRef.current) {
                   mapRef.current.setView([o.latitude, o.longitude], 13)
                 }
+                setDetalhe({ tipo: 'ocorrencia', dados: o })
               }}
             >
               <div style={styles.itemTitle}>{o.titulo}</div>
