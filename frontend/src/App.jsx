@@ -1021,8 +1021,12 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             })
           : 'Data/hora não disponível'
 
+        const nomesTiposEvento = {
+          ocorrencia: 'Ocorr\u00eancia',
+          missao: 'Miss\u00e3o'
+        }
         const tipoEvento = evento.tipo
-          ? String(evento.tipo).replaceAll('_', ' ').replace(/\b\w/g, letra => letra.toUpperCase())
+          ? (nomesTiposEvento[evento.tipo] || String(evento.tipo).replaceAll('_', ' ').replace(/\b\w/g, letra => letra.toUpperCase()))
           : 'Evento'
         const descricaoEvento = String(evento.descricao || '—')
         const linhasDescricao = doc.splitTextToSize(descricaoEvento, larguraTexto - 10)
