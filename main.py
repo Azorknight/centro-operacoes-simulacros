@@ -2221,10 +2221,9 @@ def criar_missao(missao: Missao):
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"MissÃƒÆ’Ã‚Â£o criada: {missao.titulo.strip()}",
+        """), {"descricao": f"Miss\u00e3o criada: {missao.titulo.strip()}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao.ocorrencia_id})
-    return {"mensagem": "MissÃƒÆ’Ã‚Â£o criada com sucesso", "id": missao_id}
-
+    return {"mensagem": "Miss\u00e3o criada com sucesso", "id": missao_id}
 
 @app.put("/missoes/{missao_id}/estado")
 def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
