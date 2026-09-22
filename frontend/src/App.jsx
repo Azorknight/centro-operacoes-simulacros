@@ -193,6 +193,18 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [secaoPAOAberta, setSecaoPAOAberta] = useState(null)
   const [missaoPAOExpandida, setMissaoPAOExpandida] = useState(null)
   const [objetivoPAOExpandido, setObjetivoPAOExpandido] = useState(null)
+
+  const [mostrarFormObjetivo, setMostrarFormObjetivo] = useState(false)
+  const [objetivoEmEdicao, setObjetivoEmEdicao] = useState(null)
+  const [formObjetivo, setFormObjetivo] = useState({
+    nome: '',
+    descricao: '',
+    prioridade: 'normal',
+    estado: 'planeado',
+    responsavel: '',
+    ocorrencia_id: ''
+  })
+
   const modoBloqueado = modoConsulta || modoReplay
 
   useEffect(() => {
@@ -1176,40 +1188,63 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     doc.save(`relatorio_operacional_${nomeSeguro}.pdf`)
   }
 
-  async function pedirDadosObjetivo(objetivo = null, ocorrenciaContexto = null) {
-    const modeloEscolhido = !objetivo && modelosObjetivo.length > 0
-      ? window.prompt(`MODELO DE OBJETIVO (opcional)\n\nPode escolher um modelo previamente guardado\nou deixar em branco para criar um objetivo novo.\n\n${modelosObjetivo.map(m => `${m.id} - ${m.nome}`).join('\n')}`, '')
-      : null
-    const modelo = modelosObjetivo.find(m => String(m.id) === String(modeloEscolhido))
-    const nome = window.prompt('Nome do objetivo:', objetivo?.nome || modelo?.nome || '')
-    if (nome === null || !nome.trim()) return null
-    const descricao = window.prompt('Descrição:', objetivo?.descricao || modelo?.descricao || '') ?? ''
-    const prioridade = window.prompt('Prioridade: critica, alta, normal ou baixa', objetivo?.prioridade || modelo?.prioridade || 'normal') || 'normal'
-    const estado = window.prompt('Estado: planeado, em_preparacao, em_execucao, suspenso, concluido ou cancelado', objetivo?.estado || 'planeado') || 'planeado'
-    const responsavel = window.prompt('Responsável (opcional):', objetivo?.responsavel || '') || null
-    const ocorrenciaTexto = ocorrenciaContexto?.id
-      ? String(ocorrenciaContexto.id)
-      : window.prompt(`Ocorrência associada (ID, opcional):\n${ocorrencias.map(o => `${o.id} - ${o.titulo}`).join('\n')}`, objetivo?.ocorrencia_id || '')
-    return {
-      nome: nome.trim(), descricao, prioridade, estado, responsavel,
-      ocorrencia_id: ocorrenciaTexto ? Number(ocorrenciaTexto) : null,
-      modelo_id: objetivo?.modelo_id || modelo?.id || null,
-      latitude: objetivo?.latitude || null, longitude: objetivo?.longitude || null,
-      notas: objetivo?.notas || null, arquivado: objetivo?.arquivado || false
+  function abrirFormObjetivo(objetivo = null, ocorrenciaContexto = null) {
+    setObjetivoEmEdicao(objetivo)
+
+    setFormObjetivo({
+      nome: objetivo?.nome || '',
+      descricao: objetivo?.descricao || '',
+      prioridade: objetivo?.prioridade || 'normal',
+      estado: objetivo?.estado || 'planeado',
+      responsavel: objetivo?.responsavel || '',
+      ocorrencia_id: ocorrenciaContexto?.id
+        ? String(ocorrenciaContexto.id)
+        : objetivo?.ocorrencia_id
+          ? String(objetivo.ocorrencia_id)
+          : ''
+    })
+
+    setMostrarFormObjetivo(true)
+  }
+
+  function novoObjetivo(ocorrenciaContexto = null) {
+    abrirFormObjetivo(null, ocorrenciaContexto)
+  }
+
+  function editarObjetivo(objetivo) {
+    abrirFormObjetivo(objetivo)
+  }
+
+  async function guardarObjetivoFormulario() {
+    if (!formObjetivo.nome.trim()) {
+      window.alert('Indique o nome do objetivo.')
+      return
     }
-  }
 
-  async function novoObjetivo(ocorrenciaContexto = null) {
-    const dados = await pedirDadosObjetivo(null, ocorrenciaContexto)
-    if (!dados) return
-    await criarObjetivo(dados)
-    await atualizarDados()
-  }
+    const dados = {
+      nome: formObjetivo.nome.trim(),
+      descricao: formObjetivo.descricao.trim(),
+      prioridade: formObjetivo.prioridade,
+      estado: formObjetivo.estado,
+      responsavel: formObjetivo.responsavel.trim() || null,
+      ocorrencia_id: formObjetivo.ocorrencia_id
+        ? Number(formObjetivo.ocorrencia_id)
+        : null,
+      modelo_id: objetivoEmEdicao?.modelo_id || null,
+      latitude: objetivoEmEdicao?.latitude || null,
+      longitude: objetivoEmEdicao?.longitude || null,
+      notas: objetivoEmEdicao?.notas || null,
+      arquivado: objetivoEmEdicao?.arquivado || false
+    }
 
-  async function editarObjetivo(objetivo) {
-    const dados = await pedirDadosObjetivo(objetivo)
-    if (!dados) return
-    await atualizarObjetivo(objetivo.id, dados)
+    if (objetivoEmEdicao) {
+      await atualizarObjetivo(objetivoEmEdicao.id, dados)
+    } else {
+      await criarObjetivo(dados)
+    }
+
+    setMostrarFormObjetivo(false)
+    setObjetivoEmEdicao(null)
     await atualizarDados()
   }
 
@@ -3414,6 +3449,132 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           >
             Cancelar
           </button>
+        </div>
+      )}
+
+      {mostrarFormObjetivo && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>
+            {objetivoEmEdicao ? 'Editar objetivo operacional' : 'Novo objetivo operacional'}
+          </div>
+
+          <div style={styles.itemSubtle}>Nome do objetivo</div>
+          <input
+            style={styles.input}
+            placeholder="Ex.: Socorrer as vítimas e estabilizar a zona afetada"
+            value={formObjetivo.nome}
+            onChange={(e) =>
+              setFormObjetivo({ ...formObjetivo, nome: e.target.value })
+            }
+          />
+
+          <div style={styles.itemSubtle}>Descrição</div>
+          <textarea
+            style={{ ...styles.input, minHeight: 80, resize: 'vertical' }}
+            placeholder="Descrição do objetivo operacional"
+            value={formObjetivo.descricao}
+            onChange={(e) =>
+              setFormObjetivo({ ...formObjetivo, descricao: e.target.value })
+            }
+          />
+
+          <div style={styles.itemSubtle}>Prioridade</div>
+          <select
+            style={styles.input}
+            value={formObjetivo.prioridade}
+            onChange={(e) =>
+              setFormObjetivo({ ...formObjetivo, prioridade: e.target.value })
+            }
+          >
+            <option value="critica">Crítica</option>
+            <option value="alta">Alta</option>
+            <option value="normal">Normal</option>
+            <option value="baixa">Baixa</option>
+          </select>
+
+          <div style={styles.itemSubtle}>Estado</div>
+          <select
+            style={styles.input}
+            value={formObjetivo.estado}
+            onChange={(e) =>
+              setFormObjetivo({ ...formObjetivo, estado: e.target.value })
+            }
+          >
+            <option value="planeado">Planeado</option>
+            <option value="em_preparacao">Em preparação</option>
+            <option value="em_execucao">Em execução</option>
+            <option value="suspenso">Suspenso</option>
+            <option value="concluido">Concluído</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+
+          <div style={styles.itemSubtle}>Responsável (opcional)</div>
+          <input
+            style={styles.input}
+            placeholder="Responsável pelo objetivo"
+            value={formObjetivo.responsavel}
+            onChange={(e) =>
+              setFormObjetivo({ ...formObjetivo, responsavel: e.target.value })
+            }
+          />
+
+          <div style={styles.itemSubtle}>Ocorrência associada</div>
+          <select
+            style={styles.input}
+            value={formObjetivo.ocorrencia_id}
+            onChange={(e) =>
+              setFormObjetivo({ ...formObjetivo, ocorrencia_id: e.target.value })
+            }
+          >
+            <option value="">Sem ocorrência associada</option>
+            {ocorrencias.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.titulo}
+              </option>
+            ))}
+          </select>
+
+          <div style={{ ...styles.buttonRow, marginTop: 12 }}>
+            <button
+              style={styles.mainButton}
+              onClick={guardarObjetivoFormulario}
+            >
+              {objetivoEmEdicao ? 'Guardar alterações' : 'Criar objetivo'}
+            </button>
+
+            <button
+              style={styles.smallButton}
+              onClick={() => {
+                setMostrarFormObjetivo(false)
+                setObjetivoEmEdicao(null)
+              }}
+            >
+              Cancelar
+            </button>
+
+            {objetivoEmEdicao && (
+              <button
+                style={styles.smallButton}
+                disabled={modoBloqueado}
+                onClick={async () => {
+                  const temMissoes = Number(objetivoEmEdicao.total_missoes || 0) > 0
+                  const mensagem = temMissoes
+                    ? 'Este objetivo j? possui miss?es associadas e ser? arquivado. Continuar?'
+                    : 'Eliminar este objetivo?'
+
+                  if (!window.confirm(mensagem)) return
+
+                  await eliminarObjetivo(objetivoEmEdicao.id)
+                  setMostrarFormObjetivo(false)
+                  setObjetivoEmEdicao(null)
+                  await atualizarDados()
+                }}
+              >
+                {Number(objetivoEmEdicao.total_missoes || 0) > 0 ? '🗂 Arquivar objetivo' : '🗑 Eliminar objetivo'}
+              </button>
+            )}
+
+          </div>
         </div>
       )}
 
