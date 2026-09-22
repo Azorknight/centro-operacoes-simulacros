@@ -1866,7 +1866,7 @@ def confirmar_chegada(recurso_id: int):
         ).fetchone()
 
         if chegada_existente:
-            return {"mensagem": "Chegada jÃƒÆ’Ã‚Â¡ registada"}
+            return {"mensagem": "Chegada j\u00e1 registada"}
 
         conn.execute(
             text("""
@@ -1874,7 +1874,7 @@ def confirmar_chegada(recurso_id: int):
                 VALUES ('chegada', :descricao, :recurso_id, :ocorrencia_id, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
             """),
             {
-                "descricao": f"Chegada ao local: {texto_recurso} chegou ÃƒÆ’Ã‚Â  ocorrÃƒÆ’Ã‚Âªncia {titulo_ocorrencia}",
+                "descricao": f"Chegada ao local: {texto_recurso} chegou \u00e0 ocorr\u00eancia {titulo_ocorrencia}",
                 "recurso_id": recurso_id,
                 "ocorrencia_id": ocorrencia_id
             }
