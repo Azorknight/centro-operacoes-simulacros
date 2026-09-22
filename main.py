@@ -2304,7 +2304,7 @@ def listar_notas_missao(missao_id: int):
         existe = conn.execute(text("SELECT 1 FROM missoes WHERE id=:id AND operacao_id=:operacao_id"),
                               {"id": missao_id, "operacao_id": operacao_id}).scalar()
         if not existe:
-            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
+            raise HTTPException(status_code=404, detail="Miss\u00e3o n\u00e3o encontrada")
         rows = conn.execute(text("""
             SELECT id, autor, texto, criado_em FROM missao_notas
             WHERE missao_id=:id ORDER BY criado_em DESC, id DESC
@@ -2316,7 +2316,7 @@ def listar_notas_missao(missao_id: int):
 def adicionar_nota_missao(missao_id: int, nota: NotaMissao):
     texto_nota = nota.texto.strip()
     if not texto_nota:
-        raise HTTPException(status_code=400, detail="A nota nÃƒÆ’Ã‚Â£o pode estar vazia")
+        raise HTTPException(status_code=400, detail="A nota n\u00e3o pode estar vazia")
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
         missao = conn.execute(text("""
@@ -2324,7 +2324,7 @@ def adicionar_nota_missao(missao_id: int, nota: NotaMissao):
             WHERE id=:id AND operacao_id=:operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
+            raise HTTPException(status_code=404, detail="Miss\u00e3o n\u00e3o encontrada")
         nota_id = conn.execute(text("""
             INSERT INTO missao_notas (missao_id, autor, texto)
             VALUES (:missao_id, :autor, :texto) RETURNING id
@@ -2333,10 +2333,9 @@ def adicionar_nota_missao(missao_id: int, nota: NotaMissao):
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"Nova nota na missão {missao['titulo']}: {texto_nota}",
+        """), {"descricao": f"Nova nota na miss\u00e3o {missao['titulo']}: {texto_nota}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
     return {"mensagem": "Nota registada", "id": nota_id}
-
 
 @app.get("/missoes/{missao_id}/estatisticas")
 def estatisticas_missao(missao_id: int):
