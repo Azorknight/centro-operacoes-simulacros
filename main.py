@@ -1822,70 +1822,7 @@ def atualizar_posicao(recurso_id: int, dados: dict):
             }
         )
 
-        recurso = conn.execute(
-            text("""
-                SELECT r.nome, r.indicativo_radio, r.ocorrencia_id, o.titulo
-                FROM recursos r
-                LEFT JOIN ocorrencias o ON o.id = r.ocorrencia_id
-                WHERE r.id = :id
-            """),
-            {"id": recurso_id}
-        ).fetchone()
-
-        if recurso and recurso[2]:
-            chegou = conn.execute(
-                text("""
-                    SELECT ST_DWithin(
-                        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
-                        o.localizacao::geography,
-                        100
-                    )
-                    FROM ocorrencias o
-                    WHERE o.id = :ocorrencia_id
-                """),
-                {
-                    "latitude": dados["latitude"],
-                    "longitude": dados["longitude"],
-                    "ocorrencia_id": recurso[2]
-                }
-            ).scalar()
-
-            if chegou:
-                nome_recurso = recurso[0]
-                indicativo = recurso[1] or ""
-                ocorrencia_id = recurso[2]
-                titulo_ocorrencia = recurso[3]
-
-                texto_recurso = f"{nome_recurso} ({indicativo})" if indicativo else nome_recurso
-                hora = agora_acores()
-
-                conn.execute(
-                    text("""
-                        UPDATE ordens
-                        SET estado = 'executada'
-                        WHERE recurso_id = :recurso_id
-                        AND ocorrencia_id = :ocorrencia_id
-                        AND estado = 'emitida'
-                    """),
-                    {
-                        "recurso_id": recurso_id,
-                        "ocorrencia_id": ocorrencia_id
-                    }
-                )
-            else:
-                conn.execute(
-                    text("""
-                        INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
-                        VALUES ('movimento', :descricao, :recurso_id, :ocorrencia_id, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
-                    """),
-                    {
-                        "descricao": f"Recurso {recurso_id} movido",
-                        "recurso_id": recurso_id,
-                        "ocorrencia_id": recurso[2]
-                    }
-                )
-
-    return {"mensagem": "PosiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o atualizada"}
+    return {"mensagem": "Posi??o atualizada"}
 
 @app.put("/recursos/{recurso_id}/confirmar-chegada")
 def confirmar_chegada(recurso_id: int):
