@@ -2229,7 +2229,7 @@ def criar_missao(missao: Missao):
 def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
     estados_validos = {"recebida", "planeada", "em_execucao", "concluida", "cancelada"}
     if dados.estado not in estados_validos:
-        raise HTTPException(status_code=400, detail="Estado de missÃƒÆ’Ã‚Â£o invÃƒÆ’Ã‚Â¡lido")
+        raise HTTPException(status_code=400, detail="Estado de miss\u00e3o inv\u00e1lido")
 
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
@@ -2239,7 +2239,7 @@ def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
             WHERE id = :id AND operacao_id = :operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
+            raise HTTPException(status_code=404, detail="Miss\u00e3o n\u00e3o encontrada")
 
         conn.execute(text("""
             UPDATE missoes
@@ -2261,15 +2261,14 @@ def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
                 _libertar_recurso_se_sem_missao_ativa(conn, recurso_id)
 
         rotulos = {"recebida": "Recebida", "planeada": "Planeada",
-                   "em_execucao": "Em execuÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o", "concluida": "ConcluÃƒÆ’Ã‚Â­da",
+                   "em_execucao": "Em execu\u00e7\u00e3o", "concluida": "Conclu\u00edda",
                    "cancelada": "Cancelada"}
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"MissÃƒÆ’Ã‚Â£o {missao['titulo']} alterada para {rotulos[dados.estado]}",
+        """), {"descricao": f"Miss\u00e3o {missao['titulo']} alterada para {rotulos[dados.estado]}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
-    return {"mensagem": "Estado da missÃƒÆ’Ã‚Â£o atualizado"}
-
+    return {"mensagem": "Estado da miss\u00e3o atualizado"}
 
 @app.put("/missoes/{missao_id}/situacao")
 def alterar_situacao_missao(missao_id: int, dados: SituacaoMissao):
