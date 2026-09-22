@@ -1925,7 +1925,7 @@ def listar_bases():
     
 @app.put("/recursos/{recurso_id}/atribuir-ocorrencia/{ocorrencia_id}")
 def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
-    print(">>> ENTROU NA FUNÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã†â€™O ATRIBUIR_OCORRENCIA")
+    print(">>> ENTROU NA FUNCAO ATRIBUIR_OCORRENCIA")
     try:
         with engine.begin() as conn:
             recurso = conn.execute(
@@ -1940,7 +1940,7 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
 
             nome_recurso = recurso[0] if recurso else f"Recurso {recurso_id}"
             indicativo = recurso[1] if recurso and recurso[1] else ""
-            titulo_ocorrencia = ocorrencia[0] if ocorrencia else f"OcorrÃƒÆ’Ã‚Âªncia {ocorrencia_id}"
+            titulo_ocorrencia = ocorrencia[0] if ocorrencia else f"Ocorr\u00eancia {ocorrencia_id}"
 
             texto_recurso = f"{nome_recurso} ({indicativo})" if indicativo else nome_recurso
             hora = agora_acores()
@@ -1965,7 +1965,7 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
                             (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
                 """),
                 {
-                    "titulo": "DeslocaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o para ocorrÃƒÆ’Ã‚Âªncia",
+                    "titulo": "Desloca\u00e7\u00e3o para ocorr\u00eancia",
                     "descricao": f"Ordem direta para {texto_recurso} se deslocar para: {titulo_ocorrencia}",
                     "recurso_id": recurso_id,
                     "ocorrencia_id": ocorrencia_id
@@ -1984,11 +1984,12 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
                 }
             )
 
-        return {"mensagem": "Ordem de deslocaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o criada"}
+        return {"mensagem": "Ordem de desloca\u00e7\u00e3o criada"}
 
     except Exception as e:
         return {"erro": str(e)}
     
+
 @app.get("/ordens")
 def listar_ordens():
     with engine.connect() as conn:
