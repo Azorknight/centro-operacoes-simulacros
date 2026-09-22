@@ -2937,7 +2937,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             const ocorrenciaAtual = ocorrencias.find(o => o.id === detalhe.dados.id) || detalhe.dados
             const estados = [
               ['recebida', 'Recebida'],
-              ['despachada', 'Despachada'],
               ['em_curso', 'Em curso'],
               ['sob_controlo', 'Sob controlo'],
               ['encerrada', 'Encerrada'],
@@ -2996,11 +2995,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 <div style={styles.itemCard}>
                   <strong>📊 Estatísticas automáticas</strong>
                   <div>Receção: {formatarDataHora(estatisticasOcorrencia?.recebida_em)}</div>
-                  <div>Despacho: {formatarDataHora(estatisticasOcorrencia?.despachada_em)}</div>
                   <div>Primeira chegada: {formatarDataHora(estatisticasOcorrencia?.primeira_chegada_em)}</div>
                   <div>Sob controlo: {formatarDataHora(estatisticasOcorrencia?.sob_controlo_em)}</div>
                   <div>Encerramento: {formatarDataHora(estatisticasOcorrencia?.encerrada_em)}</div>
-                  <div style={{ marginTop: 7 }}>Tempo até despacho: {formatarDuracao(estatisticasOcorrencia?.tempo_ate_despacho_segundos)}</div>
                   <div>Tempo de resposta: {formatarDuracao(estatisticasOcorrencia?.tempo_resposta_segundos)}</div>
                   <div>Duração total: {formatarDuracao(estatisticasOcorrencia?.tempo_total_segundos)}</div>
                   <div style={{ marginTop: 7 }}>Recursos envolvidos: {estatisticasOcorrencia?.recursos_envolvidos ?? 0}</div>

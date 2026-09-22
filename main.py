@@ -1546,7 +1546,7 @@ def criar_ocorrencia(ocorrencia: Ocorrencia):
     return {"mensagem": "OcorrÃƒÆ’Ã‚Âªncia criada com sucesso", "id": nova}
 
 
-ESTADOS_OCORRENCIA = ["recebida", "despachada", "em_curso", "sob_controlo", "encerrada", "arquivada"]
+ESTADOS_OCORRENCIA = ["recebida", "em_curso", "sob_controlo", "encerrada", "arquivada"]
 COLUNA_HORA_ESTADO = {
     "recebida": "recebida_em",
     "despachada": "despachada_em",
@@ -1661,7 +1661,7 @@ def estatisticas_ocorrencia(ocorrencia_id: int):
             "sob_controlo_em": o.sob_controlo_em,
             "encerrada_em": o.encerrada_em,
             "tempo_ate_despacho_segundos": segundos(recebida, o.despachada_em),
-            "tempo_resposta_segundos": segundos(o.despachada_em, primeira_chegada),
+            "tempo_resposta_segundos": segundos(recebida, primeira_chegada),
             "tempo_total_segundos": segundos(recebida, fim),
             "recursos_envolvidos": max(recursos, recursos_atuais),
             "recursos_atuais": recursos_atuais,
@@ -1944,7 +1944,7 @@ def confirmar_chegada(recurso_id: int):
         )
 
         estado_ocorrencia = conn.execute(text("SELECT estado FROM ocorrencias WHERE id=:id"), {"id": ocorrencia_id}).scalar()
-        if estado_ocorrencia in ("recebida", "despachada"):
+        if estado_ocorrencia == "recebida":
             atualizar_estado_ocorrencia_interno(
                 conn, ocorrencia_id, "em_curso", exigir_operacao_ativa_id(conn)
             )
@@ -2020,12 +2020,6 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
                     "recurso_id": recurso_id
                 }
             )
-
-            estado_ocorrencia = conn.execute(text("SELECT estado FROM ocorrencias WHERE id=:id"), {"id": ocorrencia_id}).scalar()
-            if estado_ocorrencia == "recebida":
-                atualizar_estado_ocorrencia_interno(
-                    conn, ocorrencia_id, "despachada", exigir_operacao_ativa_id(conn)
-                )
 
             conn.execute(
                 text("""
