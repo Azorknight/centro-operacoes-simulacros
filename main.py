@@ -2274,7 +2274,7 @@ def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
 def alterar_situacao_missao(missao_id: int, dados: SituacaoMissao):
     situacoes_validas = {"sob_controlo", "estavel", "complexa", "critica", "necessita_reforco"}
     if dados.situacao_operacional not in situacoes_validas:
-        raise HTTPException(status_code=400, detail="SituaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o operacional invÃƒÆ’Ã‚Â¡lida")
+        raise HTTPException(status_code=400, detail="Situa\u00e7\u00e3o operacional inv\u00e1lida")
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
         missao = conn.execute(text("""
@@ -2282,21 +2282,20 @@ def alterar_situacao_missao(missao_id: int, dados: SituacaoMissao):
             WHERE id=:id AND operacao_id=:operacao_id
         """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
         if not missao:
-            raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
+            raise HTTPException(status_code=404, detail="Miss\u00e3o n\u00e3o encontrada")
         conn.execute(text("""
             UPDATE missoes SET situacao_operacional=:situacao, atualizada_em=NOW() WHERE id=:id
         """), {"situacao": dados.situacao_operacional, "id": missao_id})
         rotulos = {
-            "sob_controlo": "Sob controlo", "estavel": "EstÃƒÆ’Ã‚Â¡vel", "complexa": "Complexa",
-            "critica": "CrÃƒÆ’Ã‚Â­tica", "necessita_reforco": "Necessita de reforÃƒÆ’Ã‚Â§o"
+            "sob_controlo": "Sob controlo", "estavel": "Est\u00e1vel", "complexa": "Complexa",
+            "critica": "Cr\u00edtica", "necessita_reforco": "Necessita de refor\u00e7o"
         }
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
-        """), {"descricao": f"SituaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da missÃƒÆ’Ã‚Â£o {missao['titulo']}: {rotulos[dados.situacao_operacional]}",
+        """), {"descricao": f"Situa\u00e7\u00e3o da miss\u00e3o {missao['titulo']}: {rotulos[dados.situacao_operacional]}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao["ocorrencia_id"]})
-    return {"mensagem": "SituaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o operacional atualizada"}
-
+    return {"mensagem": "Situa\u00e7\u00e3o operacional atualizada"}
 
 @app.get("/missoes/{missao_id}/notas")
 def listar_notas_missao(missao_id: int):
