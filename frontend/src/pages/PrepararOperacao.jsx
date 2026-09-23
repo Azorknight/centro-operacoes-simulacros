@@ -24,7 +24,6 @@ function PrepararOperacao({ operacao, onFechar }) {
   const [selecionado, setSelecionado] = useState('')
   const [indicativo, setIndicativo] = useState('')
   const [funcao, setFuncao] = useState('')
-  const [recursoSelecionado, setRecursoSelecionado] = useState('')
   const [mostrarNovo, setMostrarNovo] = useState(false)
   const [novoRecurso, setNovoRecurso] = useState(novoRecursoInicial)
   const [novoElemento, setNovoElemento] = useState(novoElementoInicial)
@@ -58,7 +57,6 @@ function PrepararOperacao({ operacao, onFechar }) {
     setSelecionado('')
     setIndicativo('')
     setFuncao('')
-    setRecursoSelecionado('')
     setMostrarNovo(false)
   }, [separador])
 
@@ -86,10 +84,10 @@ function PrepararOperacao({ operacao, onFechar }) {
           elemento_catalogo_id: Number(selecionado),
           indicativo_operacional: indicativo.trim() || null,
           funcao_operacional: funcao.trim() || null,
-          recurso_catalogo_id: recursoSelecionado ? Number(recursoSelecionado) : null
+          recurso_catalogo_id: null
         })
       }
-      setSelecionado(''); setIndicativo(''); setFuncao(''); setRecursoSelecionado('')
+      setSelecionado(''); setIndicativo(''); setFuncao('')
       await carregar()
     } catch {
       setErro(`Não foi possível adicionar o ${separador === 'recursos' ? 'recurso' : 'elemento'} à operação.`)
@@ -178,19 +176,6 @@ function PrepararOperacao({ operacao, onFechar }) {
           </div>
           <div><label>Indicativo nesta operação</label><input value={indicativo} onChange={(e) => setIndicativo(e.target.value)} placeholder="Ex.: Alfa 01" /></div>
           <div><label>Função operacional</label><input value={funcao} onChange={(e) => setFuncao(e.target.value)} placeholder={separador === 'recursos' ? 'Ex.: Patrulhamento' : 'Ex.: Chefe de equipa'} /></div>
-          {separador === 'elementos' && (
-            <div>
-              <label>Viatura / recurso de transporte</label>
-              <select value={recursoSelecionado} onChange={(e) => setRecursoSelecionado(e.target.value)}>
-                <option value="">Sem viatura atribuída</option>
-                {recursos.map((recurso) => (
-                  <option key={recurso.recurso_catalogo_id} value={recurso.recurso_catalogo_id}>
-                    {recurso.indicativo_operacional ? `${recurso.indicativo_operacional} — ` : ''}{recurso.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           <button type="submit" className="botao-primario" disabled={aGuardar || !selecionado}>Adicionar</button>
         </form>
 
@@ -236,9 +221,6 @@ function PrepararOperacao({ operacao, onFechar }) {
                   <small>
                     Indicativo: <b>{item.indicativo_operacional || 'não definido'}</b>
                     {(item.funcao || item.funcao_operacional) ? ` · Função: ${item.funcao || item.funcao_operacional}` : ''}
-                    {separador === 'elementos'
-                      ? ` · Viatura: ${item.recurso_nome ? `${item.recurso_indicativo ? `${item.recurso_indicativo} — ` : ''}${item.recurso_nome}` : 'não atribuída'}`
-                      : ''}
                   </small>
                 </div>
                 <button type="button" className="botao-retirar" onClick={() => retirar(item)}>Retirar</button>
