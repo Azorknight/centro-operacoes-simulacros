@@ -632,11 +632,12 @@ develop
 
 Estado remoto confirmado em 23/09/2026:
 
-fe82dd9 (HEAD -> develop, origin/develop)
-Corrige acentuacao no diario operacional das missoes
+0c5d142 (HEAD -> develop, origin/develop)
+Atualiza nota de continuidade do desenvolvimento
 
 Commits recentes importantes, por ordem:
 
+0c5d142 — Atualiza nota de continuidade do desenvolvimento
 52850ea — WIP: reposicionamento manual de recursos sem timeline
 e761f5c — Corrige acentuacao das mensagens de chegada
 1dd8f0f — Corrige acentuacao das ordens de deslocacao
@@ -676,6 +677,16 @@ No novo chat, escrever:
 "Estou a continuar o desenvolvimento do SGO. Tenho o projeto em C:\centro-operacoes-simulacros. Leia primeiro o ficheiro CONTINUIDADE_SGO.md e continue exatamente do ponto indicado. Trabalhe um passo de cada vez, validando e testando antes de cada commit."
 
 Se o novo chat não tiver acesso ao ficheiro local, anexar `CONTINUIDADE_SGO.md`.
+
+---
+
+# 23. PASSAGEM ENTRE PC DO SERVIÇO E PC DE CASA — 23/09/2026
+
+O PC do serviço é o principal. O código circula entre este PC e o PC de casa pelo Git/GitHub na branch `develop`; as bases de dados PostgreSQL são independentes. Ao mudar de PC, confirmar branch e estado do Git no computador de destino e executar `git pull --ff-only` antes de alterar código. Antes de sair do computador de origem, terminar/testar a alteração de código em curso, fazer commit apenas dos ficheiros pretendidos e push. Não incluir backups locais nem usar `git add .`.
+
+No PC do serviço, o utilizador confirmou em 23/09/2026 que `develop` e `origin/develop` estavam em `0c5d142`, sem alterações em ficheiros rastreados. Os vários ficheiros `??` são locais e não devem ser adicionados indiscriminadamente. Foi criada e confirmada na lista a operação `SIMULACRO SISMOTER 2026 - PERCURSO VISUAL`, do tipo Simulacro, local Ilha Terceira. Estes dados pertencem à BD do PC do serviço e não se esperam automaticamente no PC de casa.
+
+O Manual de Utilização visual começa pelo procedimento `Criar/Registar uma Operação`, na sequência real de trabalho. O capítulo 16 é a base do teste de aceitação, não o destino de todas as capturas. Usar as capturas da operação prática nos capítulos funcionais correspondentes. Percorrer cada bloco inteiro no SGO, avaliar simplicidade, corrigir problemas um de cada vez com validação técnica e teste no browser, commit/push quando houver código alterado, e só depois consolidar esse bloco no Word. O bloco `Criar/Registar uma Operação` foi executado no browser e a persistência na lista foi confirmada; a consolidação no capítulo próprio do manual está pendente. O rascunho Word contém material anteriormente acrescentado ao capítulo 16 que terá de ser reorganizado quando se consolidarem os blocos.
 
 ---
 
