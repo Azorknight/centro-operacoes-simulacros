@@ -405,7 +405,7 @@ def preparar_separacao_por_operacao():
         for coluna in (
             "responsavel TEXT",
             "notas TEXT",
-            "situacao_operacional TEXT DEFAULT 'estavel'",
+            "situacao_operacional TEXT DEFAULT 'por_avaliar'",
             "atualizada_em TIMESTAMP",
             "planeada_em TIMESTAMP",
             "iniciada_em TIMESTAMP",
@@ -413,7 +413,8 @@ def preparar_separacao_por_operacao():
             "cancelada_em TIMESTAMP"
         ):
             conn.execute(text(f"ALTER TABLE missoes ADD COLUMN IF NOT EXISTS {coluna}"))
-        conn.execute(text("UPDATE missoes SET situacao_operacional = 'estavel' WHERE situacao_operacional IS NULL OR TRIM(situacao_operacional) = ''"))
+        conn.execute(text("ALTER TABLE missoes ALTER COLUMN situacao_operacional SET DEFAULT 'por_avaliar'"))
+        conn.execute(text("UPDATE missoes SET situacao_operacional = 'por_avaliar' WHERE situacao_operacional IS NULL OR TRIM(situacao_operacional) = ''"))
         conn.execute(text("UPDATE missoes SET atualizada_em = COALESCE(atualizada_em, criado_em)"))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS missao_notas (
@@ -2107,7 +2108,7 @@ class Missao(BaseModel):
     ocorrencia_id: int | None = None
     responsavel: str | None = None
     notas: str | None = None
-    situacao_operacional: str = "estavel"
+    situacao_operacional: str = "por_avaliar"
 
 
 class EstadoMissao(BaseModel):
@@ -2210,7 +2211,7 @@ def criar_missao(missao: Missao):
             "recurso_id": missao.recurso_id, "ocorrencia_id": missao.ocorrencia_id,
             "operacao_id": operacao_id, "responsavel": missao.responsavel,
             "notas": missao.notas,
-            "situacao_operacional": missao.situacao_operacional if missao.situacao_operacional in {"sob_controlo", "estavel", "complexa", "critica", "necessita_reforco"} else "estavel",
+            "situacao_operacional": missao.situacao_operacional if missao.situacao_operacional in {"por_avaliar", "sob_controlo", "estavel", "complexa", "critica", "necessita_reforco"} else "por_avaliar",
         }).scalar_one()
         if missao.recurso_id is not None:
             conn.execute(text("""
@@ -2272,7 +2273,7 @@ def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
 
 @app.put("/missoes/{missao_id}/situacao")
 def alterar_situacao_missao(missao_id: int, dados: SituacaoMissao):
-    situacoes_validas = {"sob_controlo", "estavel", "complexa", "critica", "necessita_reforco"}
+    situacoes_validas = {"por_avaliar", "sob_controlo", "estavel", "complexa", "critica", "necessita_reforco"}
     if dados.situacao_operacional not in situacoes_validas:
         raise HTTPException(status_code=400, detail="Situa\u00e7\u00e3o operacional inv\u00e1lida")
     with engine.begin() as conn:
@@ -2287,7 +2288,7 @@ def alterar_situacao_missao(missao_id: int, dados: SituacaoMissao):
             UPDATE missoes SET situacao_operacional=:situacao, atualizada_em=NOW() WHERE id=:id
         """), {"situacao": dados.situacao_operacional, "id": missao_id})
         rotulos = {
-            "sob_controlo": "Sob controlo", "estavel": "Est\u00e1vel", "complexa": "Complexa",
+            "por_avaliar": "Por avaliar", "sob_controlo": "Sob controlo", "estavel": "Est\u00e1vel", "complexa": "Complexa",
             "critica": "Cr\u00edtica", "necessita_reforco": "Necessita de refor\u00e7o"
         }
         conn.execute(text("""

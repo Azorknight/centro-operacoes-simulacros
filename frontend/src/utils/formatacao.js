@@ -40,6 +40,8 @@ export function obterCorSituacaoMissao(situacao, estado) {
   if (estado === 'concluida') return '#16a34a'
 
   switch (situacao) {
+    case 'por_avaliar':
+      return '#94a3b8'
     case 'sob_controlo':
       return '#16a34a'
     case 'estavel':

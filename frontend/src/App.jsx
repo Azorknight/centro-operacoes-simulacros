@@ -145,7 +145,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     estado: 'planeada',
     responsavel: '',
     notas: '',
-    situacao_operacional: 'estavel',
+    situacao_operacional: 'por_avaliar',
     ocorrencia_id: null,
     objetivo_id: null
   })
@@ -704,6 +704,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     const textoSituacaoMissao = (situacao) => {
       const mapa = {
+        por_avaliar: 'Por avaliar',
         sob_controlo: 'Sob controlo',
         estavel: 'Estável',
         complexa: 'Complexa',
@@ -1623,6 +1624,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))', gap: 8 }}>
               {[
+                ['por_avaliar', '⚪', 'Por avaliar'],
                 ['sob_controlo', '🟢', 'Sob controlo'],
                 ['estavel', '🟡', 'Estável'],
                 ['complexa', '🟠', 'Complexa'],
@@ -1631,7 +1633,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               ].map(([id, icone, nome]) => {
                 const total = missoes.filter(
                   (m) => !['concluida', 'cancelada'].includes(m.estado) &&
-                    (m.situacao_operacional || 'estavel') === id
+                    (m.situacao_operacional || 'por_avaliar') === id
                 ).length
                 return (
                   <div key={id} style={{ ...styles.itemCard, margin: 0, textAlign: 'center' }}>
@@ -1809,7 +1811,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 const situacaoObjetivo = missoesDoObjetivo
                   .filter((m) => !['concluida', 'cancelada'].includes(m.estado))
                   .reduce((maisGrave, m) => {
-                    const atual = m.situacao_operacional || 'estavel'
+                    const atual = m.situacao_operacional || 'por_avaliar'
                     return (pesosSituacaoObjetivo[atual] || 0) >
                       (pesosSituacaoObjetivo[maisGrave] || 0)
                       ? atual
@@ -1989,10 +1991,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   {missoesDoObjetivo.map((m) => {
                     const expandida = Number(missaoPAOExpandida) === Number(m.id)
                     const situacaoTexto = {
-                      sob_controlo: '🟢 Sob controlo', estavel: '🟡 Estável',
+                      por_avaliar: '⚪ Por avaliar', sob_controlo: '🟢 Sob controlo', estavel: '🟡 Estável',
                       complexa: '🟠 Complexa', critica: '🔴 Crítica',
                       necessita_reforco: '⚫ Necessita de reforço'
-                    }[m.situacao_operacional] || '🟡 Estável'
+                    }[m.situacao_operacional] || '⚪ Por avaliar'
                     const estadoTexto = {
                       recebida: '📥 Recebida', planeada: '📝 Planeada',
                       em_execucao: '▶️ Em execução', concluida: '✅ Concluída',
@@ -2040,7 +2042,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                               {m.estado==='planeada' && <button style={styles.smallButton} disabled={modoBloqueado}
                                 onClick={async(e)=>{e.stopPropagation();await alterarEstadoMissao(m.id,'em_execucao');await refresh()}}>▶️ Iniciar</button>}
                               <button style={styles.smallButton} disabled={modoBloqueado||['concluida','cancelada'].includes(m.estado)}
-                                onClick={async(e)=>{e.stopPropagation();const s=window.prompt('Situação: sob_controlo, estavel, complexa, critica ou necessita_reforco',m.situacao_operacional||'estavel');if(!s)return;const v=['sob_controlo','estavel','complexa','critica','necessita_reforco'];if(!v.includes(s)){window.alert('Situação inválida.');return}await alterarSituacaoMissao(m.id,s);await refresh()}}>Situação</button>
+                                onClick={async(e)=>{e.stopPropagation();const s=window.prompt('Situação: por_avaliar, sob_controlo, estavel, complexa, critica ou necessita_reforco',m.situacao_operacional||'por_avaliar');if(!s)return;const v=['por_avaliar','sob_controlo','estavel','complexa','critica','necessita_reforco'];if(!v.includes(s)){window.alert('Situação inválida.');return}await alterarSituacaoMissao(m.id,s);await refresh()}}>Situação</button>
                               <button style={styles.smallButton} disabled={modoBloqueado||['concluida','cancelada'].includes(m.estado)}
                                 onClick={async(e)=>{e.stopPropagation();if(!window.confirm(`Concluir a missão "${m.titulo}"?`))return;await concluirMissao(m.id);await refresh()}}>Concluir</button>
                             </div>
@@ -2063,7 +2065,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         estado: 'planeada',
                         responsavel: '',
                         notas: '',
-                        situacao_operacional: 'estavel',
+                        situacao_operacional: 'por_avaliar',
                         ocorrencia_id: ocorrenciaContexto?.id || null,
                         objetivo_id: o.id
                       })
@@ -2090,7 +2092,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     const totalMissoesGrupo = missoesGrupo.length
                     const pesosSituacao = { necessita_reforco: 5, critica: 4, complexa: 3, estavel: 2, sob_controlo: 1 }
                     const situacaoMaisGrave = missoesGrupo.filter((m) => !['concluida', 'cancelada'].includes(m.estado)).reduce((a, m) => {
-                      const atual = m.situacao_operacional || 'estavel'
+                      const atual = m.situacao_operacional || 'por_avaliar'
                       return (pesosSituacao[atual] || 0) > (pesosSituacao[a] || 0) ? atual : a
                     }, null)
                     const iconeSituacao = { necessita_reforco: '⚫', critica: '🔴', complexa: '🟠', estavel: '🟡', sob_controlo: '🟢' }[situacaoMaisGrave] || '⚪'
@@ -2135,7 +2137,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     const totalMissoesGrupo = missoesGrupo.length
                     const pesosSituacao = { necessita_reforco: 5, critica: 4, complexa: 3, estavel: 2, sob_controlo: 1 }
                     const situacaoMaisGrave = missoesGrupo.filter((m) => !['concluida', 'cancelada'].includes(m.estado)).reduce((a, m) => {
-                      const atual = m.situacao_operacional || 'estavel'
+                      const atual = m.situacao_operacional || 'por_avaliar'
                       return (pesosSituacao[atual] || 0) > (pesosSituacao[a] || 0) ? atual : a
                     }, null)
                     const iconeSituacao = { necessita_reforco: '⚫', critica: '🔴', complexa: '🟠', estavel: '🟡', sob_controlo: '🟢' }[situacaoMaisGrave] || '⚪'
@@ -2770,9 +2772,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   </div>
                   <div><strong>Estado:</strong> {estadosMissao.find(([id]) => id === missaoAtual.estado)?.[1] || missaoAtual.estado}</div>
                   <div><strong>Situação:</strong> {{
-                    sob_controlo: '🟢 Sob controlo', estavel: '🟡 Estável', complexa: '🟠 Complexa',
+                    por_avaliar: '⚪ Por avaliar', sob_controlo: '🟢 Sob controlo', estavel: '🟡 Estável', complexa: '🟠 Complexa',
                     critica: '🔴 Crítica', necessita_reforco: '⚫ Necessita de reforço'
-                  }[missaoAtual.situacao_operacional] || '🟡 Estável'}</div>
+                  }[missaoAtual.situacao_operacional] || '⚪ Por avaliar'}</div>
                   <div><strong>Responsável:</strong> {missaoAtual.responsavel || 'Não definido'}</div>
                   <div style={{ marginTop: 8 }}>
                     <strong>Objetivo:</strong>{' '}
@@ -2810,6 +2812,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   <strong>Situação operacional</strong>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                     {[
+                      ['por_avaliar', '⚪ Por avaliar'],
                       ['sob_controlo', '🟢 Sob controlo'],
                       ['estavel', '🟡 Estável'],
                       ['complexa', '🟠 Complexa'],
@@ -3045,7 +3048,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         <div style={{ color: '#64748b', marginTop: 3 }}>
                           {{ recebida: 'Recebida', planeada: 'Planeada', em_execucao: 'Em execução', concluida: 'Concluída', cancelada: 'Cancelada' }[missao.estado] || missao.estado}
                           {' · '}
-                          {{ sob_controlo: 'Sob controlo', estavel: 'Estável', complexa: 'Complexa', critica: 'Crítica', necessita_reforco: 'Necessita de reforço' }[missao.situacao_operacional] || 'Estável'}
+                          {{ por_avaliar: 'Por avaliar', sob_controlo: 'Sob controlo', estavel: 'Estável', complexa: 'Complexa', critica: 'Crítica', necessita_reforco: 'Necessita de reforço' }[missao.situacao_operacional] || 'Por avaliar'}
                         </div>
                         <div style={{ color: '#7c3aed', marginTop: 3, fontSize: 12 }}>
                           Abrir para consultar recursos, notas e Timeline da missão.
@@ -3071,7 +3074,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   disabled={modoBloqueado || ocorrenciaAtual.estado === 'encerrada' || ocorrenciaAtual.estado === 'arquivada'}
                   onClick={() => {
                     setDetalhe(null)
-                    setFormMissao({ titulo: '', descricao: '', prioridade: 'media', responsavel: '', notas: '', ocorrencia_id: ocorrenciaAtual.id })
+                    setFormMissao({ titulo: '', descricao: '', prioridade: 'media', responsavel: '', notas: '', situacao_operacional: 'por_avaliar', ocorrencia_id: ocorrenciaAtual.id })
                     setMostrarFormMissao(true)
                   }}
                 >
@@ -3236,6 +3239,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       titulo: '',
                       descricao: '',
                       prioridade: 'media',
+                      situacao_operacional: 'por_avaliar',
                       ocorrencia_id: detalhe.dados.id
                     })
 
@@ -3635,9 +3639,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <select
             style={styles.input}
-            value={formMissao.situacao_operacional}
+            value={formMissao.situacao_operacional || 'por_avaliar'}
             onChange={(e) => setFormMissao({ ...formMissao, situacao_operacional: e.target.value })}
           >
+            <option value="por_avaliar">Por avaliar</option>
             <option value="sob_controlo">Sob controlo</option>
             <option value="estavel">Estável</option>
             <option value="complexa">Complexa</option>
@@ -3680,7 +3685,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 estado: formMissao.estado || 'planeada',
                 responsavel: formMissao.responsavel || null,
                 notas: formMissao.notas || null,
-                situacao_operacional: formMissao.situacao_operacional || 'estavel',
+                situacao_operacional: formMissao.situacao_operacional || 'por_avaliar',
                 recurso_id: null,
                 ocorrencia_id: formMissao.ocorrencia_id
               })
@@ -3699,7 +3704,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 prioridade: 'media',
                 responsavel: '',
                 notas: '',
-                situacao_operacional: 'estavel',
+                situacao_operacional: 'por_avaliar',
                 ocorrencia_id: null,
                 objetivo_id: null
               })
@@ -4284,7 +4289,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         <Tooltip direction="top" offset={[0, -12]}>
                           <strong>{m.titulo}</strong><br />
                           Estado: {m.estado}<br />
-                          Situação: {m.situacao_operacional || 'estavel'}<br />
+                          Situação: {{ por_avaliar: 'Por avaliar', sob_controlo: 'Sob controlo', estavel: 'Estável', complexa: 'Complexa', critica: 'Crítica', necessita_reforco: 'Necessita de reforço' }[m.situacao_operacional] || 'Por avaliar'}<br />
                           Recursos: {totalRecursos}<br />
                           Clique no alvo para abrir a missão.
                         </Tooltip>
