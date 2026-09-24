@@ -353,6 +353,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     window.addEventListener('abrir-form-recurso', abrirFormRecurso)
 
     const abrirFormOcorrencia = (event) => {
+      setDetalhe(null)
       setPosicaoNovaOcorrencia(event.detail)
     }
 
@@ -4045,7 +4046,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             <button
               type="button"
               style={{ ...styles.mapaToolButton, ...(modoMapa.tipo === 'nova_ocorrencia' ? styles.mapaToolButtonActive : {}) }}
-              onClick={() => setModoMapa({ tipo: 'nova_ocorrencia', alvo: null })}
+              onClick={() => { setDetalhe(null); setModoMapa({ tipo: 'nova_ocorrencia', alvo: null }) }}
             >
               📍 Nova ocorrência
             </button>
