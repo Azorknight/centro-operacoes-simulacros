@@ -2789,7 +2789,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         const atualizada = atualizadas.find(m => m.id === missaoAtual.id)
                         if (atualizada) setDetalhe({ tipo: 'missao', dados: atualizada })
                       }}
-                      style={{ padding: 6, borderRadius: 6, marginLeft: 4 }}
+                      style={{ display: 'block', width: '100%', minWidth: 0, boxSizing: 'border-box', padding: 6, borderRadius: 6, marginTop: 4 }}
                     >
                       <option value="">Sem objetivo associado</option>
                       {objetivos.filter(o => !o.arquivado).map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
