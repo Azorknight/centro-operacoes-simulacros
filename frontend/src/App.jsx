@@ -3406,9 +3406,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             }
           />
 
-          <input
-            style={styles.input}
+          <textarea
+            style={{ ...styles.input, minHeight: 90, resize: 'vertical' }}
             placeholder="Descrição"
+            rows={3}
             value={formOcorrencia.descricao}
             onChange={(e) =>
               setFormOcorrencia({ ...formOcorrencia, descricao: e.target.value })
