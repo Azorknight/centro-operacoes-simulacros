@@ -2656,20 +2656,54 @@ def atualizar_posicao_elemento(elemento_id: int, dados: dict):
 @app.put("/elementos/{elemento_id}/reembarcar/{recurso_id}")
 def reembarcar_elemento(elemento_id: int, recurso_id: int):
     with engine.begin() as conn:
-        conn.execute(
-            text("""
-                UPDATE elementos
-                SET
-                    recurso_id = :recurso_id,
-                    estado = 'embarcado',
-                    localizacao = NULL
-                WHERE id = :elemento_id
-            """),
-            {
-                "elemento_id": elemento_id,
-                "recurso_id": recurso_id
-            }
-        )
+        operacao_id = exigir_operacao_editavel_id(conn)
+        elemento = conn.execute(text("""
+            SELECT nome, indicativo_radio, ocorrencia_id, recurso_id
+            FROM elementos
+            WHERE id = :elemento_id AND operacao_id = :operacao_id
+            FOR UPDATE
+        """), {"elemento_id": elemento_id, "operacao_id": operacao_id}).mappings().first()
+        if not elemento:
+            raise HTTPException(status_code=404, detail="Elemento não encontrado nesta operação")
+
+        recurso = conn.execute(text("""
+            SELECT nome, indicativo_radio, ocorrencia_id
+            FROM recursos
+            WHERE id = :recurso_id AND operacao_id = :operacao_id
+        """), {"recurso_id": recurso_id, "operacao_id": operacao_id}).mappings().first()
+        if not recurso:
+            raise HTTPException(status_code=404, detail="Viatura não encontrada nesta operação")
+        if elemento["recurso_id"] == recurso_id:
+            return {"ok": True}
+        if elemento["recurso_id"] is not None:
+            raise HTTPException(status_code=409, detail="O elemento já está embarcado noutra viatura")
+
+        conn.execute(text("""
+            UPDATE elementos
+            SET recurso_id = :recurso_id, estado = 'embarcado', localizacao = NULL
+            WHERE id = :elemento_id AND operacao_id = :operacao_id
+        """), {
+            "elemento_id": elemento_id,
+            "recurso_id": recurso_id,
+            "operacao_id": operacao_id
+        })
+
+        nome_elemento = elemento["nome"]
+        if elemento["indicativo_radio"]:
+            nome_elemento += f" ({elemento['indicativo_radio']})"
+        nome_recurso = recurso["nome"]
+        if recurso["indicativo_radio"]:
+            nome_recurso += f" ({recurso['indicativo_radio']})"
+        conn.execute(text("""
+            INSERT INTO timeline_eventos
+                (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
+            VALUES ('elemento', :descricao, :recurso_id, :ocorrencia_id, :operacao_id)
+        """), {
+            "descricao": f"Elemento reembarcado: {nome_elemento} em {nome_recurso}",
+            "recurso_id": recurso_id,
+            "ocorrencia_id": recurso["ocorrencia_id"] or elemento["ocorrencia_id"],
+            "operacao_id": operacao_id
+        })
 
     return {"ok": True}
 
