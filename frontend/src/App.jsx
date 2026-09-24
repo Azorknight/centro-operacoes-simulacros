@@ -3297,6 +3297,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     [detalhe.dados.latitude, detalhe.dados.longitude],
                     14
                   )
+                  setDetalhe(null)
                 }
               }}
             >
