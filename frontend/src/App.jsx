@@ -11,11 +11,12 @@ import {
 import L from 'leaflet'
 import jsPDF from 'jspdf'
 import FichaOperacional from './components/FichaOperacional'
+import FluxoOcorrencia from './components/FluxoOcorrencia'
 import PainelTimeline from './components/PainelTimeline'
 import RelogioOperacional from './components/RelogioOperacional'
 import CronometroOcorrencia from './components/CronometroOcorrencia'
 import GestorCliquesMapa from './components/GestorCliquesMapa'
-import { obterIconeRecurso, obterCorOcorrencia, obterCorSituacaoMissao, formatarDuracao, formatarDataHora } from './utils/formatacao'
+import { obterIconeRecurso, obterCorOcorrencia, formatarDuracao, formatarDataHora } from './utils/formatacao'
 import Operacoes from './pages/Operacoes'
 import { desativarOperacao, encerrarOperacao, obterOperacaoAtiva, reabrirOperacao, obterDiagnostico, obterBackups, criarBackup, restaurarBackup, eliminarBackup } from './services/api'
 import {
@@ -27,6 +28,9 @@ import {
   obterMissoes,
   obterRelatorio,
   obterElementos,
+  obterResumoElementos,
+  obterHistoricoElemento,
+  libertarElemento,
   confirmarChegada,
   criarRecurso,
   criarElemento,
@@ -70,43 +74,11 @@ import {
   associarSetorMissao
 } from './services/api' 
 
-function obterPosicaoIconeMissao(latitude, longitude, indice, total) {
-  const quantidade = Math.max(total, 1)
-  const angulo = (-Math.PI / 2) + ((2 * Math.PI * indice) / quantidade)
-  const distancia = quantidade === 1 ? 0.00032 : 0.00042
-
-  return [
-    latitude + Math.sin(angulo) * distancia,
-    longitude + Math.cos(angulo) * distancia
-  ]
-}
-
-function criarIconeMissao(cor, selecionada = false) {
-  const tamanho = selecionada ? 32 : 28
-
-  return L.divIcon({
-    className: 'icone-missao-leaflet',
-    html: `<div style="
-      width:${tamanho}px;
-      height:${tamanho}px;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:#ffffff;
-      border:${selecionada ? 4 : 3}px solid ${cor};
-      box-shadow:0 2px 8px rgba(15, 23, 42, 0.35);
-      font-size:${selecionada ? 17 : 15}px;
-      line-height:1;
-      cursor:pointer;
-    ">🎯</div>`,
-    iconSize: [tamanho, tamanho],
-    iconAnchor: [tamanho / 2, tamanho / 2]
-  })
-}
 function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null }) {
   const [recursos, setRecursos] = useState([])
   const [resumoRecursosOperacionais, setResumoRecursosOperacionais] = useState([])
+  const [resumoElementosOperacionais, setResumoElementosOperacionais] = useState([])
+  const [historicosElementos, setHistoricosElementos] = useState({})
   const [recursoOperacionalExpandido, setRecursoOperacionalExpandido] = useState(null)
   const [detalheRecursoOperacional, setDetalheRecursoOperacional] = useState(null)
   const [ocorrencias, setOcorrencias] = useState([])
@@ -121,8 +93,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [mostrarArquivadosSetores, setMostrarArquivadosSetores] = useState(false)
   const [relatorio, setRelatorio] = useState(null)
   const [mostrarSoAtivos, setMostrarSoAtivos] = useState(false)
-  const [mostrarLigacoesMissoes, setMostrarLigacoesMissoes] = useState(true)
-  const [abaAtiva, setAbaAtiva] = useState('recursos')
+  const [abaAtiva, setAbaAtiva] = useState('ocorrencias')
   const [mostrarPainelEsquerdo, setMostrarPainelEsquerdo] = useState(true)
   const [mostrarPainelDireito, setMostrarPainelDireito] = useState(true)
   const [detalhe, setDetalhe] = useState(null)
@@ -135,12 +106,16 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [formOcorrencia, setFormOcorrencia] = useState({
     titulo: '',
     tipo: '',
-    descricao: ''
+    descricao: '',
+    origem_chamada: '',
+    contacto_chamada: '',
+    recebida_em: ''
   })
   const [posicaoNovaOcorrencia, setPosicaoNovaOcorrencia] = useState(null)
   const [formMissao, setFormMissao] = useState({
     titulo: '',
     descricao: '',
+    zona: '',
     prioridade: 'media',
     estado: 'planeada',
     responsavel: '',
@@ -171,7 +146,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
   const [mostrarFormElemento, setMostrarFormElemento] = useState(false)
   const [modoMapa, setModoMapa] = useState({ tipo: 'normal', alvo: null })
-  const elementoParaApear = modoMapa.tipo === 'apear_elemento' ? modoMapa.alvo : null
   const [elementoParaReembarcar, setElementoParaReembarcar] = useState(null)
   const [historicoRecurso, setHistoricoRecurso] = useState(null)
   const [estatisticasOcorrencia, setEstatisticasOcorrencia] = useState(null)
@@ -245,13 +219,20 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       setTimelineOcorrencia([])
       return
     }
-    Promise.all([
-      obterEstatisticasOcorrencia(detalhe.dados.id),
-      obterTimelineOcorrencia(detalhe.dados.id)
+    const ocorrenciaId = detalhe.dados.id
+    let ativo = true
+    const carregarDetalhe = () => Promise.all([
+      obterEstatisticasOcorrencia(ocorrenciaId),
+      obterTimelineOcorrencia(ocorrenciaId)
     ]).then(([estatisticas, eventos]) => {
-      setEstatisticasOcorrencia(estatisticas)
-      setTimelineOcorrencia(eventos)
+      if (ativo) {
+        setEstatisticasOcorrencia(estatisticas)
+        setTimelineOcorrencia(eventos)
+      }
     }).catch(console.error)
+    carregarDetalhe()
+    const intervalo = window.setInterval(carregarDetalhe, 5000)
+    return () => { ativo = false; window.clearInterval(intervalo) }
   }, [detalhe?.tipo, detalhe?.dados?.id])
 
   useEffect(() => {
@@ -289,7 +270,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         setoresData,
         relatorioData,
         elementosData,
-        resumoRecursosOperacionaisData
+        resumoRecursosOperacionaisData,
+        resumoElementosOperacionaisData
       ] = await Promise.all([
         obterRecursos(),
         obterOcorrencias(),
@@ -302,7 +284,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         obterSetores(mostrarArquivadosSetores),
         obterRelatorio(),
         obterElementos(),
-        fetch('http://127.0.0.1:8000/recursos-operacionais/resumo').then(r => r.ok ? r.json() : [])
+        fetch('http://127.0.0.1:8000/recursos-operacionais/resumo').then(r => r.ok ? r.json() : []),
+        obterResumoElementos()
       ])
 
       // Evita que a atualização automática reponha a posição anterior durante o arrasto.
@@ -320,6 +303,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       setRelatorio(relatorioData)
       setElementos(elementosData)
       setResumoRecursosOperacionais(resumoRecursosOperacionaisData)
+      setResumoElementosOperacionais(resumoElementosOperacionaisData)
     } catch (erro) {
       console.error('Erro ao atualizar dados:', erro)
     }
@@ -385,11 +369,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const ocorrenciasFiltradas = useMemo(
     () => ocorrencias.filter((o) => !mostrarSoAtivos || !['fechada', 'encerrada', 'arquivada'].includes(o.estado)),
     [ocorrencias, mostrarSoAtivos]
-  )
-
-  const missoesFiltradas = useMemo(
-    () => missoes.filter((m) => !mostrarSoAtivos || m.estado !== 'concluida'),
-    [missoes, mostrarSoAtivos]
   )
 
   const termoPesquisa = pesquisaGlobal.trim().toLowerCase()
@@ -1489,7 +1468,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   </div>
                   <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
                     <div><div style={styles.itemMeta}>Ocorrência</div><div>{r.ocorrencia_atual || '—'}</div></div>
-                    <div><div style={styles.itemMeta}>Missões</div><div>{r.total_missoes}</div></div>
+                    <div><div style={styles.itemMeta}>Ocorrências</div><div>{r.total_ocorrencias || 0}</div></div>
                     <div>
                   <div style={styles.itemMeta}>Tempo total</div>
                   <div>{formatarTempoEmpenhado(r.tempo_total_empenhado_segundos)}</div>
@@ -1538,6 +1517,26 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </div>
             )
           })}
+          <strong style={styles.sectionTitle}>Elementos ({resumoElementosOperacionais.length})</strong>
+          {resumoElementosOperacionais.map(el => <div key={el.elemento_id} style={styles.itemCard}>
+            <div style={styles.itemTitle}>{[el.posto, el.nome].filter(Boolean).join(' ')}</div>
+            <div style={styles.itemSubtle}>{el.funcao || 'Elemento'} · {el.indicativo_radio || 'Sem indicativo'}</div>
+            <div style={styles.itemMeta}>{el.ocorrencia_id ? (el.estado === 'apeado' ? 'Apeado em ocorrência' : 'Em ocorrência') : (recursos.find(r => r.id === el.recurso_id)?.estado === 'em_missao' ? 'Em missão' : el.estado === 'retirado' ? 'Retirado' : 'Disponível')} · {el.recurso_indicativo || el.recurso_nome || 'Sem viatura'}</div>
+            <div>Ocorrências: {el.total_ocorrencias || 0} · Tempo total: {formatarTempoEmpenhado(el.tempo_total_empenhado_segundos)}</div>
+            <details onToggle={async (evento) => {
+              if (!evento.currentTarget.open) return
+              try {
+                const periodos = await obterHistoricoElemento(el.elemento_id)
+                setHistoricosElementos(atuais => ({ ...atuais, [el.elemento_id]: periodos }))
+              } catch (erro) { console.error(erro) }
+            }}>
+              <summary>Tempo por ocorrência</summary>
+              {(historicosElementos[el.elemento_id] || []).map(p => <div key={p.ocorrencia_id} style={{ marginTop: 6 }}>
+                {p.ocorrencia_titulo} · {formatarTempoEmpenhado(p.tempo_empenhado_segundos)}{p.em_curso ? ' · Em curso' : ''}
+              </div>)}
+            </details>
+            {el.ocorrencia_id && !modoBloqueado && <button style={styles.smallButton} onClick={async () => { await libertarElemento(el.elemento_id); await refresh() }}>Libertar elemento</button>}
+          </div>)}
         </>
       )
     }
@@ -2161,6 +2160,20 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       )
     }
 
+    if (abaAtiva === 'historico') {
+      return (
+        <>
+          <strong style={styles.sectionTitle}>Registos anteriores</strong>
+          <p style={styles.itemMeta}>Consulta dos registos do modelo anterior desta operação.</p>
+          {operacaoAtiva?.intencao_comandante && <div style={styles.itemCard}><b>Intenção</b><div>{operacaoAtiva.intencao_comandante}</div></div>}
+          {decisoesOperacionais.map(d => <div key={d.id} style={styles.itemCard}><b>Decisão · {d.autor || 'Comandante'}</b><div>{d.texto}</div></div>)}
+          {objetivos.map(o => <div key={o.id} style={styles.itemCard}><b>Objetivo · {o.nome}</b><div>{o.descricao}</div></div>)}
+          {missoes.map(m => <div key={m.id} style={styles.itemCard}><b>Missão · {m.titulo}</b><div>{m.estado} · {m.descricao}</div></div>)}
+          {!missoes.length && !objetivos.length && !decisoesOperacionais.length && !operacaoAtiva?.intencao_comandante && <p>Sem registos antigos.</p>}
+        </>
+      )
+    }
+
     if (abaAtiva === 'recursos') {
       return (
         <>
@@ -2174,6 +2187,17 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               <div style={styles.itemMeta}>{r.tipo} · {r.estado}</div>
             </div>
           ))}
+          {elementos.some(el => !el.recurso_id) && (
+            <>
+              <strong style={styles.sectionTitle}>Elementos sem viatura</strong>
+              {elementos.filter(el => !el.recurso_id).map(el => (
+                <div key={el.id} style={{ ...styles.itemCard, cursor: 'pointer' }} onClick={() => setDetalhe({ tipo: 'elemento', dados: el })}>
+                  <div style={styles.itemTitle}>👤 {el.indicativo_radio || el.nome}</div>
+                  <div style={styles.itemMeta}>{el.nome} · {el.funcao || 'Sem função'} · {el.estado}</div>
+                </div>
+              ))}
+            </>
+          )}
         </>
       )
     }
@@ -2208,7 +2232,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           {ordens.map((o) => {
             const recursoOrdem = recursos.find((r) => Number(r.id) === Number(o.recurso_id))
             const ocorrenciaOrdem = ocorrencias.find((oc) => Number(oc.id) === Number(o.ocorrencia_id))
-            const nomeRecursoOrdem = recursoOrdem
+            const elementoOrdem = elementos.find((el) => Number(el.id) === Number(o.elemento_id))
+            const nomeRecursoOrdem = elementoOrdem ? (elementoOrdem.indicativo_radio || elementoOrdem.nome) : recursoOrdem
               ? [recursoOrdem.indicativo_radio, recursoOrdem.nome]
                   .filter(Boolean)
                   .filter((valor, indice, lista) => lista.indexOf(valor) === indice)
@@ -2218,11 +2243,11 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             return (
               <div key={o.id} style={styles.itemCard}>
                 <div style={styles.itemTitle}>{o.titulo}</div>
-                <div style={styles.itemMeta}>🚓 Recurso: {nomeRecursoOrdem}</div>
+                <div style={styles.itemMeta}>Destinatário: {nomeRecursoOrdem}</div>
                 <div style={styles.itemMeta}>📍 Ocorrência: {ocorrenciaOrdem?.titulo || (o.ocorrencia_id ? `Ocorrência ${o.ocorrencia_id}` : 'Sem ocorrência associada')}</div>
                 <div style={styles.itemMeta}>Estado: {o.estado}</div>
                 <div style={styles.buttonRow}>
-                  {o.estado === 'emitida' && (
+                  {o.estado === 'emitida' && !o.titulo.startsWith('Desloca') && (
                     <button
                       style={styles.smallButton}
                       onClick={() => {
@@ -2256,7 +2281,12 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       return (
         <>
           <strong style={styles.sectionTitle}>Missões</strong>
-          {missoesFiltradas
+          <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => {
+            setFormMissao({ titulo: '', descricao: '', prioridade: 'media', estado: 'planeada',
+              responsavel: '', notas: '', situacao_operacional: 'por_avaliar', ocorrencia_id: null, objetivo_id: null })
+            setMostrarFormMissao(true)
+          }}>+ Planear missão</button>
+          {missoes
             .filter((m) => m.estado !== 'concluida')
             .map((m) => {
               const recursosMissao = recursos.filter((r) => (m.recurso_ids || []).includes(r.id))
@@ -2288,6 +2318,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   {m.titulo} ({m.prioridade})
                 </div>
                 <div style={styles.itemMeta}>{m.estado}</div>
+                {m.zona && <div style={styles.itemSubtle}>Zona: {m.zona}</div>}
                 {m.responsavel && <div style={styles.itemSubtle}>Responsável: {m.responsavel}</div>}
                 <div style={styles.itemSubtle}>
                   {recursosMissao.length === 0
@@ -2454,7 +2485,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             </div>
           </div>
           <div style={styles.kpiBox}>
-            <div style={styles.kpiLabel}>Em missão</div>
+            <div style={styles.kpiLabel}>Afetos</div>
             <div style={styles.kpiValue}>
               {recursos.filter((r) => r.estado === 'em_missao').length}
             </div>
@@ -2468,9 +2499,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             <div style={styles.kpiValue}>{ocorrencias.length}</div>
           </div>
           <div style={styles.kpiBox}>
-            <div style={styles.kpiLabel}>Missões ativas</div>
+            <div style={styles.kpiLabel}>No local</div>
             <div style={styles.kpiValue}>
-              {missoes.filter((m) => m.estado !== 'concluida').length}
+              {recursos.filter((r) => r.ocorrencia_id && timeline.some((e) => e.tipo === 'chegada' && e.recurso_id === r.id)).length}
             </div>
           </div>
           <div style={styles.kpiBox}>
@@ -2530,14 +2561,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           Mostrar só ativos
         </label>
 
-        <label style={styles.checkboxLabel}>
-          <input
-            type="checkbox"
-            checked={mostrarLigacoesMissoes}
-            onChange={(e) => setMostrarLigacoesMissoes(e.target.checked)}
-          />
-          Mostrar ligações das missões
-        </label>
 
         <div style={styles.helpBox}>
           <div>Click esquerdo: criar ocorrência</div>
@@ -2551,9 +2574,11 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               <div>Recursos: {relatorio.recursos}</div>
               <div>Elementos: {relatorio.elementos ?? elementos.length}</div>
               <div>Ocorrências: {relatorio.ocorrencias}</div>
-              <div>Missões total: {relatorio.missoes_total}</div>
-              <div>Missões ativas: {relatorio.missoes_ativas}</div>
-              <div>Missões concluídas: {relatorio.missoes_concluidas}</div>
+              <details><summary>Registos antigos</summary>
+                <div>Missões total: {relatorio.missoes_total}</div>
+                <div>Missões ativas: {relatorio.missoes_ativas}</div>
+                <div>Missões concluídas: {relatorio.missoes_concluidas}</div>
+              </details>
               <div>Ordens: {relatorio.ordens}</div>
             </div>
           )}
@@ -2602,7 +2627,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       {mostrarPainelDireito && (
         <div style={styles.rightPanel}>
         <div style={styles.tabBar}>
-          {['recursos', 'recursos_operacionais', 'ocorrencias', 'pao', 'setores', 'objetivos', 'missoes', 'ordens', 'timeline'].map((aba) => (
+          {['ocorrencias', 'missoes', 'recursos', 'recursos_operacionais', 'ordens', 'timeline', 'historico'].map((aba) => (
             <button
               key={aba}
               style={{
@@ -2611,7 +2636,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               }}
               onClick={() => setAbaAtiva(aba)}
             >
-              {aba === 'recursos_operacionais' ? '📊 recursos' : aba}
+              {aba === 'historico' ? 'Histórico antigo' : aba === 'recursos_operacionais' ? 'Equipas' : aba}
             </button>
           ))}
         </div>
@@ -2776,6 +2801,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     critica: '🔴 Crítica', necessita_reforco: '⚫ Necessita de reforço'
                   }[missaoAtual.situacao_operacional] || '⚪ Por avaliar'}</div>
                   <div><strong>Responsável:</strong> {missaoAtual.responsavel || 'Não definido'}</div>
+                  {missaoAtual.zona && <div><strong>Zona / percurso:</strong> {missaoAtual.zona}</div>}
                   <div style={{ marginTop: 8 }}>
                     <strong>Objetivo:</strong>{' '}
                     <select
@@ -3020,66 +3046,33 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   ))}
                 </div>
 
-                <div style={{ ...styles.itemCard, border: '2px solid #7c3aed' }}>
-                  <strong>🎯 Missões desta ocorrência</strong>
-                  {missoes.filter(m => m.ocorrencia_id === ocorrenciaAtual.id).length === 0 ? (
-                    <div style={{ color: '#64748b', marginTop: 8 }}>Ainda não existem missões para esta ocorrência.</div>
-                  ) : (
-                    missoes.filter(m => m.ocorrencia_id === ocorrenciaAtual.id).map(missao => (
-                      <button
-                        key={missao.id}
-                        type="button"
-                        onClick={() => setDetalhe({ tipo: 'missao', dados: missao })}
-                        style={{
-                          width: '100%',
-                          marginTop: 8,
-                          padding: '9px 10px',
-                          border: '1px solid #c4b5fd',
-                          borderRadius: 8,
-                          background: '#f5f3ff',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontWeight: 700 }}>
-                          <span>{missao.titulo}</span>
-                          <span>Abrir →</span>
-                        </div>
-                        <div style={{ color: '#64748b', marginTop: 3 }}>
-                          {{ recebida: 'Recebida', planeada: 'Planeada', em_execucao: 'Em execução', concluida: 'Concluída', cancelada: 'Cancelada' }[missao.estado] || missao.estado}
-                          {' · '}
-                          {{ por_avaliar: 'Por avaliar', sob_controlo: 'Sob controlo', estavel: 'Estável', complexa: 'Complexa', critica: 'Crítica', necessita_reforco: 'Necessita de reforço' }[missao.situacao_operacional] || 'Por avaliar'}
-                        </div>
-                        <div style={{ color: '#7c3aed', marginTop: 3, fontSize: 12 }}>
-                          Abrir para consultar recursos, notas e Timeline da missão.
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-
-                <div style={styles.itemCard}>
-                  <strong>🕘 Timeline da ocorrência</strong>
-                  {timelineOcorrencia.length === 0 && <div>Sem acontecimentos registados.</div>}
-                  {timelineOcorrencia.slice(0, 12).map(evento => (
-                    <div key={evento.id} style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid #e2e8f0' }}>
-                      <div>{evento.descricao}</div>
-                      <small style={{ color: '#64748b' }}>{formatarDataHora(evento.criado_em)}</small>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  style={styles.mainButton}
-                  disabled={modoBloqueado || ocorrenciaAtual.estado === 'encerrada' || ocorrenciaAtual.estado === 'arquivada'}
-                  onClick={() => {
-                    setDetalhe(null)
-                    setFormMissao({ titulo: '', descricao: '', prioridade: 'media', responsavel: '', notas: '', situacao_operacional: 'por_avaliar', ocorrencia_id: ocorrenciaAtual.id })
-                    setMostrarFormMissao(true)
-                  }}
-                >
-                  Criar missão para esta ocorrência
-                </button>
+                <FluxoOcorrencia
+                  key={ocorrenciaAtual.id}
+                  ocorrencia={ocorrenciaAtual}
+                  recursos={recursos}
+                  elementos={elementos}
+                  ordens={ordens}
+                  eventos={timelineOcorrencia}
+                  bloqueado={modoBloqueado}
+                  atualizar={refresh}
+                />
+                {!modoBloqueado && <button type="button" style={styles.mainButton} onClick={() => {
+                  setFormMissao({ titulo: '', descricao: '', prioridade: 'media', estado: 'planeada',
+                    responsavel: '', notas: '', situacao_operacional: 'por_avaliar',
+                    ocorrencia_id: ocorrenciaAtual.id, objetivo_id: null })
+                  setMostrarFormMissao(true)
+                }}>Planear missão nesta ocorrência</button>}
+                {missoes.some(m => Number(m.ocorrencia_id) === Number(ocorrenciaAtual.id)) && (
+                  <details style={styles.itemCard}>
+                    <summary>Missões desta ocorrência</summary>
+                    {missoes.filter(m => Number(m.ocorrencia_id) === Number(ocorrenciaAtual.id)).map(m =>
+                      <div key={m.id} style={{ marginTop: 7 }}>
+                        <strong>{m.titulo}</strong> · {m.estado}
+                        {m.descricao && <div>{m.descricao}</div>}
+                      </div>
+                    )}
+                  </details>
+                )}
               </>
             )
           })()}
@@ -3205,7 +3198,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   setMostrarFormOrdem(true)
                 }}
               >
-                Criar ordem
+                Dar nova ordem
               </button>
 
               <button
@@ -3227,29 +3220,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             </>
           )}
 
-            {detalhe.tipo === 'ocorrencia' && (
-              <>
-                
-                <button
-                  style={styles.mainButton}
-                  onClick={() => {
-                    setDetalhe(null)
-
-                    setFormMissao({
-                      titulo: '',
-                      descricao: '',
-                      prioridade: 'media',
-                      situacao_operacional: 'por_avaliar',
-                      ocorrencia_id: detalhe.dados.id
-                    })
-
-                    setMostrarFormMissao(true)
-                  }}
-                >
-                  Criar missão
-                </button>
-              </>
-            )}
 
             {detalhe.tipo === 'missao' && (
               <>
@@ -3284,7 +3254,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     setDetalhe(null)
                   }}
                 >
-                  Reembarcar em viatura
+                  {detalhe.dados.estado === 'apeado' ? 'Reembarcar em viatura' : 'Embarcar em viatura'}
                 </button>
               </>
             )}
@@ -3391,7 +3361,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
       {posicaoNovaOcorrencia && (
         <div style={styles.detailPanel}>
-          <div style={styles.panelTitle}>Nova ocorrência</div>
+          <div style={styles.panelTitle}>Chamada / nova ocorrência</div>
 
           <input
             style={styles.input}
@@ -3413,13 +3383,18 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <textarea
             style={{ ...styles.input, minHeight: 90, resize: 'vertical' }}
-            placeholder="Descrição"
+            placeholder="Informação recebida na chamada"
             rows={3}
             value={formOcorrencia.descricao}
             onChange={(e) =>
               setFormOcorrencia({ ...formOcorrencia, descricao: e.target.value })
             }
           />
+
+          <input style={styles.input} placeholder="Quem ligou (opcional)" value={formOcorrencia.origem_chamada} onChange={e => setFormOcorrencia({ ...formOcorrencia, origem_chamada: e.target.value })} />
+          <input style={styles.input} placeholder="Contacto (opcional)" value={formOcorrencia.contacto_chamada} onChange={e => setFormOcorrencia({ ...formOcorrencia, contacto_chamada: e.target.value })} />
+          <label>Hora da chamada (em branco: agora)</label>
+          <input type="datetime-local" style={styles.input} value={formOcorrencia.recebida_em} onChange={e => setFormOcorrencia({ ...formOcorrencia, recebida_em: e.target.value })} />
 
           <button
             style={styles.mainButton}
@@ -3430,6 +3405,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 titulo: formOcorrencia.titulo,
                 tipo: formOcorrencia.tipo,
                 descricao: formOcorrencia.descricao,
+                origem_chamada: formOcorrencia.origem_chamada,
+                contacto_chamada: formOcorrencia.contacto_chamada,
+                recebida_em: formOcorrencia.recebida_em || null,
                 estado: 'aberta',
                 ilha: 'Terceira',
                 latitude: posicaoNovaOcorrencia.latitude,
@@ -3437,18 +3415,18 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               }).then(async () => {
                 await refresh()
                 setPosicaoNovaOcorrencia(null)
-                setFormOcorrencia({ titulo: '', tipo: '', descricao: '' })
+                setFormOcorrencia({ titulo: '', tipo: '', descricao: '', origem_chamada: '', contacto_chamada: '', recebida_em: '' })
               })
             }}
           >
-            Criar ocorrência
+            Registar chamada e ocorrência
           </button>
 
           <button
             style={styles.mainButton}
             onClick={() => {
               setPosicaoNovaOcorrencia(null)
-              setFormOcorrencia({ titulo: '', tipo: '', descricao: '' })
+              setFormOcorrencia({ titulo: '', tipo: '', descricao: '', origem_chamada: '', contacto_chamada: '', recebida_em: '' })
             }}
           >
             Cancelar
@@ -3628,6 +3606,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             }
           />
 
+          <input style={styles.input} placeholder="Zona ou percurso atribuído (ex.: Posto A — Ponto de Encontro)" value={formMissao.zona || ''} onChange={e => setFormMissao({ ...formMissao, zona: e.target.value })} />
+
           <textarea
             style={{ ...styles.input, minHeight: 70, resize: 'vertical' }}
             placeholder="Notas operacionais (opcional)"
@@ -3684,6 +3664,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 prioridade: formMissao.prioridade,
                 estado: formMissao.estado || 'planeada',
                 responsavel: formMissao.responsavel || null,
+                zona: formMissao.zona || null,
                 notas: formMissao.notas || null,
                 situacao_operacional: formMissao.situacao_operacional || 'por_avaliar',
                 recurso_id: null,
@@ -3703,6 +3684,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 descricao: '',
                 prioridade: 'media',
                 responsavel: '',
+                zona: '',
                 notas: '',
                 situacao_operacional: 'por_avaliar',
                 ocorrencia_id: null,
@@ -4098,15 +4080,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           {recursosFiltrados.map((r) => {
             if (!r.latitude || !r.longitude) return null
 
-            const ordensRecurso = ordens.filter((o) => o.recurso_id === r.id)
-            const ordem =
-              ordensRecurso.length > 0
-                ? ordensRecurso.reduce((latest, current) =>
-                    new Date(current.criado_em) > new Date(latest.criado_em)
-                      ? current
-                      : latest
-                  )
-                : null
             
             const totalElementos = elementos.filter(el => el.recurso_id === r.id).length    
 
@@ -4198,37 +4171,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             )
           })}
 
-          {mostrarLigacoesMissoes && missoesFiltradas.flatMap((missao) => {
-            const ocorrencia = ocorrencias.find((o) => o.id === missao.ocorrencia_id)
-            if (!ocorrencia?.latitude || !ocorrencia?.longitude) return []
-
-            const cor = obterCorSituacaoMissao(missao.situacao_operacional, missao.estado)
-            const selecionada = detalhe?.tipo === 'missao' && detalhe.dados.id === missao.id
-
-            return recursos
-              .filter((recurso) => (missao.recurso_ids || []).includes(recurso.id) && recurso.latitude && recurso.longitude)
-              .map((recurso) => (
-                <Polyline
-                  key={`ligacao-missao-${missao.id}-recurso-${recurso.id}`}
-                  positions={[
-                    [ocorrencia.latitude, ocorrencia.longitude],
-                    [recurso.latitude, recurso.longitude]
-                  ]}
-                  pathOptions={{
-                    color: cor,
-                    weight: selecionada ? 5 : 3,
-                    opacity: selecionada ? 0.95 : 0.65,
-                    dashArray: missao.estado === 'em_execucao' ? undefined : '8 8'
-                  }}
-                  interactive={false}
-                >
-                  <Tooltip sticky>
-                    {missao.titulo} → {recurso.indicativo_radio || recurso.nome}
-                  </Tooltip>
-                </Polyline>
-              ))
-          })}
-
           {ocorrenciasFiltradas.map((o) =>
             o.latitude && o.longitude ? (
               <>
@@ -4259,44 +4201,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   </Popup>
                 </CircleMarker>
 
-                {(() => {
-                  const missoesOcorrencia = missoes.filter((m) => m.ocorrencia_id === o.id)
 
-                  return missoesOcorrencia.map((m, indice) => {
-                    const color = obterCorSituacaoMissao(m.situacao_operacional, m.estado)
-                    const selecionada = detalhe?.tipo === 'missao' && detalhe.dados.id === m.id
-                    const totalRecursos = (m.recurso_ids || []).length
-                    const posicaoIcone = obterPosicaoIconeMissao(
-                      o.latitude,
-                      o.longitude,
-                      indice,
-                      missoesOcorrencia.length
-                    )
-
-                    return (
-                      <Marker
-                        key={`missao-${m.id}`}
-                        position={posicaoIcone}
-                        icon={criarIconeMissao(color, selecionada)}
-                        zIndexOffset={selecionada ? 1200 : 900}
-                        eventHandlers={{
-                          click: (e) => {
-                            L.DomEvent.stopPropagation(e.originalEvent)
-                            setDetalhe({ tipo: 'missao', dados: m })
-                          }
-                        }}
-                      >
-                        <Tooltip direction="top" offset={[0, -12]}>
-                          <strong>{m.titulo}</strong><br />
-                          Estado: {m.estado}<br />
-                          Situação: {{ por_avaliar: 'Por avaliar', sob_controlo: 'Sob controlo', estavel: 'Estável', complexa: 'Complexa', critica: 'Crítica', necessita_reforco: 'Necessita de reforço' }[m.situacao_operacional] || 'Por avaliar'}<br />
-                          Recursos: {totalRecursos}<br />
-                          Clique no alvo para abrir a missão.
-                        </Tooltip>
-                      </Marker>
-                    )
-                  })
-                })()}
               </>
             ) : null
           )}
@@ -4883,9 +4788,6 @@ function App() {
     try {
       const resultado = await restaurarBackup(nome, confirmacao)
       // Evita manter no ecrã referências a registos que acabaram de ser substituídos.
-      setDetalhe(null)
-      setEstatisticasOcorrencia(null)
-      setTimelineOcorrencia([])
       setMostrarBackups(false)
       setMensagemBackup(`Backup restaurado com sucesso (${resultado.registos_restaurados} registos). A aplicação será atualizada.`)
       // Recarregamento sem cache para obter imediatamente o estado restaurado.
@@ -5239,7 +5141,6 @@ function App() {
 }
 
 export default App
-
 
 
 

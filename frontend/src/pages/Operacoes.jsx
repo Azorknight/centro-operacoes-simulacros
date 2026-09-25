@@ -18,7 +18,10 @@ const formularioInicial = {
   local: '',
   objetivo: '',
   descricao: '',
-  data_inicio: ''
+  data_inicio: '',
+  responsavel_nome: '',
+  responsavel_posto: '',
+  responsavel_funcao: ''
 }
 
 function Operacoes({ onAbrir }) {
@@ -44,7 +47,7 @@ function Operacoes({ onAbrir }) {
       ])
       setOperacoes(ativas)
       setArquivadas(listaArquivadas)
-    } catch (e) {
+    } catch {
       setErro('Não foi possível ligar à API. Confirme se o backend está iniciado.')
     } finally {
       setACarregar(false)
@@ -73,14 +76,14 @@ function Operacoes({ onAbrir }) {
         local: formulario.local || null,
         objetivo: formulario.objetivo || null,
         descricao: formulario.descricao || null,
-        data_inicio: formulario.data_inicio || null,
+        data_inicio: null,
         data_fim: null
       })
       setFormulario(formularioInicial)
       setMostrarFormulario(false)
       await carregarOperacoes()
       await abrirOperacao(criada)
-    } catch (e) {
+    } catch {
       setErro('Não foi possível criar a operação.')
     } finally {
       setAGuardar(false)
@@ -98,7 +101,7 @@ function Operacoes({ onAbrir }) {
       setErro('')
       await arquivarOperacao(operacao.id)
       await carregarOperacoes()
-    } catch (e) {
+    } catch {
       setErro('Não foi possível arquivar a operação. Confirme que não está ativa.')
     }
   }
@@ -108,7 +111,7 @@ function Operacoes({ onAbrir }) {
       setErro('')
       await restaurarOperacao(operacao.id)
       await carregarOperacoes()
-    } catch (e) {
+    } catch {
       setErro('Não foi possível restaurar a operação.')
     }
   }
@@ -129,7 +132,7 @@ function Operacoes({ onAbrir }) {
       setOperacaoAEliminar(null)
       setConfirmacaoEliminacao('')
       await carregarOperacoes()
-    } catch (e) {
+    } catch {
       setErro('Não foi possível eliminar a operação. Confirme que está arquivada e escreva ELIMINAR.')
     } finally {
       setAEliminar(false)
@@ -141,7 +144,7 @@ function Operacoes({ onAbrir }) {
       setErro('')
       await ativarOperacao(operacao.id)
       onAbrir(operacao)
-    } catch (e) {
+    } catch {
       setErro('Não foi possível abrir a operação.')
     }
   }
@@ -195,6 +198,7 @@ function Operacoes({ onAbrir }) {
                   </div>
                   <p>{operacao.local || 'Local não definido'}</p>
                   <small>Estado: {operacao.estado}</small>
+                  {operacao.responsavel_nome && <small> · Responsável: {operacao.responsavel_posto ? `${operacao.responsavel_posto} ` : ''}{operacao.responsavel_nome}{operacao.responsavel_funcao ? ` (${operacao.responsavel_funcao})` : ''}</small>}
                 </div>
                 <div className="operacao-acoes">
                   <button className="botao-preparar" onClick={() => setOperacaoAPreparar(operacao)}>
@@ -322,13 +326,20 @@ function Operacoes({ onAbrir }) {
                 </select>
               </div>
               <div>
-                <label>Data e hora de início</label>
-                <input type="datetime-local" name="data_inicio" value={formulario.data_inicio} onChange={alterarCampo} />
+                <label>Início da operação</label>
+                <p>A primeira chamada da ocorrência principal marca a hora de início.</p>
               </div>
             </div>
 
             <label>Entidade organizadora</label>
             <input name="entidade_organizadora" value={formulario.entidade_organizadora} onChange={alterarCampo} />
+
+            <div className="campos-duplos">
+              <div><label>Responsável — nome</label><input name="responsavel_nome" value={formulario.responsavel_nome} onChange={alterarCampo} /></div>
+              <div><label>Posto</label><input name="responsavel_posto" value={formulario.responsavel_posto} onChange={alterarCampo} /></div>
+            </div>
+            <label>Função na operação</label>
+            <input name="responsavel_funcao" placeholder="Ex.: Chefe da Área Operacional" value={formulario.responsavel_funcao} onChange={alterarCampo} />
 
             <label>Local</label>
             <input name="local" value={formulario.local} onChange={alterarCampo} />

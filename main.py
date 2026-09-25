@@ -30,6 +30,20 @@ class Ocorrencia(BaseModel):
     ilha: str
     latitude: float
     longitude: float
+    origem_chamada: str | None = None
+    contacto_chamada: str | None = None
+    recebida_em: datetime | None = None
+
+class ChamadaOcorrencia(BaseModel):
+    informacao: str
+    origem: str | None = None
+    contacto: str | None = None
+    recebido_em: datetime | None = None
+
+def hora_operacional(valor: datetime | None):
+    if valor is None:
+        return datetime.now(ZoneInfo("Atlantic/Azores")).replace(tzinfo=None)
+    return valor.astimezone(ZoneInfo("Atlantic/Azores")).replace(tzinfo=None) if valor.tzinfo else valor
 
 class EstadoOcorrencia(BaseModel):
     estado: str
@@ -43,6 +57,9 @@ class Operacao(BaseModel):
     descricao: str | None = None
     data_inicio: datetime | None = None
     data_fim: datetime | None = None
+    responsavel_nome: str | None = None
+    responsavel_posto: str | None = None
+    responsavel_funcao: str | None = None
 
 class IntencaoComandante(BaseModel):
     intencao_comandante: str = ""
@@ -58,6 +75,8 @@ class ConfirmacaoEliminacao(BaseModel):
 class RecursoCatalogo(BaseModel):
     nome: str
     tipo: str
+    marca: str | None = None
+    matricula: str | None = None
     entidade_id: int | None = None
     ilha: str | None = None
     estado: str = "ativo"
@@ -70,6 +89,7 @@ class ParticipacaoRecurso(BaseModel):
 class ElementoCatalogo(BaseModel):
     nome: str
     entidade: str | None = None
+    posto: str | None = None
     estado: str = "ativo"
 
 class ParticipacaoElemento(BaseModel):
@@ -168,6 +188,7 @@ TABELAS_BACKUP = [
     "configuracao", "bases", "ocorrencias", "recursos", "elementos",
     "setores", "objetivos", "objetivo_modelos", "missoes", "missao_recursos", "missao_notas", "decisoes_operacionais", "ordens", "timeline_eventos", "operacao_recursos",
     "operacao_elementos",
+    "chamadas_ocorrencia", "elemento_empenhos",
 ]
 
 def _serializar_backup(valor):
@@ -371,6 +392,22 @@ def exigir_operacao_editavel_id(conn):
 def preparar_separacao_por_operacao():
     """Atualiza a estrutura sem apagar dados antigos."""
     with engine.begin() as conn:
+        # Campos opcionais e aditivos: operações e registos anteriores mantêm-se intactos.
+        for coluna in ("responsavel_nome TEXT", "responsavel_posto TEXT", "responsavel_funcao TEXT"):
+            conn.execute(text(f"ALTER TABLE operacoes ADD COLUMN IF NOT EXISTS {coluna}"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS chamadas_ocorrencia (
+                id SERIAL PRIMARY KEY,
+                operacao_id INTEGER NOT NULL REFERENCES operacoes(id) ON DELETE CASCADE,
+                ocorrencia_id INTEGER NOT NULL REFERENCES ocorrencias(id) ON DELETE CASCADE,
+                recebido_em TIMESTAMP NOT NULL DEFAULT NOW(),
+                origem TEXT,
+                contacto TEXT,
+                informacao TEXT NOT NULL,
+                registado_em TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_chamadas_ocorrencia ON chamadas_ocorrencia(operacao_id, ocorrencia_id, recebido_em)"))
         # PAO: intenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do comandante associada ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.
         conn.execute(text("ALTER TABLE operacoes ADD COLUMN IF NOT EXISTS intencao_comandante TEXT"))
         conn.execute(text("""
@@ -385,6 +422,9 @@ def preparar_separacao_por_operacao():
 
         for tabela in ("recursos", "ocorrencias", "missoes", "ordens", "timeline_eventos", "elementos"):
             conn.execute(text(f"ALTER TABLE {tabela} ADD COLUMN IF NOT EXISTS operacao_id INTEGER"))
+
+        for tabela in ("ordens", "timeline_eventos"):
+            conn.execute(text(f"ALTER TABLE {tabela} ADD COLUMN IF NOT EXISTS elemento_id INTEGER REFERENCES elementos(id) ON DELETE SET NULL"))
 
         # Estrutura da OcorrÃƒÆ’Ã‚Âªncia Inteligente. As colunas sÃƒÆ’Ã‚Â£o acrescentadas sem apagar dados.
         for coluna in (
@@ -404,6 +444,7 @@ def preparar_separacao_por_operacao():
         # Estrutura de MissÃƒÆ’Ã‚Âµes v1: acrescenta metadados sem eliminar missÃƒÆ’Ã‚Âµes existentes.
         for coluna in (
             "responsavel TEXT",
+            "zona TEXT",
             "notas TEXT",
             "situacao_operacional TEXT DEFAULT 'por_avaliar'",
             "atualizada_em TIMESTAMP",
@@ -447,6 +488,22 @@ def preparar_separacao_por_operacao():
             )
         """))
 
+        # Cada elemento conserva o período na ocorrência mesmo depois de apear.
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS elemento_empenhos (
+                id SERIAL PRIMARY KEY,
+                operacao_id INTEGER NOT NULL REFERENCES operacoes(id) ON DELETE CASCADE,
+                elemento_id INTEGER NOT NULL REFERENCES elementos(id) ON DELETE CASCADE,
+                recurso_id INTEGER REFERENCES recursos(id) ON DELETE SET NULL,
+                ocorrencia_id INTEGER NOT NULL REFERENCES ocorrencias(id) ON DELETE CASCADE,
+                inicio_em TIMESTAMP NOT NULL DEFAULT NOW(),
+                fim_em TIMESTAMP
+            )
+        """))
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_elemento_empenho_aberto
+            ON elemento_empenhos(operacao_id, elemento_id) WHERE fim_em IS NULL
+        """))
         # Sprint 9.1: objetivos operacionais e modelos editÃƒÆ’Ã‚Â¡veis.
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS objetivo_modelos (
@@ -513,6 +570,8 @@ def preparar_separacao_por_operacao():
                 UNIQUE (nome, tipo)
             )
         """))
+        for coluna in ("marca TEXT", "matricula TEXT"):
+            conn.execute(text(f"ALTER TABLE recursos_catalogo ADD COLUMN IF NOT EXISTS {coluna}"))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS operacao_recursos (
                 id SERIAL PRIMARY KEY,
@@ -536,6 +595,7 @@ def preparar_separacao_por_operacao():
                 UNIQUE (nome, entidade)
             )
         """))
+        conn.execute(text("ALTER TABLE elementos_catalogo ADD COLUMN IF NOT EXISTS posto TEXT"))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS operacao_elementos (
                 id SERIAL PRIMARY KEY,
@@ -550,6 +610,9 @@ def preparar_separacao_por_operacao():
                 UNIQUE (operacao_id, elemento_catalogo_id)
             )
         """))
+        for coluna in ("chamado_em TIMESTAMP", "apresentado_em TIMESTAMP"):
+            conn.execute(text(f"ALTER TABLE operacao_elementos ADD COLUMN IF NOT EXISTS {coluna}"))
+
         conn.execute(text("ALTER TABLE elementos ADD COLUMN IF NOT EXISTS elemento_catalogo_id INTEGER"))
         conn.execute(text("ALTER TABLE operacao_elementos ADD COLUMN IF NOT EXISTS recurso_catalogo_id INTEGER"))
 
@@ -735,7 +798,8 @@ def listar_operacoes():
         resultado = conn.execute(text("""
             SELECT
                 id, nome, tipo, entidade_organizadora, local, objetivo,
-                descricao, estado, data_inicio, data_fim, criado_em
+                descricao, estado, data_inicio, data_fim, criado_em,
+                responsavel_nome, responsavel_posto, responsavel_funcao
             FROM operacoes
             WHERE COALESCE(estado, '') <> 'arquivada'
             ORDER BY criado_em DESC
@@ -750,19 +814,25 @@ def criar_operacao(operacao: Operacao):
             text("""
                 INSERT INTO operacoes (
                     nome, tipo, entidade_organizadora, local, objetivo,
-                    descricao, estado, data_inicio, data_fim
+                    descricao, estado, data_inicio, data_fim,
+                    responsavel_nome, responsavel_posto, responsavel_funcao
                 )
                 VALUES (
                     :nome, :tipo, :entidade_organizadora, :local, :objetivo,
-                    :descricao, 'planeada', :data_inicio, :data_fim
+                    :descricao, 'planeada', :data_inicio, :data_fim,
+                    :responsavel_nome, :responsavel_posto, :responsavel_funcao
                 )
                 RETURNING
                     id, nome, tipo, entidade_organizadora, local, objetivo,
-                    descricao, estado, data_inicio, data_fim, criado_em
+                    descricao, estado, data_inicio, data_fim, criado_em,
+                responsavel_nome, responsavel_posto, responsavel_funcao
             """),
             operacao.model_dump()
         ).mappings().fetchone()
-
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
+            VALUES ('operacao', :descricao, :operacao_id)
+        """), {"descricao": f"Operação registada: {operacao.nome}", "operacao_id": nova["id"]})
         return dict(nova)
 
 
@@ -874,7 +944,8 @@ def listar_operacoes_arquivadas():
         resultado = conn.execute(text("""
             SELECT
                 id, nome, tipo, entidade_organizadora, local, objetivo,
-                descricao, estado, data_inicio, data_fim, criado_em
+                descricao, estado, data_inicio, data_fim, criado_em,
+                responsavel_nome, responsavel_posto, responsavel_funcao
             FROM operacoes
             WHERE estado = 'arquivada'
             ORDER BY criado_em DESC
@@ -1038,7 +1109,7 @@ def listar_catalogo_recursos():
     with engine.connect() as conn:
         resultado = conn.execute(text("""
             SELECT rc.id, rc.nome, rc.tipo, rc.entidade_id,
-                   e.nome AS entidade_nome, rc.ilha, rc.estado, rc.criado_em
+                   e.nome AS entidade_nome, rc.ilha, rc.marca, rc.matricula, rc.estado, rc.criado_em
             FROM recursos_catalogo rc
             LEFT JOIN entidades e ON e.id = rc.entidade_id
             WHERE rc.estado = 'ativo'
@@ -1051,13 +1122,15 @@ def listar_catalogo_recursos():
 def criar_recurso_catalogo(recurso: RecursoCatalogo):
     with engine.begin() as conn:
         novo = conn.execute(text("""
-            INSERT INTO recursos_catalogo (nome, tipo, entidade_id, ilha, estado)
-            VALUES (:nome, :tipo, :entidade_id, :ilha, :estado)
+            INSERT INTO recursos_catalogo (nome, tipo, entidade_id, ilha, marca, matricula, estado)
+            VALUES (:nome, :tipo, :entidade_id, :ilha, :marca, :matricula, :estado)
             ON CONFLICT (nome, tipo) DO UPDATE SET
                 entidade_id = COALESCE(EXCLUDED.entidade_id, recursos_catalogo.entidade_id),
                 ilha = COALESCE(EXCLUDED.ilha, recursos_catalogo.ilha),
+                marca = COALESCE(EXCLUDED.marca, recursos_catalogo.marca),
+                matricula = COALESCE(EXCLUDED.matricula, recursos_catalogo.matricula),
                 estado = 'ativo'
-            RETURNING id, nome, tipo, entidade_id, ilha, estado, criado_em
+            RETURNING id, nome, tipo, entidade_id, ilha, marca, matricula, estado, criado_em
         """), recurso.model_dump()).mappings().fetchone()
         return dict(novo)
 
@@ -1070,7 +1143,7 @@ def listar_recursos_participantes(operacao_id: int):
             raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         resultado = conn.execute(text("""
             SELECT opr.id AS participacao_id, opr.operacao_id,
-                   rc.id AS recurso_catalogo_id, rc.nome, rc.tipo, rc.ilha,
+                   rc.id AS recurso_catalogo_id, rc.nome, rc.tipo, rc.ilha, rc.marca, rc.matricula,
                    rc.entidade_id, e.nome AS entidade_nome,
                    opr.indicativo_operacional, opr.funcao, opr.estado,
                    opr.entrada_em, opr.saida_em
@@ -1168,6 +1241,12 @@ def adicionar_recurso_participante(operacao_id: int, dados: ParticipacaoRecurso)
             "indicativo_operacional": dados.indicativo_operacional
         })
 
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
+            VALUES ('recurso', :descricao, :operacao_id)
+        """), {"descricao": f"Recurso {dados.recurso_catalogo_id} preparado"
+                           + (f" — indicativo {dados.indicativo_operacional}" if dados.indicativo_operacional else ""),
+               "operacao_id": operacao_id})
         return {"mensagem": "Recurso adicionado ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o", "participacao_id": participacao}
 
 
@@ -1179,6 +1258,20 @@ def retirar_recurso_participante(operacao_id: int, recurso_catalogo_id: int):
             raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if estado in ("concluida", "arquivada"):
             raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o permite alterar participantes")
+        em_ocorrencia = conn.execute(text("""
+            SELECT 1 FROM recursos WHERE operacao_id=:operacao_id
+              AND recurso_catalogo_id=:recurso_catalogo_id AND ocorrencia_id IS NOT NULL
+        """), {"operacao_id": operacao_id, "recurso_catalogo_id": recurso_catalogo_id}).scalar()
+        if em_ocorrencia:
+            raise HTTPException(status_code=409, detail="Liberte primeiro a viatura da ocorrência")
+        em_missao = conn.execute(text("""
+            SELECT 1 FROM recursos r JOIN missao_recursos mr ON mr.recurso_id=r.id
+            JOIN missoes m ON m.id=mr.missao_id AND m.operacao_id=r.operacao_id
+            WHERE r.operacao_id=:operacao_id AND r.recurso_catalogo_id=:recurso_catalogo_id
+              AND m.estado='em_execucao' LIMIT 1
+        """), {"operacao_id": operacao_id, "recurso_catalogo_id": recurso_catalogo_id}).scalar()
+        if em_missao:
+            raise HTTPException(status_code=409, detail="Retire primeiro a viatura da missão ativa")
         resultado = conn.execute(text("""
             UPDATE operacao_recursos
             SET saida_em = NOW(), estado = 'retirado'
@@ -1215,7 +1308,7 @@ def retirar_recurso_participante(operacao_id: int, recurso_catalogo_id: int):
 def listar_catalogo_elementos():
     with engine.connect() as conn:
         resultado = conn.execute(text("""
-            SELECT id, nome, entidade, estado, criado_em
+            SELECT id, nome, entidade, posto, estado, criado_em
             FROM elementos_catalogo
             WHERE estado = 'ativo'
             ORDER BY nome, entidade
@@ -1227,10 +1320,12 @@ def listar_catalogo_elementos():
 def criar_elemento_catalogo(elemento: ElementoCatalogo):
     with engine.begin() as conn:
         novo = conn.execute(text("""
-            INSERT INTO elementos_catalogo (nome, entidade, estado)
-            VALUES (:nome, :entidade, :estado)
-            ON CONFLICT (nome, entidade) DO UPDATE SET estado = 'ativo'
-            RETURNING id, nome, entidade, estado, criado_em
+            INSERT INTO elementos_catalogo (nome, entidade, posto, estado)
+            VALUES (:nome, :entidade, :posto, :estado)
+            ON CONFLICT (nome, entidade) DO UPDATE SET
+                posto = COALESCE(EXCLUDED.posto, elementos_catalogo.posto),
+                estado = 'ativo'
+            RETURNING id, nome, entidade, posto, estado, criado_em
         """), elemento.model_dump()).mappings().fetchone()
         return dict(novo)
 
@@ -1243,11 +1338,12 @@ def listar_elementos_participantes(operacao_id: int):
             raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         resultado = conn.execute(text("""
             SELECT ope.id AS participacao_id, ope.operacao_id,
-                   ec.id AS elemento_catalogo_id, ec.nome, ec.entidade,
+                   ec.id AS elemento_catalogo_id, ec.nome, ec.entidade, ec.posto,
                    ope.indicativo_operacional, ope.funcao_operacional,
                    ope.recurso_catalogo_id, rc.nome AS recurso_nome,
                    rc.tipo AS recurso_tipo, opr.indicativo_operacional AS recurso_indicativo,
-                   ope.estado, ope.entrada_em, ope.saida_em
+                   ope.estado, ope.entrada_em, ope.saida_em,
+                   ope.chamado_em, ope.apresentado_em
             FROM operacao_elementos ope
             JOIN elementos_catalogo ec ON ec.id = ope.elemento_catalogo_id
             LEFT JOIN recursos_catalogo rc ON rc.id = ope.recurso_catalogo_id
@@ -1289,6 +1385,27 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
             if not recurso_participante:
                 raise HTTPException(status_code=409, detail="A viatura selecionada nÃƒÆ’Ã‚Â£o participa nesta operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o")
 
+        recurso_operacional = None
+        if dados.recurso_catalogo_id is not None:
+            recurso_operacional = conn.execute(text("""
+                SELECT id, nome, ocorrencia_id FROM recursos
+                WHERE operacao_id=:operacao_id AND recurso_catalogo_id=:recurso_catalogo_id
+                ORDER BY id LIMIT 1 FOR UPDATE
+            """), {"operacao_id": operacao_id, "recurso_catalogo_id": dados.recurso_catalogo_id}).mappings().first()
+            if not recurso_operacional:
+                raise HTTPException(status_code=409, detail="A viatura selecionada não está disponível nesta operação")
+
+        elemento_atual = conn.execute(text("""
+            SELECT id, ocorrencia_id FROM elementos
+            WHERE operacao_id=:operacao_id AND elemento_catalogo_id=:elemento_catalogo_id
+            FOR UPDATE
+        """), {"operacao_id": operacao_id, "elemento_catalogo_id": dados.elemento_catalogo_id}).mappings().first()
+        if elemento_atual and elemento_atual["ocorrencia_id"] is not None:
+            raise HTTPException(status_code=409, detail="Liberte o elemento da ocorrência antes de alterar a sua preparação")
+
+        recurso_id = recurso_operacional["id"] if recurso_operacional else None
+        ocorrencia_id = recurso_operacional["ocorrencia_id"] if recurso_operacional else None
+
         conn.execute(text("""
             INSERT INTO operacao_elementos (
                 operacao_id, elemento_catalogo_id, indicativo_operacional,
@@ -1313,11 +1430,7 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
             SELECT ec.nome, :funcao_operacional, ec.entidade,
                    CASE WHEN :recurso_catalogo_id IS NULL THEN 'disponivel' ELSE 'embarcado' END,
                    :indicativo_operacional,
-                   (SELECT r.id FROM recursos r
-                    WHERE r.operacao_id = :operacao_id
-                      AND r.recurso_catalogo_id = :recurso_catalogo_id
-                    ORDER BY r.id LIMIT 1),
-                   NULL, NULL, :operacao_id, ec.id
+                   :recurso_id, :ocorrencia_id, NULL, :operacao_id, ec.id
             FROM elementos_catalogo ec
             WHERE ec.id = :elemento_catalogo_id
               AND NOT EXISTS (
@@ -1330,7 +1443,8 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
             "elemento_catalogo_id": dados.elemento_catalogo_id,
             "indicativo_operacional": dados.indicativo_operacional,
             "funcao_operacional": dados.funcao_operacional,
-            "recurso_catalogo_id": dados.recurso_catalogo_id
+            "recurso_catalogo_id": dados.recurso_catalogo_id,
+            "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id
         })
 
         conn.execute(text("""
@@ -1339,21 +1453,76 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
                 indicativo_radio = ope.indicativo_operacional,
                 funcao = ope.funcao_operacional,
                 estado = CASE WHEN ope.recurso_catalogo_id IS NULL THEN 'disponivel' ELSE 'embarcado' END,
-                recurso_id = (
-                    SELECT r.id FROM recursos r
-                    WHERE r.operacao_id = ope.operacao_id
-                      AND r.recurso_catalogo_id = ope.recurso_catalogo_id
-                    ORDER BY r.id LIMIT 1
-                )
+                recurso_id = :recurso_id,
+                ocorrencia_id = :ocorrencia_id,
+                localizacao = CASE WHEN :recurso_id IS NOT NULL THEN NULL ELSE e.localizacao END
             FROM operacao_elementos ope
             JOIN elementos_catalogo ec ON ec.id = ope.elemento_catalogo_id
             WHERE e.operacao_id = ope.operacao_id
               AND e.elemento_catalogo_id = ec.id
+              AND e.ocorrencia_id IS NULL
               AND ope.operacao_id = :operacao_id
               AND ope.elemento_catalogo_id = :elemento_catalogo_id
-        """), {"operacao_id": operacao_id, "elemento_catalogo_id": dados.elemento_catalogo_id})
+        """), {"operacao_id": operacao_id, "elemento_catalogo_id": dados.elemento_catalogo_id,
+               "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id})
 
+        if ocorrencia_id is not None:
+            conn.execute(text("""
+                INSERT INTO elemento_empenhos (operacao_id, elemento_id, recurso_id, ocorrencia_id)
+                SELECT :operacao_id, id, :recurso_id, :ocorrencia_id FROM elementos
+                WHERE operacao_id=:operacao_id AND elemento_catalogo_id=:elemento_catalogo_id
+                ON CONFLICT (operacao_id, elemento_id) WHERE fim_em IS NULL DO NOTHING
+            """), {"operacao_id": operacao_id, "elemento_catalogo_id": dados.elemento_catalogo_id,
+                   "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id})
+
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, elemento_id, recurso_id, ocorrencia_id, operacao_id)
+            VALUES ('elemento', :descricao,
+                    (SELECT id FROM elementos WHERE operacao_id=:operacao_id
+                     AND elemento_catalogo_id=:elemento_catalogo_id),
+                    :recurso_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Preparação do elemento {dados.elemento_catalogo_id} atualizada"
+                           + (f" na viatura {recurso_operacional['nome']}" if recurso_operacional else " sem viatura"),
+               "elemento_catalogo_id": dados.elemento_catalogo_id,
+               "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
         return {"mensagem": "Elemento adicionado ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o"}
+
+
+class HorariosElemento(BaseModel):
+    chamado_em: datetime | None = None
+    apresentado_em: datetime | None = None
+
+
+@app.put("/operacoes/{operacao_id}/elementos-participantes/{elemento_catalogo_id}/horarios")
+def registar_horarios_elemento(operacao_id: int, elemento_catalogo_id: int, dados: HorariosElemento):
+    if dados.chamado_em is None and dados.apresentado_em is None:
+        raise HTTPException(status_code=400, detail="Indique a hora da chamada ou da apresentação")
+    with engine.begin() as conn:
+        if exigir_operacao_editavel_id(conn) != operacao_id:
+            raise HTTPException(status_code=409, detail="Esta não é a operação ativa")
+        participante = conn.execute(text("""
+            UPDATE operacao_elementos
+            SET chamado_em=COALESCE(:chamado_em, chamado_em),
+                apresentado_em=COALESCE(:apresentado_em, apresentado_em)
+            WHERE operacao_id=:operacao_id AND elemento_catalogo_id=:elemento_catalogo_id
+              AND saida_em IS NULL
+            RETURNING id
+        """), {"chamado_em": hora_operacional(dados.chamado_em) if dados.chamado_em else None,
+               "apresentado_em": hora_operacional(dados.apresentado_em) if dados.apresentado_em else None,
+               "operacao_id": operacao_id, "elemento_catalogo_id": elemento_catalogo_id}).scalar()
+        if not participante:
+            raise HTTPException(status_code=404, detail="Elemento não encontrado nesta operação")
+        nome = conn.execute(text("SELECT nome FROM elementos_catalogo WHERE id=:id"),
+                            {"id": elemento_catalogo_id}).scalar()
+        for tipo, valor in (("Chamado", dados.chamado_em), ("Apresentou-se", dados.apresentado_em)):
+            if valor is None:
+                continue
+            conn.execute(text("""
+                INSERT INTO timeline_eventos (tipo, descricao, operacao_id, criado_em)
+                VALUES ('elemento', :descricao, :operacao_id, :hora)
+            """), {"descricao": f"{nome}: {tipo.lower()} ao serviço",
+                   "operacao_id": operacao_id, "hora": hora_operacional(valor)})
+    return {"mensagem": "Horários do elemento registados"}
 
 
 @app.delete("/operacoes/{operacao_id}/elementos-participantes/{elemento_catalogo_id}")
@@ -1364,6 +1533,12 @@ def retirar_elemento_participante(operacao_id: int, elemento_catalogo_id: int):
             raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if estado_operacao in ("concluida", "arquivada"):
             raise HTTPException(status_code=409, detail="A operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o permite alterar participantes")
+        em_servico = conn.execute(text("""
+            SELECT 1 FROM elementos WHERE operacao_id=:operacao_id
+              AND elemento_catalogo_id=:elemento_catalogo_id AND ocorrencia_id IS NOT NULL
+        """), {"operacao_id": operacao_id, "elemento_catalogo_id": elemento_catalogo_id}).scalar()
+        if em_servico:
+            raise HTTPException(status_code=409, detail="Liberte o elemento da ocorrência antes de o retirar")
 
         resultado = conn.execute(text("""
             UPDATE operacao_elementos
@@ -1376,7 +1551,7 @@ def retirar_elemento_participante(operacao_id: int, elemento_catalogo_id: int):
             raise HTTPException(status_code=404, detail="ParticipaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
 
         conn.execute(text("""
-            DELETE FROM elementos
+            UPDATE elementos SET estado='retirado', recurso_id=NULL
             WHERE operacao_id = :operacao_id
               AND elemento_catalogo_id = :elemento_catalogo_id
         """), {"operacao_id": operacao_id, "elemento_catalogo_id": elemento_catalogo_id})
@@ -1515,6 +1690,10 @@ def listar_ocorrencias():
 
 @app.post("/ocorrencias")
 def criar_ocorrencia(ocorrencia: Ocorrencia):
+    titulo = ocorrencia.titulo.strip()
+    if not titulo:
+        raise HTTPException(status_code=400, detail="A ocorrência precisa de um título")
+    recebido_em = hora_operacional(ocorrencia.recebida_em)
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
         nova = conn.execute(text("""
@@ -1524,27 +1703,85 @@ def criar_ocorrencia(ocorrencia: Ocorrencia):
             ) VALUES (
                 :titulo, :descricao, :tipo, 'recebida', :ilha,
                 ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326),
-                :operacao_id, NOW()
+                :operacao_id, :recebido_em
             )
             RETURNING id
         """), {
-            "titulo": ocorrencia.titulo,
-            "descricao": ocorrencia.descricao,
-            "tipo": ocorrencia.tipo,
-            "ilha": ocorrencia.ilha,
-            "latitude": ocorrencia.latitude,
-            "longitude": ocorrencia.longitude,
-            "operacao_id": operacao_id
-        }).scalar()
+            "titulo": titulo, "descricao": ocorrencia.descricao,
+            "tipo": ocorrencia.tipo, "ilha": ocorrencia.ilha,
+            "latitude": ocorrencia.latitude, "longitude": ocorrencia.longitude,
+            "operacao_id": operacao_id, "recebido_em": recebido_em
+        }).scalar_one()
         conn.execute(text("""
-            INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
-            VALUES ('ocorrencia', :descricao, :ocorrencia_id, :operacao_id)
+            INSERT INTO chamadas_ocorrencia
+                (operacao_id, ocorrencia_id, recebido_em, origem, contacto, informacao)
+            VALUES (:operacao_id, :ocorrencia_id, :recebido_em, :origem, :contacto, :informacao)
+        """), {"operacao_id": operacao_id, "ocorrencia_id": nova, "recebido_em": recebido_em,
+               "origem": (ocorrencia.origem_chamada or "").strip() or None,
+               "contacto": (ocorrencia.contacto_chamada or "").strip() or None,
+               "informacao": (ocorrencia.descricao or "").strip() or titulo})
+        conn.execute(text("""
+            UPDATE operacoes SET data_inicio=COALESCE(data_inicio, :recebido_em)
+            WHERE id=:operacao_id
+              AND NOT EXISTS (SELECT 1 FROM ocorrencias
+                              WHERE operacao_id=:operacao_id AND id<>:ocorrencia_id)
+        """), {"recebido_em": recebido_em, "operacao_id": operacao_id, "ocorrencia_id": nova})
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id, criado_em)
+            VALUES ('chamada', :descricao, :ocorrencia_id, :operacao_id, :recebido_em)
         """), {
-            "descricao": f"Ocorrência recebida: {ocorrencia.titulo}",
-            "ocorrencia_id": nova,
-            "operacao_id": operacao_id
+            "descricao": f"Chamada recebida — {titulo}: {(ocorrencia.descricao or '').strip()}"
+                         + (f" | Origem: {ocorrencia.origem_chamada.strip()}" if ocorrencia.origem_chamada and ocorrencia.origem_chamada.strip() else ""),
+            "ocorrencia_id": nova, "operacao_id": operacao_id, "recebido_em": recebido_em
         })
-    return {"mensagem": "OcorrÃƒÆ’Ã‚Âªncia criada com sucesso", "id": nova}
+    return {"mensagem": "Ocorrência e chamada registadas", "id": nova}
+
+
+@app.get("/ocorrencias/{ocorrencia_id}/chamadas")
+def listar_chamadas_ocorrencia(ocorrencia_id: int):
+    with engine.connect() as conn:
+        operacao_id = exigir_operacao_ativa_id(conn)
+        existe = conn.execute(text("SELECT id FROM ocorrencias WHERE id=:id AND operacao_id=:operacao_id"),
+                              {"id": ocorrencia_id, "operacao_id": operacao_id}).scalar()
+        if existe is None:
+            raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+        linhas = conn.execute(text("""
+            SELECT id, recebido_em, origem, contacto, informacao, registado_em
+            FROM chamadas_ocorrencia
+            WHERE operacao_id=:operacao_id AND ocorrencia_id=:ocorrencia_id
+            ORDER BY recebido_em, id
+        """), {"operacao_id": operacao_id, "ocorrencia_id": ocorrencia_id})
+        return [dict(linha._mapping) for linha in linhas]
+
+
+@app.post("/ocorrencias/{ocorrencia_id}/chamadas")
+def registar_chamada_ocorrencia(ocorrencia_id: int, dados: ChamadaOcorrencia):
+    informacao = dados.informacao.strip()
+    if not informacao:
+        raise HTTPException(status_code=400, detail="Indique a informação recebida na chamada")
+    recebido_em = hora_operacional(dados.recebido_em)
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        existe = conn.execute(text("SELECT id FROM ocorrencias WHERE id=:id AND operacao_id=:operacao_id"),
+                              {"id": ocorrencia_id, "operacao_id": operacao_id}).scalar()
+        if existe is None:
+            raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+        chamada_id = conn.execute(text("""
+            INSERT INTO chamadas_ocorrencia
+                (operacao_id, ocorrencia_id, recebido_em, origem, contacto, informacao)
+            VALUES (:operacao_id, :ocorrencia_id, :recebido_em, :origem, :contacto, :informacao)
+            RETURNING id
+        """), {"operacao_id": operacao_id, "ocorrencia_id": ocorrencia_id,
+               "recebido_em": recebido_em, "origem": (dados.origem or "").strip() or None,
+               "contacto": (dados.contacto or "").strip() or None, "informacao": informacao}).scalar_one()
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id, criado_em)
+            VALUES ('chamada', :descricao, :ocorrencia_id, :operacao_id, :recebido_em)
+        """), {"descricao": f"Chamada recebida: {informacao}"
+                         + (f" | Origem: {dados.origem.strip()}" if dados.origem and dados.origem.strip() else ""),
+               "ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id,
+               "recebido_em": recebido_em})
+    return {"mensagem": "Chamada registada", "id": chamada_id}
 
 
 ESTADOS_OCORRENCIA = ["recebida", "em_curso", "sob_controlo", "encerrada", "arquivada"]
@@ -1606,7 +1843,7 @@ def timeline_ocorrencia(ocorrencia_id: int):
     with engine.connect() as conn:
         operacao_id = exigir_operacao_ativa_id(conn)
         resultado = conn.execute(text("""
-            SELECT id, tipo, descricao, recurso_id, ocorrencia_id, criado_em
+            SELECT id, tipo, descricao, recurso_id, elemento_id, ocorrencia_id, criado_em
             FROM timeline_eventos
             WHERE ocorrencia_id=:ocorrencia_id AND operacao_id=:operacao_id
             ORDER BY criado_em DESC
@@ -1675,7 +1912,7 @@ def estatisticas_ocorrencia(ocorrencia_id: int):
 def listar_timeline():
     with engine.connect() as conn:
         resultado = conn.execute(text("""
-            SELECT id, tipo, descricao, criado_em
+            SELECT id, tipo, descricao, recurso_id, elemento_id, ocorrencia_id, criado_em
             FROM timeline_eventos
             WHERE operacao_id = :operacao_id
             ORDER BY criado_em DESC
@@ -1721,6 +1958,16 @@ def atualizar_estado(recurso_id: int, dados: dict):
             and novo_estado == "disponivel"
             and ocorrencia_id is not None
         ):
+            conn.execute(text("""
+                UPDATE elemento_empenhos ee SET fim_em=NOW()
+                FROM elementos e WHERE ee.elemento_id=e.id AND ee.operacao_id=:operacao_id
+                  AND ee.recurso_id=:recurso_id AND ee.fim_em IS NULL
+                  AND e.recurso_id=:recurso_id
+            """), {"recurso_id": recurso_id, "operacao_id": operacao_id})
+            conn.execute(text("""
+                UPDATE elementos SET ocorrencia_id=NULL
+                WHERE operacao_id=:operacao_id AND recurso_id=:recurso_id
+            """), {"recurso_id": recurso_id, "operacao_id": operacao_id})
             conn.execute(text("""
                 INSERT INTO timeline_eventos (
                     tipo, descricao, recurso_id, ocorrencia_id, operacao_id
@@ -1780,17 +2027,23 @@ def libertar_recurso(recurso_id: int):
             raise HTTPException(status_code=404, detail="Recurso nÃƒÆ’Ã‚Â£o encontrado nesta operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o")
 
         conn.execute(text("""
-            UPDATE recursos
-            SET estado = 'disponivel', ocorrencia_id = NULL
-            WHERE id = :recurso_id AND operacao_id = :operacao_id
+            UPDATE elemento_empenhos ee SET fim_em=NOW()
+            FROM elementos e WHERE ee.elemento_id=e.id AND ee.operacao_id=:operacao_id
+              AND ee.recurso_id=:recurso_id AND ee.fim_em IS NULL
+              AND e.recurso_id=:recurso_id
         """), {"recurso_id": recurso_id, "operacao_id": operacao_id})
-
         conn.execute(text("""
-            UPDATE missoes
-            SET recurso_id = NULL
-            WHERE recurso_id = :recurso_id
-              AND operacao_id = :operacao_id
-              AND estado <> 'concluida'
+            UPDATE elementos SET ocorrencia_id=NULL
+            WHERE operacao_id=:operacao_id AND recurso_id=:recurso_id
+        """), {"recurso_id": recurso_id, "operacao_id": operacao_id})
+        conn.execute(text("""
+            UPDATE recursos
+            SET estado = CASE WHEN EXISTS (
+                SELECT 1 FROM missao_recursos mr JOIN missoes m ON m.id=mr.missao_id
+                WHERE mr.recurso_id=:recurso_id AND m.operacao_id=:operacao_id
+                  AND m.estado='em_execucao'
+            ) THEN 'em_missao' ELSE 'disponivel' END, ocorrencia_id = NULL
+            WHERE id = :recurso_id AND operacao_id = :operacao_id
         """), {"recurso_id": recurso_id, "operacao_id": operacao_id})
 
         nome = recurso[1] or recurso[0]
@@ -1833,13 +2086,13 @@ def confirmar_chegada(recurso_id: int):
                 SELECT r.nome, r.indicativo_radio, r.ocorrencia_id, o.titulo
                 FROM recursos r
                 LEFT JOIN ocorrencias o ON o.id = r.ocorrencia_id
-                WHERE r.id = :id
+                WHERE r.id = :id AND r.operacao_id = :operacao_id
             """),
-            {"id": recurso_id}
+            {"id": recurso_id, "operacao_id": exigir_operacao_editavel_id(conn)}
         ).fetchone()
 
         if not recurso:
-            return {"erro": "Recurso nÃƒÆ’Ã‚Â£o encontrado"}
+            raise HTTPException(status_code=404, detail="Recurso não encontrado nesta operação")
 
         nome_recurso = recurso[0]
         indicativo = recurso[1] or ""
@@ -1847,7 +2100,7 @@ def confirmar_chegada(recurso_id: int):
         titulo_ocorrencia = recurso[3]
 
         if not ocorrencia_id:
-            return {"erro": "Recurso nÃƒÆ’Ã‚Â£o tem ocorrÃƒÆ’Ã‚Âªncia associada"}
+            raise HTTPException(status_code=409, detail="O recurso não tem ocorrência associada")
 
         texto_recurso = f"{nome_recurso} ({indicativo})" if indicativo else nome_recurso
 
@@ -1858,11 +2111,18 @@ def confirmar_chegada(recurso_id: int):
                 WHERE tipo = 'chegada'
                 AND recurso_id = :recurso_id
                 AND ocorrencia_id = :ocorrencia_id
+                AND operacao_id = :operacao_id
+                AND criado_em >= (
+                    SELECT MAX(criado_em) FROM ordens
+                    WHERE recurso_id=:recurso_id AND ocorrencia_id=:ocorrencia_id
+                      AND operacao_id=:operacao_id AND titulo LIKE 'Desloca%'
+                )
                 LIMIT 1
             """),
             {
                 "recurso_id": recurso_id,
-                "ocorrencia_id": ocorrencia_id
+                "ocorrencia_id": ocorrencia_id,
+                "operacao_id": exigir_operacao_ativa_id(conn)
             }
         ).fetchone()
 
@@ -1894,10 +2154,13 @@ def confirmar_chegada(recurso_id: int):
                 WHERE recurso_id = :recurso_id
                 AND ocorrencia_id = :ocorrencia_id
                 AND estado = 'emitida'
+                AND titulo LIKE 'Desloca%'
+                AND operacao_id = :operacao_id
             """),
             {
                 "recurso_id": recurso_id,
-                "ocorrencia_id": ocorrencia_id
+                "ocorrencia_id": ocorrencia_id,
+                "operacao_id": exigir_operacao_ativa_id(conn)
             }
         )
 
@@ -1926,163 +2189,296 @@ def listar_bases():
     
 @app.put("/recursos/{recurso_id}/atribuir-ocorrencia/{ocorrencia_id}")
 def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
-    print(">>> ENTROU NA FUNCAO ATRIBUIR_OCORRENCIA")
-    try:
-        with engine.begin() as conn:
-            recurso = conn.execute(
-                text("SELECT nome, indicativo_radio FROM recursos WHERE id = :id"),
-                {"id": recurso_id}
-            ).fetchone()
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        recurso = conn.execute(text("""
+            SELECT nome, indicativo_radio, estado, ocorrencia_id FROM recursos
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": recurso_id, "operacao_id": operacao_id}).mappings().first()
+        ocorrencia = conn.execute(text("""
+            SELECT titulo, estado FROM ocorrencias
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": ocorrencia_id, "operacao_id": operacao_id}).mappings().first()
+        if not recurso or not ocorrencia:
+            raise HTTPException(status_code=404, detail="Recurso ou ocorrência não encontrado nesta operação")
+        if recurso["estado"] not in {"disponivel", "em_missao"} or recurso["ocorrencia_id"] is not None:
+            raise HTTPException(status_code=409, detail="O recurso já está afetado a uma ocorrência")
+        if ocorrencia["estado"] in {"encerrada", "arquivada"}:
+            raise HTTPException(status_code=409, detail="A ocorrência já foi encerrada")
+        nome = recurso["indicativo_radio"] or recurso["nome"]
+        conn.execute(text("""
+            UPDATE ocorrencias SET despachada_em=COALESCE(despachada_em, NOW())
+            WHERE id=:ocorrencia_id AND operacao_id=:operacao_id
+        """), {"ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
+        conn.execute(text("""
+            UPDATE recursos SET ocorrencia_id=:ocorrencia_id, estado='em_missao'
+            WHERE id=:recurso_id AND operacao_id=:operacao_id
+        """), {"ocorrencia_id": ocorrencia_id, "recurso_id": recurso_id, "operacao_id": operacao_id})
+        conn.execute(text("""
+            INSERT INTO ordens (titulo, descricao, estado, recurso_id, ocorrencia_id, operacao_id)
+            VALUES ('Deslocação para ocorrência', :descricao, 'emitida',
+                    :recurso_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"{nome}: deslocar para {ocorrencia['titulo']}",
+               "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
+        membros = conn.execute(text("""
+            UPDATE elementos SET ocorrencia_id=:ocorrencia_id
+            WHERE operacao_id=:operacao_id AND recurso_id=:recurso_id
+            RETURNING id, nome
+        """), {"ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id,
+               "recurso_id": recurso_id}).mappings().all()
+        for membro in membros:
+            conn.execute(text("""
+                INSERT INTO elemento_empenhos (operacao_id, elemento_id, recurso_id, ocorrencia_id)
+                VALUES (:operacao_id, :elemento_id, :recurso_id, :ocorrencia_id)
+                ON CONFLICT (operacao_id, elemento_id) WHERE fim_em IS NULL DO NOTHING
+            """), {"operacao_id": operacao_id, "elemento_id": membro["id"],
+                   "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id})
+            conn.execute(text("""
+                INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
+                VALUES ('elemento', :descricao, :recurso_id, :ocorrencia_id, :operacao_id)
+            """), {"descricao": f"{membro['nome']} mobilizado na equipa {nome}",
+                   "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id,
+                   "operacao_id": operacao_id})
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
+            VALUES ('ordem', :descricao, :recurso_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Ordem de deslocação para {nome}: {ocorrencia['titulo']}",
+               "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
+    return {"mensagem": "Ordem de deslocação criada"}
 
-            ocorrencia = conn.execute(
-                text("SELECT titulo FROM ocorrencias WHERE id = :id"),
-                {"id": ocorrencia_id}
-            ).fetchone()
 
-            nome_recurso = recurso[0] if recurso else f"Recurso {recurso_id}"
-            indicativo = recurso[1] if recurso and recurso[1] else ""
-            titulo_ocorrencia = ocorrencia[0] if ocorrencia else f"Ocorr\u00eancia {ocorrencia_id}"
+@app.put("/elementos/{elemento_id}/atribuir-ocorrencia/{ocorrencia_id}")
+def atribuir_elemento_ocorrencia(elemento_id: int, ocorrencia_id: int):
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        elemento = conn.execute(text("""
+            SELECT nome, estado, recurso_id, ocorrencia_id FROM elementos
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": elemento_id, "operacao_id": operacao_id}).mappings().first()
+        ocorrencia = conn.execute(text("""
+            SELECT titulo, estado FROM ocorrencias
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": ocorrencia_id, "operacao_id": operacao_id}).mappings().first()
+        if not elemento or not ocorrencia:
+            raise HTTPException(status_code=404, detail="Elemento ou ocorrência não encontrado")
+        if elemento["recurso_id"] is not None or elemento["ocorrencia_id"] is not None:
+            raise HTTPException(status_code=409, detail="O elemento já está integrado numa equipa ou ocorrência")
+        if elemento["estado"] not in {"disponivel", "apeado"}:
+            raise HTTPException(status_code=409, detail="O elemento não está disponível")
+        if ocorrencia["estado"] in {"encerrada", "arquivada"}:
+            raise HTTPException(status_code=409, detail="A ocorrência está encerrada")
+        conn.execute(text("""
+            UPDATE elementos SET ocorrencia_id=:ocorrencia_id, estado='em_missao'
+            WHERE id=:elemento_id AND operacao_id=:operacao_id
+        """), {"ocorrencia_id": ocorrencia_id, "elemento_id": elemento_id,
+               "operacao_id": operacao_id})
+        conn.execute(text("""
+            UPDATE ocorrencias SET despachada_em=COALESCE(despachada_em, NOW())
+            WHERE id=:ocorrencia_id AND operacao_id=:operacao_id
+        """), {"ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
+        conn.execute(text("""
+            INSERT INTO elemento_empenhos (operacao_id, elemento_id, ocorrencia_id)
+            VALUES (:operacao_id, :elemento_id, :ocorrencia_id)
+        """), {"operacao_id": operacao_id, "elemento_id": elemento_id,
+               "ocorrencia_id": ocorrencia_id})
+        conn.execute(text("""
+            INSERT INTO ordens (titulo, descricao, estado, elemento_id, ocorrencia_id, operacao_id)
+            VALUES ('Deslocação para ocorrência', :descricao, 'emitida',
+                    :elemento_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"{elemento['nome']}: deslocar para {ocorrencia['titulo']}",
+               "elemento_id": elemento_id, "ocorrencia_id": ocorrencia_id,
+               "operacao_id": operacao_id})
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, elemento_id, ocorrencia_id, operacao_id)
+            VALUES ('ordem', :descricao, :elemento_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Ordem de deslocação para {elemento['nome']}: {ocorrencia['titulo']}",
+               "elemento_id": elemento_id, "ocorrencia_id": ocorrencia_id,
+               "operacao_id": operacao_id})
+    return {"mensagem": "Ordem de deslocação do elemento criada"}
 
-            texto_recurso = f"{nome_recurso} ({indicativo})" if indicativo else nome_recurso
-            hora = agora_acores()
 
-            conn.execute(
-                text("""
-                    UPDATE recursos
-                    SET ocorrencia_id = :ocorrencia_id,
-                        estado = 'em_missao'
-                    WHERE id = :recurso_id
-                """),
-                {
-                    "ocorrencia_id": ocorrencia_id,
-                    "recurso_id": recurso_id
-                }
-            )
+@app.put("/elementos/{elemento_id}/confirmar-chegada")
+def confirmar_chegada_elemento(elemento_id: int):
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        elemento = conn.execute(text("""
+            SELECT nome, ocorrencia_id FROM elementos
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": elemento_id, "operacao_id": operacao_id}).mappings().first()
+        if not elemento or elemento["ocorrencia_id"] is None:
+            raise HTTPException(status_code=409, detail="O elemento não tem ocorrência associada")
+        ocorrencia_id = elemento["ocorrencia_id"]
+        existe = conn.execute(text("""
+            SELECT id FROM timeline_eventos WHERE tipo='chegada' AND elemento_id=:elemento_id
+              AND ocorrencia_id=:ocorrencia_id AND operacao_id=:operacao_id
+              AND criado_em >= (
+                  SELECT MAX(criado_em) FROM ordens
+                  WHERE elemento_id=:elemento_id AND ocorrencia_id=:ocorrencia_id
+                    AND operacao_id=:operacao_id AND titulo LIKE 'Desloca%'
+              ) LIMIT 1
+        """), {"elemento_id": elemento_id, "ocorrencia_id": ocorrencia_id,
+               "operacao_id": operacao_id}).scalar()
+        if existe:
+            return {"mensagem": "Chegada já registada"}
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, elemento_id, ocorrencia_id, operacao_id)
+            VALUES ('chegada', :descricao, :elemento_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Chegada ao local: {elemento['nome']}", "elemento_id": elemento_id,
+               "ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
+        conn.execute(text("""
+            UPDATE ordens SET estado='executada'
+            WHERE elemento_id=:elemento_id AND ocorrencia_id=:ocorrencia_id
+              AND operacao_id=:operacao_id AND estado='emitida' AND titulo LIKE 'Desloca%'
+        """), {"elemento_id": elemento_id, "ocorrencia_id": ocorrencia_id,
+               "operacao_id": operacao_id})
+        estado = conn.execute(text("SELECT estado FROM ocorrencias WHERE id=:id AND operacao_id=:operacao_id"),
+                              {"id": ocorrencia_id, "operacao_id": operacao_id}).scalar()
+        if estado == "recebida":
+            atualizar_estado_ocorrencia_interno(conn, ocorrencia_id, "em_curso", operacao_id)
+    return {"mensagem": "Chegada do elemento registada"}
 
-            conn.execute(
-                text("""
-                    INSERT INTO ordens (titulo, descricao, estado, recurso_id, ocorrencia_id, operacao_id)
-                    VALUES (:titulo, :descricao, 'emitida', :recurso_id, :ocorrencia_id,
-                            (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
-                """),
-                {
-                    "titulo": "Desloca\u00e7\u00e3o para ocorr\u00eancia",
-                    "descricao": f"Ordem direta para {texto_recurso} se deslocar para: {titulo_ocorrencia}",
-                    "recurso_id": recurso_id,
-                    "ocorrencia_id": ocorrencia_id
-                }
-            )
 
-            conn.execute(
-                text("""
-                    INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
-                    VALUES ('ordem', :descricao, :recurso_id, :ocorrencia_id, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
-                """),
-                {
-                    "descricao": f"Ordem emitida: {texto_recurso} deslocar para {titulo_ocorrencia}",
-                    "recurso_id": recurso_id,
-                    "ocorrencia_id": ocorrencia_id
-                }
-            )
+class ComunicacaoSituacao(BaseModel):
+    recurso_id: int | None = None
+    elemento_id: int | None = None
+    descricao: str
 
-        return {"mensagem": "Ordem de desloca\u00e7\u00e3o criada"}
 
-    except Exception as e:
-        return {"erro": str(e)}
-    
+@app.post("/ocorrencias/{ocorrencia_id}/situacao")
+def comunicar_situacao(ocorrencia_id: int, dados: ComunicacaoSituacao):
+    descricao = dados.descricao.strip()
+    if not descricao:
+        raise HTTPException(status_code=400, detail="A informação da situação é obrigatória")
+    if (dados.recurso_id is None) == (dados.elemento_id is None):
+        raise HTTPException(status_code=400, detail="Indique um recurso ou um elemento")
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        tabela, alvo_id = ("recursos", dados.recurso_id) if dados.recurso_id is not None else ("elementos", dados.elemento_id)
+        coluna = "recurso_id" if dados.recurso_id is not None else "elemento_id"
+        recurso = conn.execute(text(f"""
+            SELECT nome{', indicativo_radio' if tabela == 'recursos' else ''} FROM {tabela}
+            WHERE id=:alvo_id AND operacao_id=:operacao_id AND ocorrencia_id=:ocorrencia_id
+        """), {"alvo_id": alvo_id, "operacao_id": operacao_id,
+               "ocorrencia_id": ocorrencia_id}).mappings().first()
+        if recurso is None:
+            raise HTTPException(status_code=409, detail="O destinatário não está associado a esta ocorrência")
+        chegada = conn.execute(text("""
+            SELECT id FROM timeline_eventos
+            WHERE tipo='chegada' AND recurso_id IS NOT DISTINCT FROM :recurso_id
+              AND elemento_id IS NOT DISTINCT FROM :elemento_id
+              AND ocorrencia_id=:ocorrencia_id AND operacao_id=:operacao_id
+              AND criado_em >= (
+                  SELECT MAX(criado_em) FROM ordens
+                  WHERE recurso_id IS NOT DISTINCT FROM :recurso_id
+                    AND elemento_id IS NOT DISTINCT FROM :elemento_id
+                    AND ocorrencia_id=:ocorrencia_id AND operacao_id=:operacao_id
+                    AND titulo LIKE 'Desloca%'
+              )
+            LIMIT 1
+        """), {"recurso_id": dados.recurso_id, "elemento_id": dados.elemento_id, "ocorrencia_id": ocorrencia_id,
+               "operacao_id": operacao_id}).scalar()
+        if not chegada:
+            raise HTTPException(status_code=409, detail="Confirme primeiro a chegada ao local")
+        nome = (recurso["indicativo_radio"] if tabela == 'recursos' else None) or recurso["nome"]
+        evento_id = conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
+            VALUES ('situacao', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
+            RETURNING id
+        """), {"descricao": f"Situação comunicada por {nome}: {descricao}",
+               "recurso_id": dados.recurso_id, "elemento_id": dados.elemento_id, "ocorrencia_id": ocorrencia_id,
+               "operacao_id": operacao_id}).scalar_one()
+    return {"mensagem": "Situação registada", "id": evento_id}
+
 
 @app.get("/ordens")
 def listar_ordens():
     with engine.connect() as conn:
         resultado = conn.execute(text("""
-            SELECT id, titulo, descricao, estado, recurso_id, ocorrencia_id, criado_em
+            SELECT id, titulo, descricao, estado, recurso_id, elemento_id, ocorrencia_id, criado_em
             FROM ordens
             WHERE operacao_id = :operacao_id
-            ORDER BY criado_em DESC
+            ORDER BY criado_em DESC, id DESC
         """), {"operacao_id": exigir_operacao_ativa_id(conn)})
+        return [dict(linha._mapping) for linha in resultado]
 
-        dados = []
-        for linha in resultado:
-            dados.append(dict(linha._mapping))
-
-        return dados
 
 class Ordem(BaseModel):
     titulo: str
-    descricao: str
-    estado: str
+    descricao: str = ""
+    estado: str = "emitida"
     recurso_id: int | None = None
-    ocorrencia_id: int | None = None
+    elemento_id: int | None = None
+    ocorrencia_id: int
 
 
 @app.post("/ordens")
 def criar_ordem(ordem: Ordem):
-    with engine.connect() as conn:
-        exigir_operacao_editavel_id(conn)
-        conn.execute(
-            text("""
-                INSERT INTO ordens (titulo, descricao, estado, recurso_id, ocorrencia_id, operacao_id)
-                VALUES (:titulo, :descricao, :estado, :recurso_id, :ocorrencia_id,
-                        (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
-            """),
-            {
-                "titulo": ordem.titulo,
-                "descricao": ordem.descricao,
-                "estado": ordem.estado,
-                "recurso_id": ordem.recurso_id,
-                "ocorrencia_id": ordem.ocorrencia_id
-            }
-        )
+    titulo = ordem.titulo.strip()
+    descricao = ordem.descricao.strip()
+    if not titulo:
+        raise HTTPException(status_code=400, detail="A ordem precisa de um título")
+    if ordem.estado != "emitida":
+        raise HTTPException(status_code=400, detail="Uma nova ordem começa no estado emitida")
+    if (ordem.recurso_id is None) == (ordem.elemento_id is None):
+        raise HTTPException(status_code=400, detail="Indique um recurso ou um elemento")
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        tabela, alvo_id = ("recursos", ordem.recurso_id) if ordem.recurso_id is not None else ("elementos", ordem.elemento_id)
+        recurso = conn.execute(text(f"""
+            SELECT nome{', indicativo_radio' if tabela == 'recursos' else ''} FROM {tabela}
+            WHERE id=:alvo_id AND operacao_id=:operacao_id AND ocorrencia_id=:ocorrencia_id
+        """), {"alvo_id": alvo_id, "ocorrencia_id": ordem.ocorrencia_id,
+               "operacao_id": operacao_id}).mappings().first()
+        if recurso is None:
+            raise HTTPException(status_code=409, detail="Primeiro ordene a deslocação do destinatário para esta ocorrência")
+        ordem_id = conn.execute(text("""
+            INSERT INTO ordens (titulo, descricao, estado, recurso_id, elemento_id, ocorrencia_id, operacao_id)
+            VALUES (:titulo, :descricao, 'emitida', :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
+            RETURNING id
+        """), {"titulo": titulo, "descricao": descricao, "recurso_id": ordem.recurso_id, "elemento_id": ordem.elemento_id,
+               "ocorrencia_id": ordem.ocorrencia_id, "operacao_id": operacao_id}).scalar_one()
+        nome = (recurso["indicativo_radio"] if tabela == 'recursos' else None) or recurso["nome"]
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
+            VALUES ('ordem', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Ordem para {nome}: {titulo}" + (f" — {descricao}" if descricao else ""),
+               "recurso_id": ordem.recurso_id, "elemento_id": ordem.elemento_id, "ocorrencia_id": ordem.ocorrencia_id,
+               "operacao_id": operacao_id})
+    return {"mensagem": "Ordem criada com sucesso", "id": ordem_id}
 
-        conn.execute(
-            text("""
-                INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
-                VALUES ('ordem', :descricao, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
-            """),
-            {
-                "descricao": f"Ordem criada: {ordem.titulo}"
-            }
-        )
-
-        conn.commit()
-
-    return {"mensagem": "Ordem criada com sucesso"}
 
 @app.put("/ordens/{ordem_id}/estado")
 def atualizar_estado_ordem(ordem_id: int, dados: dict):
-    with engine.connect() as conn:
-        conn.execute(
-            text("""
-                UPDATE ordens
-                SET estado = :estado
-                WHERE id = :id
-            """),
-            {
-                "estado": dados["estado"],
-                "id": ordem_id
-            }
-        )
-
-        conn.execute(
-            text("""
-                INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
-                VALUES ('ordem', :descricao, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
-            """),
-            {
-                "descricao": f"Ordem {ordem_id} mudou estado para {dados['estado']}"
-            }
-        )
-
-        conn.commit()
-
+    estado = dados.get("estado")
+    if estado not in {"emitida", "executada", "concluida"}:
+        raise HTTPException(status_code=400, detail="Estado da ordem inválido")
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        ordem = conn.execute(text("""
+            SELECT titulo, recurso_id, elemento_id, ocorrencia_id, estado
+            FROM ordens WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": ordem_id, "operacao_id": operacao_id}).mappings().first()
+        if not ordem:
+            raise HTTPException(status_code=404, detail="Ordem não encontrada")
+        if ordem["estado"] == estado:
+            return {"mensagem": "Estado da ordem inalterado"}
+        conn.execute(text("UPDATE ordens SET estado=:estado WHERE id=:id AND operacao_id=:operacao_id"),
+                     {"estado": estado, "id": ordem_id, "operacao_id": operacao_id})
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
+            VALUES ('ordem', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Ordem {ordem['titulo']}: {estado}",
+               "recurso_id": ordem["recurso_id"], "elemento_id": ordem["elemento_id"], "ocorrencia_id": ordem["ocorrencia_id"],
+               "operacao_id": operacao_id})
     return {"mensagem": "Estado da ordem atualizado"}
+
 
 @app.get("/missoes")
 def listar_missoes():
     with engine.connect() as conn:
         resultado = conn.execute(text("""
             SELECT m.id, m.titulo, m.descricao, m.prioridade, m.estado, m.recurso_id,
-                   m.ocorrencia_id, m.objetivo_id, m.responsavel, m.notas, m.situacao_operacional,
+                   m.ocorrencia_id, m.objetivo_id, m.responsavel, m.zona, m.notas, m.situacao_operacional,
                    m.atualizada_em, m.criado_em, m.planeada_em, m.iniciada_em,
                    m.concluida_em, m.cancelada_em,
                    COALESCE(
@@ -2107,6 +2503,7 @@ class Missao(BaseModel):
     recurso_id: int | None = None
     ocorrencia_id: int | None = None
     responsavel: str | None = None
+    zona: str | None = None
     notas: str | None = None
     situacao_operacional: str = "por_avaliar"
 
@@ -2143,7 +2540,7 @@ def _libertar_recurso_se_sem_missao_ativa(conn, recurso_id: int):
         FROM missao_recursos mr
         JOIN missoes m ON m.id = mr.missao_id
         WHERE mr.recurso_id = :recurso_id
-          AND m.estado NOT IN ('concluida', 'cancelada')
+          AND m.estado = 'em_execucao'
         LIMIT 1
     """), {"recurso_id": recurso_id}).scalar()
 
@@ -2158,30 +2555,8 @@ def _libertar_recurso_se_sem_missao_ativa(conn, recurso_id: int):
             return
 
         ocorrencia_id = recurso["ocorrencia_id"]
-        nome = recurso["indicativo_radio"] or recurso["nome"]
-
-        if recurso["estado"] != "disponivel" and ocorrencia_id is not None:
-            conn.execute(text("""
-                INSERT INTO timeline_eventos (
-                    tipo, descricao, recurso_id, ocorrencia_id, operacao_id
-                )
-                VALUES (
-                    'recurso', :descricao, :recurso_id,
-                    :ocorrencia_id, :operacao_id
-                )
-            """), {
-                "descricao": f"Recurso libertado: {nome}",
-                "recurso_id": recurso_id,
-                "ocorrencia_id": ocorrencia_id,
-                "operacao_id": recurso["operacao_id"]
-            })
-
-        conn.execute(text("""
-            UPDATE recursos
-            SET estado = 'disponivel',
-                ocorrencia_id = NULL
-            WHERE id = :id
-        """), {"id": recurso_id})
+        if ocorrencia_id is None and recurso["estado"] == "em_missao":
+            conn.execute(text("UPDATE recursos SET estado='disponivel' WHERE id=:id"), {"id": recurso_id})
 
 
 @app.post("/missoes")
@@ -2193,12 +2568,12 @@ def criar_missao(missao: Missao):
         missao_id = conn.execute(text("""
             INSERT INTO missoes (
                 titulo, descricao, prioridade, estado, recurso_id, ocorrencia_id,
-                operacao_id, responsavel, notas, situacao_operacional, atualizada_em,
+                operacao_id, responsavel, zona, notas, situacao_operacional, atualizada_em,
                 planeada_em, iniciada_em, concluida_em, cancelada_em
             )
             VALUES (
                 :titulo, :descricao, :prioridade, :estado, :recurso_id, :ocorrencia_id,
-                :operacao_id, :responsavel, :notas, :situacao_operacional, NOW(),
+                :operacao_id, :responsavel, :zona, :notas, :situacao_operacional, NOW(),
                 CASE WHEN :estado IN ('planeada','em_execucao','concluida','cancelada') THEN NOW() END,
                 CASE WHEN :estado = 'em_execucao' THEN NOW() END,
                 CASE WHEN :estado = 'concluida' THEN NOW() END,
@@ -2210,7 +2585,7 @@ def criar_missao(missao: Missao):
             "prioridade": missao.prioridade, "estado": estado,
             "recurso_id": missao.recurso_id, "ocorrencia_id": missao.ocorrencia_id,
             "operacao_id": operacao_id, "responsavel": missao.responsavel,
-            "notas": missao.notas,
+            "zona": (missao.zona or "").strip() or None, "notas": missao.notas,
             "situacao_operacional": missao.situacao_operacional if missao.situacao_operacional in {"por_avaliar", "sob_controlo", "estavel", "complexa", "critica", "necessita_reforco"} else "por_avaliar",
         }).scalar_one()
         if missao.recurso_id is not None:
@@ -2219,6 +2594,12 @@ def criar_missao(missao: Missao):
                 VALUES (:missao_id, :recurso_id)
                 ON CONFLICT (missao_id, recurso_id) DO NOTHING
             """), {"missao_id": missao_id, "recurso_id": missao.recurso_id})
+            if estado == "em_execucao":
+                conn.execute(text("""
+                    UPDATE recursos SET estado='em_missao'
+                    WHERE id=:recurso_id AND operacao_id=:operacao_id AND ocorrencia_id IS NULL
+                      AND estado IN ('disponivel', 'em_missao')
+                """), {"recurso_id": missao.recurso_id, "operacao_id": operacao_id})
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
@@ -2256,8 +2637,12 @@ def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
             "SELECT recurso_id FROM missao_recursos WHERE missao_id = :id"
         ), {"id": missao_id})]
         if dados.estado == "em_execucao" and recurso_ids:
-            conn.execute(text("UPDATE recursos SET estado = 'em_missao' WHERE id = ANY(:ids)"), {"ids": recurso_ids})
-        elif dados.estado in {"concluida", "cancelada"}:
+            conn.execute(text("""
+                UPDATE recursos SET estado='em_missao'
+                WHERE id=ANY(:ids) AND operacao_id=:operacao_id AND ocorrencia_id IS NULL
+                  AND estado IN ('disponivel', 'em_missao')
+            """), {"ids": recurso_ids, "operacao_id": operacao_id})
+        else:
             for recurso_id in recurso_ids:
                 _libertar_recurso_se_sem_missao_ativa(conn, recurso_id)
 
@@ -2423,7 +2808,10 @@ def atribuir_recurso_missao(missao_id: int, recurso_id: int):
         """), {"missao_id": missao_id, "recurso_id": recurso_id})
         _atualizar_recurso_principal_missao(conn, missao_id)
         if missao["estado"] == "em_execucao":
-            conn.execute(text("UPDATE recursos SET estado = 'em_missao' WHERE id = :id"), {"id": recurso_id})
+            conn.execute(text("""
+                UPDATE recursos SET estado='em_missao' WHERE id=:id AND operacao_id=:operacao_id
+                  AND ocorrencia_id IS NULL AND estado IN ('disponivel', 'em_missao')
+            """), {"id": recurso_id, "operacao_id": operacao_id})
         nome_recurso = recurso["indicativo_radio"] or recurso["nome"] or f"Recurso {recurso_id}"
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
@@ -2660,16 +3048,14 @@ def reembarcar_elemento(elemento_id: int, recurso_id: int):
         elemento = conn.execute(text("""
             SELECT nome, indicativo_radio, ocorrencia_id, recurso_id
             FROM elementos
-            WHERE id = :elemento_id AND operacao_id = :operacao_id
+            WHERE id=:elemento_id AND operacao_id=:operacao_id
             FOR UPDATE
         """), {"elemento_id": elemento_id, "operacao_id": operacao_id}).mappings().first()
         if not elemento:
             raise HTTPException(status_code=404, detail="Elemento não encontrado nesta operação")
-
         recurso = conn.execute(text("""
-            SELECT nome, indicativo_radio, ocorrencia_id
-            FROM recursos
-            WHERE id = :recurso_id AND operacao_id = :operacao_id
+            SELECT nome, indicativo_radio, ocorrencia_id FROM recursos
+            WHERE id=:recurso_id AND operacao_id=:operacao_id
         """), {"recurso_id": recurso_id, "operacao_id": operacao_id}).mappings().first()
         if not recurso:
             raise HTTPException(status_code=404, detail="Viatura não encontrada nesta operação")
@@ -2677,33 +3063,30 @@ def reembarcar_elemento(elemento_id: int, recurso_id: int):
             return {"ok": True}
         if elemento["recurso_id"] is not None:
             raise HTTPException(status_code=409, detail="O elemento já está embarcado noutra viatura")
-
+        if elemento["ocorrencia_id"] is not None and elemento["ocorrencia_id"] != recurso["ocorrencia_id"]:
+            raise HTTPException(status_code=409, detail="Liberte primeiro o elemento da outra ocorrência")
         conn.execute(text("""
-            UPDATE elementos
-            SET recurso_id = :recurso_id, estado = 'embarcado', localizacao = NULL
-            WHERE id = :elemento_id AND operacao_id = :operacao_id
-        """), {
-            "elemento_id": elemento_id,
-            "recurso_id": recurso_id,
-            "operacao_id": operacao_id
-        })
-
-        nome_elemento = elemento["nome"]
-        if elemento["indicativo_radio"]:
-            nome_elemento += f" ({elemento['indicativo_radio']})"
-        nome_recurso = recurso["nome"]
-        if recurso["indicativo_radio"]:
-            nome_recurso += f" ({recurso['indicativo_radio']})"
+            UPDATE elementos SET recurso_id=:recurso_id, ocorrencia_id=:ocorrencia_id,
+                estado='embarcado', localizacao=NULL
+            WHERE id=:elemento_id AND operacao_id=:operacao_id
+        """), {"elemento_id": elemento_id, "recurso_id": recurso_id,
+               "ocorrencia_id": recurso["ocorrencia_id"], "operacao_id": operacao_id})
+        if recurso["ocorrencia_id"] is not None:
+            conn.execute(text("""
+                INSERT INTO elemento_empenhos (operacao_id, elemento_id, recurso_id, ocorrencia_id)
+                VALUES (:operacao_id, :elemento_id, :recurso_id, :ocorrencia_id)
+                ON CONFLICT (operacao_id, elemento_id) WHERE fim_em IS NULL DO UPDATE
+                    SET recurso_id=EXCLUDED.recurso_id
+            """), {"operacao_id": operacao_id, "elemento_id": elemento_id,
+                   "recurso_id": recurso_id, "ocorrencia_id": recurso["ocorrencia_id"]})
+        nome_elemento = elemento["nome"] + (f" ({elemento['indicativo_radio']})" if elemento["indicativo_radio"] else "")
+        nome_recurso = recurso["nome"] + (f" ({recurso['indicativo_radio']})" if recurso["indicativo_radio"] else "")
         conn.execute(text("""
-            INSERT INTO timeline_eventos
-                (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
-            VALUES ('elemento', :descricao, :recurso_id, :ocorrencia_id, :operacao_id)
-        """), {
-            "descricao": f"Elemento reembarcado: {nome_elemento} em {nome_recurso}",
-            "recurso_id": recurso_id,
-            "ocorrencia_id": recurso["ocorrencia_id"] or elemento["ocorrencia_id"],
-            "operacao_id": operacao_id
-        })
+            INSERT INTO timeline_eventos (tipo, descricao, elemento_id, recurso_id, ocorrencia_id, operacao_id)
+            VALUES ('elemento', :descricao, :elemento_id, :recurso_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Elemento reembarcado: {nome_elemento} em {nome_recurso}",
+               "elemento_id": elemento_id, "recurso_id": recurso_id,
+               "ocorrencia_id": recurso["ocorrencia_id"], "operacao_id": operacao_id})
 
     return {"ok": True}
 
@@ -2758,11 +3141,11 @@ def resumo_recursos_operacionais():
                 SELECT
                     (
                         SELECT MAX(t.criado_em)
-                        FROM timeline_eventos t
+                        FROM ordens t
                         WHERE t.recurso_id = :recurso_id
                           AND t.operacao_id = :operacao_id
                           AND t.ocorrencia_id = l.ocorrencia_id
-                          AND t.tipo = 'ordem'
+                          AND t.titulo LIKE 'Desloca%'
                           AND t.criado_em <= l.libertado_em
                           AND NOT EXISTS (
                               SELECT 1
@@ -2798,11 +3181,11 @@ def resumo_recursos_operacionais():
             if recurso["estado"] != "disponivel" and recurso["ocorrencia_id"] is not None:
                 mobilizado_em_atual = conn.execute(text("""
                     SELECT MAX(t.criado_em)
-                    FROM timeline_eventos t
+                    FROM ordens t
                     WHERE t.recurso_id = :recurso_id
                       AND t.operacao_id = :operacao_id
                       AND t.ocorrencia_id = :ocorrencia_id
-                      AND t.tipo = 'ordem'
+                      AND t.titulo LIKE 'Desloca%'
                       AND NOT EXISTS (
                           SELECT 1
                           FROM timeline_eventos l
@@ -2826,8 +3209,14 @@ def resumo_recursos_operacionais():
                     )
                     tempo_total += empenho_atual_segundos
 
+            total_ocorrencias = conn.execute(text("""
+                SELECT COUNT(DISTINCT ocorrencia_id) FROM ordens
+                WHERE operacao_id=:operacao_id AND recurso_id=:recurso_id
+                  AND titulo LIKE 'Desloca%'
+            """), {"operacao_id": operacao_id, "recurso_id": recurso_id}).scalar() or 0
             resumo.append({
                 **dict(recurso),
+                "total_ocorrencias": total_ocorrencias,
                 "total_missoes": total_missoes,
                 "tempo_total_empenhado_segundos": tempo_total,
                 "empenho_atual_segundos": empenho_atual_segundos,
@@ -2837,6 +3226,83 @@ def resumo_recursos_operacionais():
         return resumo
 
 
+@app.get("/elementos-operacionais/resumo")
+def resumo_elementos_operacionais():
+    with engine.connect() as conn:
+        operacao_id = exigir_operacao_ativa_id(conn)
+        linhas = conn.execute(text("""
+            SELECT e.id AS elemento_id, e.nome, ec.posto, e.funcao,
+                   e.indicativo_radio, e.estado, e.recurso_id, e.ocorrencia_id,
+                   r.nome AS recurso_nome, r.indicativo_radio AS recurso_indicativo,
+                   COUNT(DISTINCT ee.ocorrencia_id)::INTEGER AS total_ocorrencias,
+                   COALESCE(SUM(GREATEST(0, EXTRACT(EPOCH FROM
+                       (COALESCE(ee.fim_em, NOW()) - ee.inicio_em)))), 0)::INTEGER
+                       AS tempo_total_empenhado_segundos
+            FROM elementos e
+            LEFT JOIN elementos_catalogo ec ON ec.id=e.elemento_catalogo_id
+            LEFT JOIN recursos r ON r.id=e.recurso_id AND r.operacao_id=e.operacao_id
+            LEFT JOIN elemento_empenhos ee ON ee.elemento_id=e.id AND ee.operacao_id=e.operacao_id
+            WHERE e.operacao_id=:operacao_id
+            GROUP BY e.id, ec.posto, r.nome, r.indicativo_radio
+            ORDER BY e.nome, e.id
+        """), {"operacao_id": operacao_id}).mappings()
+        return [dict(linha) for linha in linhas]
+
+
+@app.get("/elementos/{elemento_id}/historico")
+def historico_elemento(elemento_id: int):
+    with engine.connect() as conn:
+        operacao_id = exigir_operacao_ativa_id(conn)
+        existe = conn.execute(text("""
+            SELECT 1 FROM elementos WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": elemento_id, "operacao_id": operacao_id}).scalar()
+        if not existe:
+            raise HTTPException(status_code=404, detail="Elemento não encontrado")
+        linhas = conn.execute(text("""
+            SELECT ee.ocorrencia_id, o.titulo AS ocorrencia_titulo,
+                   MIN(ee.inicio_em) AS primeira_mobilizacao,
+                   MAX(ee.fim_em) AS ultima_libertacao,
+                   BOOL_OR(ee.fim_em IS NULL) AS em_curso,
+                   COALESCE(SUM(GREATEST(0, EXTRACT(EPOCH FROM
+                       (COALESCE(ee.fim_em, NOW()) - ee.inicio_em)))), 0)::INTEGER
+                       AS tempo_empenhado_segundos
+            FROM elemento_empenhos ee
+            JOIN ocorrencias o ON o.id=ee.ocorrencia_id AND o.operacao_id=ee.operacao_id
+            WHERE ee.operacao_id=:operacao_id AND ee.elemento_id=:elemento_id
+            GROUP BY ee.ocorrencia_id, o.titulo
+            ORDER BY MIN(ee.inicio_em) DESC
+        """), {"operacao_id": operacao_id, "elemento_id": elemento_id}).mappings()
+        return [dict(linha) for linha in linhas]
+
+
+@app.put("/elementos/{elemento_id}/libertar")
+def libertar_elemento(elemento_id: int):
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        elemento = conn.execute(text("""
+            SELECT nome, ocorrencia_id FROM elementos
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": elemento_id, "operacao_id": operacao_id}).mappings().first()
+        if not elemento:
+            raise HTTPException(status_code=404, detail="Elemento não encontrado nesta operação")
+        if elemento["ocorrencia_id"] is None:
+            raise HTTPException(status_code=409, detail="O elemento não está afetado a uma ocorrência")
+        conn.execute(text("""
+            UPDATE elemento_empenhos SET fim_em=NOW()
+            WHERE operacao_id=:operacao_id AND elemento_id=:elemento_id AND fim_em IS NULL
+        """), {"operacao_id": operacao_id, "elemento_id": elemento_id})
+        conn.execute(text("""
+            UPDATE elementos SET ocorrencia_id=NULL, recurso_id=NULL, estado='disponivel'
+            WHERE id=:elemento_id AND operacao_id=:operacao_id
+        """), {"elemento_id": elemento_id, "operacao_id": operacao_id})
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
+            VALUES ('elemento', :descricao, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Elemento libertado: {elemento['nome']}",
+               "ocorrencia_id": elemento["ocorrencia_id"], "operacao_id": operacao_id})
+    return {"mensagem": "Elemento libertado"}
+
+
 @app.get("/recursos/{recurso_id}/historico")
 def historico_recurso(recurso_id: int):
     with engine.connect() as conn:
@@ -2844,10 +3310,11 @@ def historico_recurso(recurso_id: int):
         total_ocorrencias = conn.execute(
             text("""
                 SELECT COUNT(DISTINCT ocorrencia_id)
-                FROM timeline_eventos
+                FROM ordens
                 WHERE recurso_id = :recurso_id
                 AND operacao_id = :operacao_id
                 AND ocorrencia_id IS NOT NULL
+                AND titulo LIKE 'Desloca%'
             """),
             {"recurso_id": recurso_id, "operacao_id": operacao_id}
         ).scalar()
@@ -2916,11 +3383,11 @@ def historico_recurso(recurso_id: int):
                     o.titulo AS ocorrencia_titulo,
                     (
                         SELECT MAX(t.criado_em)
-                        FROM timeline_eventos t
+                        FROM ordens t
                         WHERE t.recurso_id = :recurso_id
                           AND t.operacao_id = :operacao_id
                           AND t.ocorrencia_id = l.ocorrencia_id
-                          AND t.tipo = 'ordem'
+                          AND t.titulo LIKE 'Desloca%'
                           AND t.criado_em <= l.libertado_em
                           AND NOT EXISTS (
                               SELECT 1
@@ -2956,6 +3423,25 @@ def historico_recurso(recurso_id: int):
                 "ocorrencia_titulo": periodo["ocorrencia_titulo"],
                 "mobilizado_em": mobilizado_em,
                 "libertado_em": libertado_em,
+                "tempo_empenhado_segundos": segundos
+            })
+
+        atual = conn.execute(text("""
+            SELECT r.ocorrencia_id, o.titulo AS ocorrencia_titulo,
+                   (SELECT MAX(ord.criado_em) FROM ordens ord
+                    WHERE ord.recurso_id=r.id AND ord.operacao_id=r.operacao_id
+                      AND ord.ocorrencia_id=r.ocorrencia_id AND ord.titulo LIKE 'Desloca%')
+                      AS mobilizado_em
+            FROM recursos r JOIN ocorrencias o ON o.id=r.ocorrencia_id
+            WHERE r.id=:recurso_id AND r.operacao_id=:operacao_id
+        """), {"recurso_id": recurso_id, "operacao_id": operacao_id}).mappings().first()
+        if atual and atual["mobilizado_em"]:
+            segundos = max(0, int((datetime.now() - atual["mobilizado_em"]).total_seconds()))
+            tempo_total_empenhado_segundos += segundos
+            ocorrencias_empenho.append({
+                "ocorrencia_id": atual["ocorrencia_id"],
+                "ocorrencia_titulo": atual["ocorrencia_titulo"],
+                "mobilizado_em": atual["mobilizado_em"], "libertado_em": None,
                 "tempo_empenhado_segundos": segundos
             })
 

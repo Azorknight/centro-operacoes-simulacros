@@ -60,9 +60,24 @@ export function atribuirOcorrencia(recursoId, ocorrenciaId) {
   })
 }
 
+export function atribuirElementoOcorrencia(elementoId, ocorrenciaId) {
+  return request(`/elementos/${elementoId}/atribuir-ocorrencia/${ocorrenciaId}`, { method: 'PUT' })
+}
+
+export function confirmarChegadaElemento(elementoId) {
+  return request(`/elementos/${elementoId}/confirmar-chegada`, { method: 'PUT' })
+}
+
 export function confirmarChegada(recursoId) {
   return request(`/recursos/${recursoId}/confirmar-chegada`, {
     method: 'PUT'
+  })
+}
+
+export function comunicarSituacao(ocorrenciaId, alvo, descricao) {
+  return request(`/ocorrencias/${ocorrenciaId}/situacao`, {
+    method: 'POST',
+    body: JSON.stringify({ ...(typeof alvo === 'number' ? { recurso_id: alvo } : alvo), descricao })
   })
 }
 
@@ -86,6 +101,14 @@ export function criarOcorrencia(dados) {
     method: 'POST',
     body: JSON.stringify(dados)
   })
+}
+
+export function obterChamadasOcorrencia(id) {
+  return request(`/ocorrencias/${id}/chamadas`)
+}
+
+export function registarChamadaOcorrencia(id, dados) {
+  return request(`/ocorrencias/${id}/chamadas`, { method: 'POST', body: JSON.stringify(dados) })
 }
 
 // Bases
@@ -185,6 +208,18 @@ export function concluirMissao(id) {
 // Elementos
 export function obterElementos() {
   return request('/elementos')
+}
+
+export function obterResumoElementos() {
+  return request('/elementos-operacionais/resumo')
+}
+
+export function obterHistoricoElemento(id) {
+  return request(`/elementos/${id}/historico`)
+}
+
+export function libertarElemento(id) {
+  return request(`/elementos/${id}/libertar`, { method: 'PUT' })
 }
 
 export function criarElemento(dados) {
@@ -322,6 +357,12 @@ export function adicionarElementoParticipante(operacaoId, dados) {
   return request(`/operacoes/${operacaoId}/elementos-participantes`, {
     method: 'POST',
     body: JSON.stringify(dados)
+  })
+}
+
+export function registarHorariosElemento(operacaoId, elementoCatalogoId, dados) {
+  return request(`/operacoes/${operacaoId}/elementos-participantes/${elementoCatalogoId}/horarios`, {
+    method: 'PUT', body: JSON.stringify(dados)
   })
 }
 
