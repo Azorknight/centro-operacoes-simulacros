@@ -2078,6 +2078,28 @@ def atualizar_posicao(recurso_id: int, dados: dict):
 
     return {"mensagem": "Posi??o atualizada"}
 
+def concluir_deslocacao_na_chegada(conn, operacao_id: int, ocorrencia_id: int,
+                                  recurso_id: int | None = None, elemento_id: int | None = None):
+    """A chegada cumpre a ordem de deslocação sem intervenção adicional."""
+    ordens = conn.execute(text("""
+        UPDATE ordens SET estado='concluida'
+        WHERE operacao_id=:operacao_id AND ocorrencia_id=:ocorrencia_id
+          AND recurso_id IS NOT DISTINCT FROM :recurso_id
+          AND elemento_id IS NOT DISTINCT FROM :elemento_id
+          AND titulo='Deslocação para ocorrência'
+          AND estado IN ('emitida', 'executada')
+        RETURNING titulo
+    """), {"operacao_id": operacao_id, "ocorrencia_id": ocorrencia_id,
+           "recurso_id": recurso_id, "elemento_id": elemento_id}).mappings().all()
+    for ordem in ordens:
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
+            VALUES ('ordem', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
+        """), {"descricao": f"Ordem {ordem['titulo']}: concluída com a chegada",
+               "recurso_id": recurso_id, "elemento_id": elemento_id,
+               "ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
+
+
 @app.put("/recursos/{recurso_id}/confirmar-chegada")
 def confirmar_chegada(recurso_id: int):
     with engine.begin() as conn:
@@ -2147,22 +2169,8 @@ def confirmar_chegada(recurso_id: int):
                 conn, ocorrencia_id, "em_curso", exigir_operacao_ativa_id(conn)
             )
 
-        conn.execute(
-            text("""
-                UPDATE ordens
-                SET estado = 'executada'
-                WHERE recurso_id = :recurso_id
-                AND ocorrencia_id = :ocorrencia_id
-                AND estado = 'emitida'
-                AND titulo LIKE 'Desloca%'
-                AND operacao_id = :operacao_id
-            """),
-            {
-                "recurso_id": recurso_id,
-                "ocorrencia_id": ocorrencia_id,
-                "operacao_id": exigir_operacao_ativa_id(conn)
-            }
-        )
+        concluir_deslocacao_na_chegada(conn, exigir_operacao_ativa_id(conn), ocorrencia_id,
+                                      recurso_id=recurso_id)
 
     return {"mensagem": "Chegada registada"}
 
@@ -2325,12 +2333,7 @@ def confirmar_chegada_elemento(elemento_id: int):
             VALUES ('chegada', :descricao, :elemento_id, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Chegada ao local: {elemento['nome']}", "elemento_id": elemento_id,
                "ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
-        conn.execute(text("""
-            UPDATE ordens SET estado='executada'
-            WHERE elemento_id=:elemento_id AND ocorrencia_id=:ocorrencia_id
-              AND operacao_id=:operacao_id AND estado='emitida' AND titulo LIKE 'Desloca%'
-        """), {"elemento_id": elemento_id, "ocorrencia_id": ocorrencia_id,
-               "operacao_id": operacao_id})
+        concluir_deslocacao_na_chegada(conn, operacao_id, ocorrencia_id, elemento_id=elemento_id)
         estado = conn.execute(text("SELECT estado FROM ocorrencias WHERE id=:id AND operacao_id=:operacao_id"),
                               {"id": ocorrencia_id, "operacao_id": operacao_id}).scalar()
         if estado == "recebida":
@@ -2462,6 +2465,8 @@ def atualizar_estado_ordem(ordem_id: int, dados: dict):
             raise HTTPException(status_code=404, detail="Ordem não encontrada")
         if ordem["estado"] == estado:
             return {"mensagem": "Estado da ordem inalterado"}
+        if ordem["titulo"] == "Deslocação para ocorrência":
+            raise HTTPException(status_code=409, detail="A ordem de deslocação é concluída ao confirmar a chegada")
         conn.execute(text("UPDATE ordens SET estado=:estado WHERE id=:id AND operacao_id=:operacao_id"),
                      {"estado": estado, "id": ordem_id, "operacao_id": operacao_id})
         conn.execute(text("""

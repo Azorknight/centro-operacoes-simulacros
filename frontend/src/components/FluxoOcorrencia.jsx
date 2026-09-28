@@ -20,7 +20,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
   const associados = recursos.filter(r => Number(r.ocorrencia_id) === Number(ocorrencia.id))
   const disponiveis = recursos.filter(r => !r.ocorrencia_id && ['disponivel', 'em_missao'].includes(r.estado))
   const ordensOcorrencia = ordens.filter(o => Number(o.ocorrencia_id) === Number(ocorrencia.id))
-  const deslocacaoAtual = (tipo, id) => ordensOcorrencia.filter(o => Number(o[tipo]) === Number(id) && o.titulo.startsWith('Desloca')).reduce((ultima, o) => !ultima || new Date(o.criado_em) > new Date(ultima) ? o.criado_em : ultima, null)
+  const deslocacaoAtual = (tipo, id) => ordensOcorrencia.filter(o => Number(o[tipo]) === Number(id) && o.titulo === 'Deslocação para ocorrência').reduce((ultima, o) => !ultima || new Date(o.criado_em) > new Date(ultima) ? o.criado_em : ultima, null)
   const chegou = r => eventos.some(e => e.tipo === 'chegada' && Number(e.recurso_id) === Number(r.id) && new Date(e.criado_em) >= new Date(deslocacaoAtual('recurso_id', r.id)))
   const noLocal = associados.filter(chegou)
   const elementosIndividuais = elementos.filter(e => !e.recurso_id && Number(e.ocorrencia_id) === Number(ocorrencia.id))
@@ -143,8 +143,8 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
           <b>{o.titulo}</b> · {o.elemento_id ? (elemento?.nome || `Elemento ${o.elemento_id}`) : (recurso ? nome(recurso) : `Recurso ${o.recurso_id}`)}<br />
           {o.descricao && <span>{o.descricao}<br /></span>}
           <small>{o.estado} · {formatarDataHora(o.criado_em)}</small>
-          {!inativo && o.estado === 'emitida' && !o.titulo.startsWith('Desloca') && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => guardar(() => alterarEstadoOrdem(o.id, 'executada'))}>Executada</button>}
-          {!inativo && o.estado === 'executada' && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => guardar(() => alterarEstadoOrdem(o.id, 'concluida'))}>Concluir</button>}
+          {!inativo && o.estado === 'emitida' && o.titulo !== 'Deslocação para ocorrência' && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => guardar(() => alterarEstadoOrdem(o.id, 'executada'))}>Executada</button>}
+          {!inativo && o.estado === 'executada' && o.titulo !== 'Deslocação para ocorrência' && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => guardar(() => alterarEstadoOrdem(o.id, 'concluida'))}>Concluir</button>}
         </div>
       })}
     </div>

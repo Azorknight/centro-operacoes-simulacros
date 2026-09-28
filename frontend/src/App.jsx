@@ -2247,7 +2247,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 <div style={styles.itemMeta}>📍 Ocorrência: {ocorrenciaOrdem?.titulo || (o.ocorrencia_id ? `Ocorrência ${o.ocorrencia_id}` : 'Sem ocorrência associada')}</div>
                 <div style={styles.itemMeta}>Estado: {o.estado}</div>
                 <div style={styles.buttonRow}>
-                  {o.estado === 'emitida' && !o.titulo.startsWith('Desloca') && (
+                  {o.estado === 'emitida' && o.titulo !== 'Deslocação para ocorrência' && (
                     <button
                       style={styles.smallButton}
                       onClick={() => {
@@ -2258,7 +2258,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       Executar
                     </button>
                   )}
-                  {o.estado !== 'concluida' && (
+                  {o.estado !== 'concluida' && o.titulo !== 'Deslocação para ocorrência' && (
                     <button
                       style={styles.smallButton}
                       onClick={() => {
