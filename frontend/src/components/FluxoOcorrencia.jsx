@@ -143,12 +143,16 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
       {ordensOcorrencia.map(o => {
         const recurso = recursos.find(r => Number(r.id) === Number(o.recurso_id))
         const elemento = elementos.find(e => Number(e.id) === Number(o.elemento_id))
+        const destinatarioAfeto = Number((elemento || recurso)?.ocorrencia_id) === Number(ocorrencia.id)
         return <div key={o.id} style={{ borderTop: '1px solid #dbe4f2', marginTop: 7, paddingTop: 7 }}>
           <b>{o.titulo}</b> · {o.elemento_id ? (elemento?.nome || `Elemento ${o.elemento_id}`) : (recurso ? nome(recurso) : `Recurso ${o.recurso_id}`)}<br />
           {o.descricao && <span>{o.descricao}<br /></span>}
           <small>{o.estado} · {formatarDataHora(o.criado_em)}</small>
-          {!inativo && o.estado === 'emitida' && o.titulo !== 'Deslocação para ocorrência' && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => guardar(() => alterarEstadoOrdem(o.id, 'executada'))}>Executada</button>}
+          {!inativo && o.estado === 'emitida' && destinatarioAfeto && o.titulo !== 'Deslocação para ocorrência' && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => guardar(() => alterarEstadoOrdem(o.id, 'executada'))}>Executada</button>}
           {!inativo && o.estado === 'executada' && o.titulo !== 'Deslocação para ocorrência' && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => guardar(() => alterarEstadoOrdem(o.id, 'concluida'))}>Concluir</button>}
+          {!inativo && o.estado === 'emitida' && o.titulo !== 'Deslocação para ocorrência' && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => {
+            if (window.confirm(`Anular a ordem «${o.titulo}»? O registo permanece no histórico.`)) guardar(() => alterarEstadoOrdem(o.id, 'cancelada'))
+          }}>Anular</button>}
         </div>
       })}
     </div>

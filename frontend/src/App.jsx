@@ -2249,6 +2249,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   .filter((valor, indice, lista) => lista.indexOf(valor) === indice)
                   .join(' — ')
               : (o.recurso_id ? `Recurso ${o.recurso_id}` : 'Sem recurso associado')
+            const destinatarioAfeto = Number((elementoOrdem || recursoOrdem)?.ocorrencia_id) === Number(o.ocorrencia_id)
 
             return (
               <div key={o.id} style={styles.itemCard}>
@@ -2257,7 +2258,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 <div style={styles.itemMeta}>📍 Ocorrência: {ocorrenciaOrdem?.titulo || (o.ocorrencia_id ? `Ocorrência ${o.ocorrencia_id}` : 'Sem ocorrência associada')}</div>
                 <div style={styles.itemMeta}>Estado: {o.estado}</div>
                 <div style={styles.buttonRow}>
-                  {o.estado === 'emitida' && o.titulo !== 'Deslocação para ocorrência' && (
+                  {o.estado === 'emitida' && destinatarioAfeto && o.titulo !== 'Deslocação para ocorrência' && (
                     <button
                       style={styles.smallButton}
                       onClick={() => {
@@ -2268,7 +2269,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       Executar
                     </button>
                   )}
-                  {o.estado !== 'concluida' && o.titulo !== 'Deslocação para ocorrência' && (
+                  {(o.estado === 'executada' || (o.estado === 'emitida' && destinatarioAfeto)) && o.titulo !== 'Deslocação para ocorrência' && (
                     <button
                       style={styles.smallButton}
                       onClick={() => {
@@ -2277,6 +2278,20 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       }}
                     >
                       Concluir
+                    </button>
+                  )}
+                  {o.estado === 'emitida' && o.titulo !== 'Deslocação para ocorrência' && (
+                    <button
+                      style={styles.smallButton}
+                      disabled={modoBloqueado}
+                      onClick={() => {
+                        if (!window.confirm(`Anular a ordem «${o.titulo}»? O registo permanece no histórico.`)) return
+                        alterarEstadoOrdem(o.id, 'cancelada')
+                          .then(() => atualizarDados())
+                          .catch(e => window.alert(e.message || 'Não foi possível anular a ordem.'))
+                      }}
+                    >
+                      Anular
                     </button>
                   )}
                 </div>

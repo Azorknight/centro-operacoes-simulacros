@@ -2046,6 +2046,26 @@ def libertar_recurso(recurso_id: int):
             WHERE id = :recurso_id AND operacao_id = :operacao_id
         """), {"recurso_id": recurso_id, "operacao_id": operacao_id})
 
+        if recurso[2] is not None:
+            ordens_canceladas = conn.execute(text("""
+                UPDATE ordens SET estado='cancelada'
+                WHERE operacao_id=:operacao_id AND ocorrencia_id=:ocorrencia_id
+                  AND estado='emitida'
+                  AND (recurso_id=:recurso_id OR elemento_id IN (
+                      SELECT id FROM elementos
+                      WHERE operacao_id=:operacao_id AND recurso_id=:recurso_id
+                  ))
+                RETURNING titulo, recurso_id, elemento_id
+            """), {"recurso_id": recurso_id, "ocorrencia_id": recurso[2],
+                   "operacao_id": operacao_id}).mappings().all()
+            for ordem in ordens_canceladas:
+                conn.execute(text("""
+                    INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
+                    VALUES ('ordem', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
+                """), {"descricao": f"Ordem {ordem['titulo']}: anulada com a libertação do recurso",
+                       "recurso_id": ordem["recurso_id"], "elemento_id": ordem["elemento_id"],
+                       "ocorrencia_id": recurso[2], "operacao_id": operacao_id})
+
         nome = recurso[1] or recurso[0]
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
@@ -2453,7 +2473,7 @@ def criar_ordem(ordem: Ordem):
 @app.put("/ordens/{ordem_id}/estado")
 def atualizar_estado_ordem(ordem_id: int, dados: dict):
     estado = dados.get("estado")
-    if estado not in {"emitida", "executada", "concluida"}:
+    if estado not in {"executada", "concluida", "cancelada"}:
         raise HTTPException(status_code=400, detail="Estado da ordem inválido")
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
@@ -2467,6 +2487,20 @@ def atualizar_estado_ordem(ordem_id: int, dados: dict):
             return {"mensagem": "Estado da ordem inalterado"}
         if ordem["titulo"] == "Deslocação para ocorrência":
             raise HTTPException(status_code=409, detail="A ordem de deslocação é concluída ao confirmar a chegada")
+        transicoes = {"emitida": {"executada", "concluida", "cancelada"},
+                     "executada": {"concluida"}}
+        if estado not in transicoes.get(ordem["estado"], set()):
+            raise HTTPException(status_code=409, detail="Esta ordem já não permite essa alteração de estado")
+        if ordem["estado"] == "emitida" and estado != "cancelada":
+            tabela = "recursos" if ordem["recurso_id"] is not None else "elementos"
+            alvo_id = ordem["recurso_id"] if ordem["recurso_id"] is not None else ordem["elemento_id"]
+            associado = conn.execute(text(f"""
+                SELECT 1 FROM {tabela}
+                WHERE id=:alvo_id AND operacao_id=:operacao_id AND ocorrencia_id=:ocorrencia_id
+            """), {"alvo_id": alvo_id, "operacao_id": operacao_id,
+                   "ocorrencia_id": ordem["ocorrencia_id"]}).scalar()
+            if not associado:
+                raise HTTPException(status_code=409, detail="O destinatário já não está afeto a esta ocorrência; anule a ordem pendente")
         conn.execute(text("UPDATE ordens SET estado=:estado WHERE id=:id AND operacao_id=:operacao_id"),
                      {"estado": estado, "id": ordem_id, "operacao_id": operacao_id})
         conn.execute(text("""
