@@ -2504,6 +2504,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const missaoAtivaRecurso = recursoDetalheAtual
     ? missoes.find(m => m.recurso_id === recursoDetalheAtual.id && !['concluida', 'cancelada'].includes(m.estado))
     : null
+  const chegouRecursoNesteDespacho = (recurso) => {
+    if (!recurso?.ocorrencia_id) return false
+    const despacho = ordens.find(o => Number(o.recurso_id) === Number(recurso.id) &&
+      Number(o.ocorrencia_id) === Number(recurso.ocorrencia_id) && o.titulo === 'Deslocação para ocorrência')
+    if (!despacho) return false
+    return timeline.some(e => e.tipo === 'chegada' && Number(e.recurso_id) === Number(recurso.id) &&
+      Number(e.ocorrencia_id) === Number(recurso.ocorrencia_id) &&
+      new Date(e.criado_em) >= new Date(despacho.criado_em))
+  }
   const despachoAtualRecurso = recursoDetalheAtual?.ocorrencia_id
     ? ordens.find(o => o.recurso_id === recursoDetalheAtual.id && o.ocorrencia_id === recursoDetalheAtual.ocorrencia_id && o.titulo === 'Deslocação para ocorrência')
     : null
@@ -2539,7 +2548,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           <div style={styles.kpiBox}>
             <div style={styles.kpiLabel}>No local</div>
             <div style={styles.kpiValue}>
-              {recursos.filter((r) => r.ocorrencia_id && timeline.some((e) => e.tipo === 'chegada' && e.recurso_id === r.id)).length}
+              {recursos.filter(chegouRecursoNesteDespacho).length}
             </div>
           </div>
           <div style={styles.kpiBox}>
@@ -3204,8 +3213,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 Ordenar deslocação
               </button>
 
-          {recursoDetalheAtual.ocorrencia_id &&
-            !historicoRecurso?.chegadas_registadas?.includes(recursoDetalheAtual.ocorrencia_id) && (
+          {recursoDetalheAtual.ocorrencia_id && !chegouRecursoNesteDespacho(recursoDetalheAtual) && (
               <button
                 style={styles.mainButton}
                 onClick={async () => {
