@@ -433,11 +433,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     const nomeOperacao = operacaoAtiva?.nome || 'Operação'
     const estadoOperacao = modoReplay ? 'Replay' : (modoConsulta ? 'Encerrada' : 'Ativa')
-    const intencaoComandante =
-      operacaoAtiva?.intencao_comandante ||
-      relatorio?.intencao_comandante ||
-      'Não registada.'
-
     const textoEstado = (estado) => {
       const mapa = {
         ativa: 'Ativa',
@@ -447,6 +442,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         planeado: 'Planeado',
         em_preparacao: 'Em preparação',
         em_execucao: 'Em execução',
+        emitida: 'Emitida',
+        executada: 'Executada',
         suspenso: 'Suspenso',
         concluido: 'Concluído',
         concluida: 'Concluída',
@@ -556,18 +553,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     doc.text(String(nomeOperacao), 50, 88)
     doc.text(String(estadoOperacao), 50, 100)
 
-    tituloSecao(2, 'Intenção do Comandante', 119)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(25, 25, 25)
-    const linhasIntencao = doc.splitTextToSize(String(intencaoComandante), larguraTexto)
-    doc.text(linhasIntencao, margem, 137, { lineHeightFactor: 1.45 })
-
-    let y = 137 + (linhasIntencao.length * 5.2) + 12
-
-    // 3. Ocorrências
-    y = tituloSecao(3, 'Ocorrências', y)
+    // 2. Ocorrências
+    let y = tituloSecao(2, 'Ocorrências', 119)
 
     if (ocorrencias.length === 0) {
       y = escreverTexto('Não existem ocorrências registadas.', margem, y)
@@ -611,232 +598,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     y += 6
 
-    // 4. Objetivos Operacionais — agrupados por ocorrência
-    y = tituloSecao(4, 'Objetivos Operacionais', y)
-
-    const objetivosVisiveis = objetivos.filter((objetivo) => !objetivo.arquivado)
-
-    if (objetivosVisiveis.length === 0) {
-      y = escreverTexto('Não existem objetivos operacionais registados.', margem, y)
-    } else {
-      const grupos = [
-        ...ocorrencias.map((ocorrencia) => ({
-          ocorrencia,
-          objetivos: objetivosVisiveis.filter((objetivo) => Number(objetivo.ocorrencia_id) === Number(ocorrencia.id))
-        })).filter((grupo) => grupo.objetivos.length > 0),
-        {
-          ocorrencia: null,
-          objetivos: objetivosVisiveis.filter((objetivo) => !objetivo.ocorrencia_id)
-        }
-      ].filter((grupo) => grupo.objetivos.length > 0)
-
-      grupos.forEach((grupo) => {
-        y = garantirEspaco(y, 14)
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10.5)
-        doc.setTextColor(...azulPSP)
-        doc.text(
-          grupo.ocorrencia ? grupo.ocorrencia.titulo : 'Sem ocorrência associada',
-          margem,
-          y
-        )
-        y += 7
-
-        grupo.objetivos.forEach((objetivo) => {
-          const descricao = objetivo.descricao ? String(objetivo.descricao) : ''
-          const linhasDescricao = descricao ? doc.splitTextToSize(descricao, larguraTexto - 10) : []
-          const alturaBloco = 20 + (linhasDescricao.length * 4.4)
-
-          y = garantirEspaco(y, alturaBloco)
-
-          doc.setDrawColor(218, 223, 230)
-          doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'S')
-
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(9.8)
-          doc.setTextColor(25, 25, 25)
-          doc.text(objetivo.nome || `Objetivo ${objetivo.id}`, margem + 5, y + 2)
-
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(8.2)
-          doc.setTextColor(80, 80, 80)
-          const metaObjetivo = [
-            `Estado: ${textoEstado(objetivo.estado)}`,
-            `Prioridade: ${textoPrioridade(objetivo.prioridade)}`,
-            objetivo.responsavel ? `Responsável: ${objetivo.responsavel}` : null
-          ].filter(Boolean).join('  |  ')
-          const linhasMeta = doc.splitTextToSize(metaObjetivo, larguraTexto - 10)
-          doc.text(linhasMeta, margem + 5, y + 8, { lineHeightFactor: 1.25 })
-
-          let yDescricao = y + 8 + (linhasMeta.length * 3.8)
-          if (linhasDescricao.length > 0) {
-            doc.setFontSize(8.8)
-            doc.setTextColor(45, 45, 45)
-            doc.text(linhasDescricao, margem + 5, yDescricao + 3, { lineHeightFactor: 1.3 })
-          }
-
-          y += alturaBloco + 4
-        })
-
-        y += 3
-      })
-    }
-
-
-    y += 6
-
-    // 5. Missões Operacionais
-    y = tituloSecao(5, 'Missões Operacionais', y)
-
-    const missoesVisiveis = missoes.filter((missao) => missao.estado !== 'cancelada')
-
-    const textoSituacaoMissao = (situacao) => {
-      const mapa = {
-        por_avaliar: 'Por avaliar',
-        sob_controlo: 'Sob controlo',
-        estavel: 'Estável',
-        complexa: 'Complexa',
-        critica: 'Crítica',
-        necessita_reforco: 'Necessita de reforço'
-      }
-      return mapa[situacao] || 'Não definida'
-    }
-
-    if (missoesVisiveis.length === 0) {
-      y = escreverTexto('Não existem missões operacionais registadas.', margem, y)
-    } else {
-      const gruposMissoes = [
-        ...ocorrencias.map((ocorrencia) => ({
-          ocorrencia,
-          missoes: missoesVisiveis.filter(
-            (missao) => Number(missao.ocorrencia_id) === Number(ocorrencia.id)
-          )
-        })).filter((grupo) => grupo.missoes.length > 0),
-        {
-          ocorrencia: null,
-          missoes: missoesVisiveis.filter((missao) => !missao.ocorrencia_id)
-        }
-      ].filter((grupo) => grupo.missoes.length > 0)
-
-      gruposMissoes.forEach((grupo) => {
-        const primeiraMissao = grupo.missoes[0]
-        const primeiraDescricao = primeiraMissao?.descricao ? String(primeiraMissao.descricao) : ''
-        const linhasPrimeiraDescricao = primeiraDescricao
-          ? doc.splitTextToSize(primeiraDescricao, larguraTexto - 10)
-          : []
-        const alturaPrimeiraMissao = 34 + (linhasPrimeiraDescricao.length * 4.2)
-
-        // Mantém o título do grupo junto da primeira missão.
-        y = garantirEspaco(y, 14 + alturaPrimeiraMissao)
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10.5)
-        doc.setTextColor(...azulPSP)
-        doc.text(
-          grupo.ocorrencia ? grupo.ocorrencia.titulo : 'Sem ocorrência associada',
-          margem,
-          y
-        )
-        y += 7
-
-        grupo.missoes.forEach((missao) => {
-          const objetivo = objetivos.find(
-            (objetivoItem) => Number(objetivoItem.id) === Number(missao.objetivo_id)
-          )
-
-          const idsRecursos = Array.isArray(missao.recurso_ids)
-            ? missao.recurso_ids
-            : (missao.recurso_id ? [missao.recurso_id] : [])
-
-          const nomesRecursos = recursos
-            .filter((recurso) => idsRecursos.some((id) => Number(id) === Number(recurso.id)))
-            .map((recurso) => recurso.indicativo_radio || recurso.nome)
-            .filter(Boolean)
-
-          const descricao = missao.descricao ? String(missao.descricao) : ''
-          const linhasDescricao = descricao
-            ? doc.splitTextToSize(descricao, larguraTexto - 10)
-            : []
-
-          const metaMissao = [
-            `Estado: ${textoEstado(missao.estado)}`,
-            `Prioridade: ${textoPrioridade(missao.prioridade)}`,
-            `Situação: ${textoSituacaoMissao(missao.situacao_operacional)}`
-          ].join('  |  ')
-
-          const linhasMeta = doc.splitTextToSize(metaMissao, larguraTexto - 10)
-
-          const contexto = [
-            objetivo ? `Objetivo: ${objetivo.nome}` : null,
-            missao.responsavel ? `Responsável: ${missao.responsavel}` : null
-          ].filter(Boolean).join('  |  ')
-
-          const linhasContexto = contexto
-            ? doc.splitTextToSize(contexto, larguraTexto - 10)
-            : []
-
-          const recursosTexto = nomesRecursos.length > 0
-            ? `Recursos: ${nomesRecursos.join(', ')}`
-            : 'Recursos: Sem recursos atribuídos'
-
-          const linhasRecursos = doc.splitTextToSize(recursosTexto, larguraTexto - 10)
-
-          const alturaBloco =
-            17 +
-            (linhasMeta.length * 3.8) +
-            (linhasContexto.length * 3.8) +
-            (linhasRecursos.length * 3.8) +
-            (linhasDescricao.length * 4.2)
-
-          y = garantirEspaco(y, alturaBloco)
-
-          doc.setDrawColor(218, 223, 230)
-          doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'S')
-
-          doc.setFillColor(...azulPSP)
-          doc.rect(margem, y - 4, 2, alturaBloco - 2, 'F')
-
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(9.8)
-          doc.setTextColor(25, 25, 25)
-          doc.text(missao.titulo || `Missão ${missao.id}`, margem + 5, y + 2)
-
-          let yLinha = y + 8
-
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(8.2)
-          doc.setTextColor(80, 80, 80)
-          doc.text(linhasMeta, margem + 5, yLinha, { lineHeightFactor: 1.25 })
-          yLinha += linhasMeta.length * 3.8
-
-          if (linhasContexto.length > 0) {
-            doc.text(linhasContexto, margem + 5, yLinha, { lineHeightFactor: 1.25 })
-            yLinha += linhasContexto.length * 3.8
-          }
-
-          doc.setTextColor(...azulPSP)
-          doc.text(linhasRecursos, margem + 5, yLinha, { lineHeightFactor: 1.25 })
-          yLinha += linhasRecursos.length * 3.8
-
-          if (linhasDescricao.length > 0) {
-            doc.setFontSize(8.8)
-            doc.setTextColor(45, 45, 45)
-            doc.text(linhasDescricao, margem + 5, yLinha + 2.5, { lineHeightFactor: 1.3 })
-          }
-
-          y += alturaBloco + 4
-        })
-
-        y += 3
-      })
-    }
-
-
-    y += 6
-
-    // 6. Recursos Operacionais
-    y = tituloSecao(6, 'Recursos Operacionais', y)
+    // 3. Recursos Operacionais
+    y = garantirEspaco(y, 53)
+    y = tituloSecao(3, 'Recursos Operacionais', y)
 
     const formatarTempoRelatorio = (segundos = 0) => {
       const total = Math.max(0, Math.floor(Number(segundos) || 0))
@@ -891,7 +655,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         const linhaPrincipal = [
           recurso.tipo ? `Tipo: ${recurso.tipo}` : null,
           `Estado: ${estadoRecurso}`,
-          `Missões: ${Number(recurso.total_missoes) || 0}`
+          `Ocorrências: ${Number(recurso.total_ocorrencias) || 0}`
         ].filter(Boolean).join('  |  ')
 
         const linhaOcorrencia = recurso.ocorrencia_atual
@@ -943,56 +707,108 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       })
     }
 
+    if (resumoElementosOperacionais.length > 0) {
+      y = garantirEspaco(y + 5, 46)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(...azulPSP)
+      doc.text('Elementos', margem, y)
+      y += 9
+
+      resumoElementosOperacionais.forEach((elemento) => {
+        const nome = [elemento.posto, elemento.nome].filter(Boolean).join(' ') || `Elemento ${elemento.elemento_id}`
+        const identificacao = [nome, elemento.indicativo_radio].filter(Boolean).join('  |  ')
+        const linhaApoio = [elemento.funcao, elemento.recurso_indicativo || elemento.recurso_nome || 'Sem viatura']
+          .filter(Boolean).join('  |  ')
+        const linhaEstatisticas = `Ocorrências: ${Number(elemento.total_ocorrencias) || 0}  |  Tempo total empenhado: ${formatarTempoRelatorio(elemento.tempo_total_empenhado_segundos)}`
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9.2)
+        const linhasNome = doc.splitTextToSize(identificacao, larguraTexto - 10)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.2)
+        const linhasApoio = doc.splitTextToSize(linhaApoio, larguraTexto - 10)
+        const linhasEstatisticas = doc.splitTextToSize(linhaEstatisticas, larguraTexto - 10)
+        const alturaBloco = 10 + (linhasNome.length + linhasApoio.length + linhasEstatisticas.length) * 4.2
+
+        y = garantirEspaco(y, alturaBloco + 4)
+        doc.setDrawColor(218, 223, 230)
+        doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'S')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9.2)
+        doc.setTextColor(25, 25, 25)
+        doc.text(linhasNome, margem + 5, y + 2, { lineHeightFactor: 1.25 })
+        let yLinha = y + 2 + linhasNome.length * 4.2
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.2)
+        doc.setTextColor(80, 80, 80)
+        doc.text(linhasApoio, margem + 5, yLinha, { lineHeightFactor: 1.25 })
+        yLinha += linhasApoio.length * 4.2
+        doc.setTextColor(...azulPSP)
+        doc.text(linhasEstatisticas, margem + 5, yLinha, { lineHeightFactor: 1.25 })
+        y += alturaBloco + 4
+      })
+    }
 
     y += 6
 
-    // 7. Decisões Operacionais
-    y = tituloSecao(7, 'Decisões Operacionais', y)
+    // 4. Ordens emitidas para as ocorrências
+    y = garantirEspaco(y, 45)
+    y = tituloSecao(4, 'Ordens', y)
 
-    const decisoesOrdenadas = [...decisoesOperacionais].sort((a, b) => {
-      const dataA = new Date(a.criado_em || 0).getTime()
-      const dataB = new Date(b.criado_em || 0).getTime()
-      return dataA - dataB
+    const ordensOrdenadas = [...ordens].sort((a, b) => {
+      const diferenca = new Date(a.criado_em || 0).getTime() - new Date(b.criado_em || 0).getTime()
+      return diferenca || Number(a.id) - Number(b.id)
     })
 
-    if (decisoesOrdenadas.length === 0) {
-      y = escreverTexto('Não existem decisões operacionais registadas nesta operação.', margem, y)
+    if (ordensOrdenadas.length === 0) {
+      y = escreverTexto('Não existem ordens registadas nesta operação.', margem, y)
     } else {
-      decisoesOrdenadas.forEach((decisao, indice) => {
-        const dataHora = decisao.criado_em
-          ? new Date(decisao.criado_em).toLocaleString('pt-PT', {
-              timeZone: 'Atlantic/Azores',
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
+      ordensOrdenadas.forEach((ordem, indice) => {
+        const dataHora = ordem.criado_em
+          ? new Date(ordem.criado_em).toLocaleString('pt-PT', {
+              timeZone: 'Atlantic/Azores', day: '2-digit', month: '2-digit', year: 'numeric',
+              hour: '2-digit', minute: '2-digit'
             })
           : 'Data/hora não disponível'
+        const recurso = recursos.find((item) => Number(item.id) === Number(ordem.recurso_id))
+        const elemento = elementos.find((item) => Number(item.id) === Number(ordem.elemento_id))
+        const ocorrencia = ocorrencias.find((item) => Number(item.id) === Number(ordem.ocorrencia_id))
+        const destinatario = elemento
+          ? [elemento.posto, elemento.nome].filter(Boolean).join(' ') || `Elemento ${ordem.elemento_id}`
+          : recurso
+            ? [recurso.indicativo_radio, recurso.nome].filter(Boolean).join(' — ')
+            : ordem.elemento_id ? `Elemento ${ordem.elemento_id}` : `Recurso ${ordem.recurso_id}`
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9.2)
+        const linhasTitulo = doc.splitTextToSize(`${indice + 1}. ${ordem.titulo || 'Ordem sem título'}`, larguraTexto - 10)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.2)
+        const linhasMeta = doc.splitTextToSize(
+          `${dataHora}  |  ${textoEstado(ordem.estado)}  |  Destinatário: ${destinatario}`, larguraTexto - 10
+        )
+        const linhasOcorrencia = doc.splitTextToSize(
+          `Ocorrência: ${ocorrencia?.titulo || `Ocorrência ${ordem.ocorrencia_id}`}`, larguraTexto - 10
+        )
+        const linhasDescricao = ordem.descricao
+          ? doc.splitTextToSize(String(ordem.descricao), larguraTexto - 10)
+          : []
+        const alturaBloco = 11 + (linhasTitulo.length + linhasMeta.length + linhasOcorrencia.length + linhasDescricao.length) * 4.2
 
-        const autor = decisao.autor || 'Comandante'
-        const textoDecisao = String(decisao.texto || '—')
-        const linhasDecisao = doc.splitTextToSize(textoDecisao, larguraTexto - 10)
-        const alturaBloco = 17 + (linhasDecisao.length * 4.2)
-
-        y = garantirEspaco(y, alturaBloco)
-
+        y = garantirEspaco(y, alturaBloco + 4)
         doc.setDrawColor(218, 223, 230)
         doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'S')
-
-        doc.setFillColor(...azulPSP)
-        doc.rect(margem, y - 4, 2, alturaBloco - 2, 'F')
-
         doc.setFont('helvetica', 'bold')
-        doc.setFontSize(8.6)
+        doc.setFontSize(9.2)
         doc.setTextColor(...azulPSP)
-        doc.text(`${indice + 1}. ${dataHora}  |  ${autor}`, margem + 5, y + 2)
-
+        doc.text(linhasTitulo, margem + 5, y + 2, { lineHeightFactor: 1.25 })
+        let yLinha = y + 2 + linhasTitulo.length * 4.2
         doc.setFont('helvetica', 'normal')
-        doc.setFontSize(9)
-        doc.setTextColor(35, 35, 35)
-        doc.text(linhasDecisao, margem + 5, y + 9, { lineHeightFactor: 1.3 })
-
+        doc.setFontSize(8.2)
+        doc.setTextColor(55, 55, 55)
+        for (const linhas of [linhasMeta, linhasOcorrencia, linhasDescricao]) {
+          if (linhas.length > 0) doc.text(linhas, margem + 5, yLinha, { lineHeightFactor: 1.25 })
+          yLinha += linhas.length * 4.2
+        }
         y += alturaBloco + 4
       })
     }
@@ -1000,8 +816,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     y += 6
 
-    // 8. Cronologia Operacional
-    y = tituloSecao(8, 'Cronologia Operacional', y)
+    // 5. Cronologia Operacional
+    y = tituloSecao(5, 'Cronologia Operacional', y)
 
     const cronologiaOrdenada = [...timeline].sort((a, b) => {
       const dataA = new Date(a.criado_em || 0).getTime()
@@ -1060,28 +876,22 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     y += 6
 
-    // 9. Síntese Final
-    y = tituloSecao(9, 'Síntese Final', y)
+    // 6. Síntese Final
+    y = tituloSecao(6, 'Síntese Final', y)
 
     const ocorrenciasAtivasRelatorio = ocorrencias.filter((o) => !['fechada', 'encerrada', 'arquivada'].includes(o.estado)).length
-    const objetivosAtivosRelatorio = objetivos.filter(
-      (o) => !['concluido', 'cancelado'].includes(o.estado)
-    ).length
-    const missoesAtivasRelatorio = missoes.filter(
-      (m) => !['concluida', 'cancelada'].includes(m.estado)
-    ).length
     const recursosEmMissaoRelatorio = resumoRecursosOperacionais.filter(
       (r) => r.estado === 'em_missao'
     ).length
 
     const estadoFinalOperacao =
       operacaoAtiva?.estado === 'concluida'
-        ? 'Conclu?da'
+        ? 'Concluída'
         : operacaoAtiva?.estado === 'arquivada'
           ? 'Arquivada'
           : operacaoAtiva
             ? 'Ativa'
-            : 'N?o definido'
+            : 'Não definido'
 
     y = garantirEspaco(y, 42)
 
@@ -1105,13 +915,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     doc.setTextColor(35, 35, 35)
     doc.text(
       `Ocorrências: ${ocorrencias.length} (${ocorrenciasAtivasRelatorio} ativas)   |   ` +
-      `Objetivos: ${objetivos.length} (${objetivosAtivosRelatorio} ativos)`,
+      `Ordens: ${ordens.length}`,
       margem + 5,
       y + 23
     )
     doc.text(
-      `Missões: ${missoes.length} (${missoesAtivasRelatorio} ativas)   |   ` +
-      `Recursos: ${resumoRecursosOperacionais.length} (${recursosEmMissaoRelatorio} em missão)`,
+      `Recursos: ${resumoRecursosOperacionais.length} (${recursosEmMissaoRelatorio} em missão)   |   ` +
+      `Elementos: ${resumoElementosOperacionais.length}`,
       margem + 5,
       y + 29
     )
