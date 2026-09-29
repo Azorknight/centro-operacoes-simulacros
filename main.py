@@ -3340,7 +3340,7 @@ def historico_recurso(recurso_id: int):
                 FROM ordens
                 WHERE recurso_id = :recurso_id
                 AND operacao_id = :operacao_id
-                AND estado = 'executada'
+                AND estado IN ('executada', 'concluida')
             """),
             {"recurso_id": recurso_id, "operacao_id": operacao_id}
         ).scalar()

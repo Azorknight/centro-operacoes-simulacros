@@ -97,6 +97,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [mostrarPainelEsquerdo, setMostrarPainelEsquerdo] = useState(true)
   const [mostrarPainelDireito, setMostrarPainelDireito] = useState(true)
   const [detalhe, setDetalhe] = useState(null)
+  const recursoSelecionadoId = detalhe?.tipo === 'recurso' ? detalhe.dados.id : null
   const [formRecurso, setFormRecurso] = useState({
     nome: '',
     tipo: '',
@@ -349,6 +350,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       window.removeEventListener('abrir-form-ocorrencia', abrirFormOcorrencia)
     }
   }, [])
+
+  useEffect(() => {
+    if (!recursoSelecionadoId) return
+    let ativo = true
+    obterHistoricoRecurso(recursoSelecionadoId)
+      .then(historico => { if (ativo) setHistoricoRecurso(historico) })
+      .catch(erro => { if (ativo) console.error('Erro ao carregar histórico do recurso:', erro) })
+    return () => { ativo = false }
+  }, [recursoSelecionadoId])
     
   async function mudarEstado(id, novoEstado) {
     await alterarEstadoRecurso(id, novoEstado)
@@ -2473,6 +2483,19 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     )
   }
 
+  const recursoDetalheAtual = detalhe?.tipo === 'recurso'
+    ? (recursos.find(r => r.id === detalhe.dados.id) || detalhe.dados)
+    : null
+  const missaoAtivaRecurso = recursoDetalheAtual
+    ? missoes.find(m => m.recurso_id === recursoDetalheAtual.id && !['concluida', 'cancelada'].includes(m.estado))
+    : null
+  const despachoAtualRecurso = recursoDetalheAtual?.ocorrencia_id
+    ? ordens.find(o => o.recurso_id === recursoDetalheAtual.id && o.ocorrencia_id === recursoDetalheAtual.ocorrencia_id && o.titulo === 'Deslocação para ocorrência')
+    : null
+  const ordemAtivaRecurso = recursoDetalheAtual?.ocorrencia_id
+    ? ordens.find(o => o.recurso_id === recursoDetalheAtual.id && o.ocorrencia_id === recursoDetalheAtual.ocorrencia_id && ['emitida', 'executada'].includes(o.estado) && (!despachoAtualRecurso || o.id >= despachoAtualRecurso.id))
+    : null
+
   return (
     <div style={styles.appShell}>
       <div style={styles.topBar}>
@@ -2679,10 +2702,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           )}
 
           {detalhe.tipo === 'recurso' && (() => {
-            const recursoAtual = recursos.find(r => r.id === detalhe.dados.id) || detalhe.dados
+            const recursoAtual = recursoDetalheAtual
             const elementosEmbarcados = elementos.filter(el => el.recurso_id === recursoAtual.id)
-            const missaoAtual = missoes.find(m => m.recurso_id === recursoAtual.id && m.estado !== 'concluida')
-            const ordemAtual = ordens.find(o => o.recurso_id === recursoAtual.id && o.estado !== 'concluida')
+            const missaoAtual = missaoAtivaRecurso
+            const ordemAtual = ordemAtivaRecurso
             const ocorrenciaAtual = ocorrencias.find(o => o.id === recursoAtual.ocorrencia_id)
             return (
               <div style={{ ...styles.itemCard, border: '2px solid #2563eb' }}>
@@ -2720,32 +2743,32 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   </div>
                 ))}
 
-              {missoes.find(m => m.recurso_id === detalhe.dados.id) && (
+              {missaoAtivaRecurso && (
                 <div>
                   <strong>Missão atual:</strong>{' '}
-                  {missoes.find(m => m.recurso_id === detalhe.dados.id)?.titulo}
+                  {missaoAtivaRecurso.titulo}
                 </div>
               )}
 
-              {ocorrencias.find(o => o.id === detalhe.dados.ocorrencia_id) && (
+              {recursoDetalheAtual.ocorrencia_id && ocorrencias.find(o => o.id === recursoDetalheAtual.ocorrencia_id) && (
                 <div
                   style={{ cursor: 'pointer', color: '#2563eb' }}
                   onClick={() =>
                     setDetalhe({
                       tipo: 'ocorrencia',
-                      dados: ocorrencias.find(o => o.id === detalhe.dados.ocorrencia_id)
+                      dados: ocorrencias.find(o => o.id === recursoDetalheAtual.ocorrencia_id)
                     })
                   }
                 >
                   <strong>Ocorrência associada:</strong>{' '}
-                  {ocorrencias.find(o => o.id === detalhe.dados.ocorrencia_id)?.titulo}
+                  {ocorrencias.find(o => o.id === recursoDetalheAtual.ocorrencia_id)?.titulo}
                 </div>
               )}
 
-              {ordens.find(o => o.recurso_id === detalhe.dados.id && o.estado !== 'concluida') && (
+              {ordemAtivaRecurso && (
                 <div>
                   <strong>Ordem ativa:</strong>{' '}
-                  {ordens.find(o => o.recurso_id === detalhe.dados.id && o.estado !== 'concluida')?.titulo}
+                  {ordemAtivaRecurso.titulo}
                 </div>
               )}
             </>
@@ -3102,7 +3125,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             )
           })}
 
-          {historicoRecurso && (
+          {detalhe.tipo === 'recurso' && historicoRecurso?.recurso_id === recursoDetalheAtual.id && (
               <div style={styles.itemCard}>
                 <strong>📊 Estatísticas</strong>
 
@@ -3114,7 +3137,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </div>
             )}
 
-          {detalhe.tipo === 'recurso' && historicoRecurso?.eventos?.length > 0 && (
+          {detalhe.tipo === 'recurso' && historicoRecurso?.recurso_id === recursoDetalheAtual.id && historicoRecurso?.eventos?.length > 0 && (
             <div style={styles.itemCard}>
               <strong>🕘 Histórico recente</strong>
               {historicoRecurso.eventos.slice(0, 5).map(evento => (
@@ -3152,8 +3175,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   if (!confirmar) return
                   await libertarRecurso(detalhe.dados.id)
                   await refresh()
-                  const atualizado = recursos.find(r => r.id === detalhe.dados.id)
-                  if (atualizado) setDetalhe({ tipo: 'recurso', dados: atualizado })
                 }}
               >
                 Libertar recurso
@@ -3168,8 +3189,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 Ordenar deslocação
               </button>
 
-          {detalhe.dados.ocorrencia_id &&
-            !historicoRecurso?.chegadas_registadas?.includes(detalhe.dados.ocorrencia_id) && (
+          {recursoDetalheAtual.ocorrencia_id &&
+            !historicoRecurso?.chegadas_registadas?.includes(recursoDetalheAtual.ocorrencia_id) && (
               <button
                 style={styles.mainButton}
                 onClick={async () => {
@@ -3192,7 +3213,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     titulo: '',
                     descricao: '',
                     recurso_id: detalhe.dados.id,
-                    ocorrencia_id: detalhe.dados.ocorrencia_id || null
+                    ocorrencia_id: recursoDetalheAtual.ocorrencia_id || null
                   })
 
                   setMostrarFormOrdem(true)
@@ -4119,14 +4140,11 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   iconAnchor: [9, 9],
                 })}
                 eventHandlers={{
-                  click: async () => {
+                  click: () => {
                     setDetalhe({
                       tipo: 'recurso',
                       dados: r
                     })
-
-                    const data = await obterHistoricoRecurso(r.id)
-                    setHistoricoRecurso(data)
                   },
                   dragstart: () => {
                     // Durante o arrasto, o Leaflet controla sozinho a posição do marcador.

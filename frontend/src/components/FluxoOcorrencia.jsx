@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { atribuirOcorrencia, atribuirElementoOcorrencia, confirmarChegada, confirmarChegadaElemento, comunicarSituacao, criarOrdem, alterarEstadoOrdem, obterChamadasOcorrencia, registarChamadaOcorrencia } from '../services/api'
 import { formatarDataHora } from '../utils/formatacao'
 
@@ -17,6 +17,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
   const [chamada, setChamada] = useState({ informacao: '', origem: '', contacto: '', recebido_em: '' })
   const [erro, setErro] = useState('')
   const [ocupado, setOcupado] = useState(false)
+  const ocupadoRef = useRef(false)
   const associados = recursos.filter(r => Number(r.ocorrencia_id) === Number(ocorrencia.id))
   const disponiveis = recursos.filter(r => !r.ocorrencia_id && ['disponivel', 'em_missao'].includes(r.estado))
   const ordensOcorrencia = ordens.filter(o => Number(o.ocorrencia_id) === Number(ocorrencia.id))
@@ -39,6 +40,8 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
   }, [ocorrencia.id])
 
   async function guardar(acao) {
+    if (ocupadoRef.current) return
+    ocupadoRef.current = true
     setErro('')
     setOcupado(true)
     try {
@@ -47,6 +50,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
     } catch (e) {
       setErro(e.message || 'Não foi possível guardar o registo.')
     } finally {
+      ocupadoRef.current = false
       setOcupado(false)
     }
   }
