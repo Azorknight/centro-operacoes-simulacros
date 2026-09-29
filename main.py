@@ -86,6 +86,15 @@ class ParticipacaoRecurso(BaseModel):
     indicativo_operacional: str | None = None
     funcao: str | None = None
 
+class EdicaoRecursoParticipante(BaseModel):
+    nome: str
+    tipo: str
+    ilha: str | None = None
+    marca: str | None = None
+    matricula: str | None = None
+    indicativo_operacional: str | None = None
+    funcao: str | None = None
+
 class ElementoCatalogo(BaseModel):
     nome: str
     entidade: str | None = None
@@ -1135,6 +1144,79 @@ def criar_recurso_catalogo(recurso: RecursoCatalogo):
         return dict(novo)
 
 
+def _editar_recurso_participante(conn, operacao_id: int, catalogo_id: int, dados: EdicaoRecursoParticipante):
+    nome, tipo = dados.nome.strip(), dados.tipo.strip()
+    if not nome or not tipo:
+        raise HTTPException(status_code=400, detail="Nome e tipo do recurso são obrigatórios")
+    estado_operacao = conn.execute(text("SELECT estado FROM operacoes WHERE id=:id"), {"id": operacao_id}).scalar()
+    if estado_operacao is None:
+        raise HTTPException(status_code=404, detail="Operação não encontrada")
+    if estado_operacao in ("concluida", "arquivada"):
+        raise HTTPException(status_code=409, detail="A operação não permite editar recursos")
+    participante = conn.execute(text("""
+        SELECT id FROM operacao_recursos
+        WHERE operacao_id=:operacao_id AND recurso_catalogo_id=:catalogo_id
+          AND estado='participante' AND saida_em IS NULL FOR UPDATE
+    """), {"operacao_id": operacao_id, "catalogo_id": catalogo_id}).scalar()
+    if participante is None:
+        raise HTTPException(status_code=404, detail="Recurso não encontrado nesta operação")
+    duplicado = conn.execute(text("""
+        SELECT id FROM recursos_catalogo
+        WHERE nome=:nome AND tipo=:tipo AND id<>:catalogo_id
+    """), {"nome": nome, "tipo": tipo, "catalogo_id": catalogo_id}).scalar()
+    if duplicado:
+        raise HTTPException(status_code=409, detail="Já existe outro recurso permanente com este nome e tipo")
+    valores = {
+        "operacao_id": operacao_id, "catalogo_id": catalogo_id,
+        "nome": nome, "tipo": tipo,
+        "ilha": (dados.ilha or "").strip() or None,
+        "marca": (dados.marca or "").strip() or None,
+        "matricula": (dados.matricula or "").strip() or None,
+        "indicativo": (dados.indicativo_operacional or "").strip() or None,
+        "funcao": (dados.funcao or "").strip() or None,
+    }
+    conn.execute(text("""
+        UPDATE recursos_catalogo
+        SET nome=:nome, tipo=:tipo, ilha=:ilha, marca=:marca, matricula=:matricula
+        WHERE id=:catalogo_id
+    """), valores)
+    conn.execute(text("""
+        UPDATE operacao_recursos
+        SET indicativo_operacional=:indicativo, funcao=:funcao
+        WHERE id=:participante
+    """), {**valores, "participante": participante})
+    recurso_operacional_id = conn.execute(text("""
+        UPDATE recursos SET nome=:nome, tipo=:tipo, ilha=:ilha, indicativo_radio=:indicativo
+        WHERE operacao_id=:operacao_id AND recurso_catalogo_id=:catalogo_id
+        RETURNING id
+    """), valores).scalar()
+    conn.execute(text("""
+        INSERT INTO timeline_eventos (tipo, descricao, recurso_id, operacao_id)
+        VALUES ('recurso', :descricao, :recurso_id, :operacao_id)
+    """), {"descricao": f"Recurso atualizado: {nome} ({valores['indicativo'] or tipo})",
+           "recurso_id": recurso_operacional_id, "operacao_id": operacao_id})
+    return {"mensagem": "Recurso atualizado"}
+
+
+@app.put("/operacoes/{operacao_id}/recursos-participantes/{recurso_catalogo_id}")
+def editar_recurso_na_preparacao(operacao_id: int, recurso_catalogo_id: int, dados: EdicaoRecursoParticipante):
+    with engine.begin() as conn:
+        return _editar_recurso_participante(conn, operacao_id, recurso_catalogo_id, dados)
+
+
+@app.put("/recursos/{recurso_id}")
+def editar_recurso_operacional(recurso_id: int, dados: EdicaoRecursoParticipante):
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        catalogo_id = conn.execute(text("""
+            SELECT recurso_catalogo_id FROM recursos
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": recurso_id, "operacao_id": operacao_id}).scalar()
+        if catalogo_id is None:
+            raise HTTPException(status_code=404, detail="Recurso não encontrado nesta operação")
+        return _editar_recurso_participante(conn, operacao_id, catalogo_id, dados)
+
+
 @app.get("/operacoes/{operacao_id}/recursos-participantes")
 def listar_recursos_participantes(operacao_id: int):
     with engine.connect() as conn:
@@ -1475,14 +1557,22 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
             """), {"operacao_id": operacao_id, "elemento_catalogo_id": dados.elemento_catalogo_id,
                    "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id})
 
+        nome_elemento = conn.execute(text("""
+            SELECT nome FROM elementos_catalogo WHERE id=:id
+        """), {"id": dados.elemento_catalogo_id}).scalar() or "Elemento"
+        designacao_elemento = nome_elemento
+        if dados.indicativo_operacional:
+            designacao_elemento += f" ({dados.indicativo_operacional})"
+        designacao_recurso = (recurso_operacional["nome"] if recurso_operacional else None)
+
         conn.execute(text("""
             INSERT INTO timeline_eventos (tipo, descricao, elemento_id, recurso_id, ocorrencia_id, operacao_id)
             VALUES ('elemento', :descricao,
                     (SELECT id FROM elementos WHERE operacao_id=:operacao_id
                      AND elemento_catalogo_id=:elemento_catalogo_id),
                     :recurso_id, :ocorrencia_id, :operacao_id)
-        """), {"descricao": f"Preparação do elemento {dados.elemento_catalogo_id} atualizada"
-                           + (f" na viatura {recurso_operacional['nome']}" if recurso_operacional else " sem viatura"),
+        """), {"descricao": f"Preparação de {designacao_elemento} atualizada"
+                           + (f" na viatura {designacao_recurso}" if designacao_recurso else " sem viatura"),
                "elemento_catalogo_id": dados.elemento_catalogo_id,
                "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id, "operacao_id": operacao_id})
         return {"mensagem": "Elemento adicionado ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o"}
@@ -1575,13 +1665,15 @@ def listar_recursos():
                 ST_X(r.localizacao) AS longitude,
                 r.criado_em,
                 r.recurso_catalogo_id,
-                opr.funcao AS funcao_operacional
+                opr.funcao AS funcao_operacional,
+                rc.marca, rc.matricula
             FROM recursos r
             JOIN operacao_recursos opr
               ON opr.operacao_id = r.operacao_id
              AND opr.recurso_catalogo_id = r.recurso_catalogo_id
              AND opr.estado = 'participante'
              AND opr.saida_em IS NULL
+            JOIN recursos_catalogo rc ON rc.id = r.recurso_catalogo_id
             WHERE r.operacao_id = :operacao_id
             ORDER BY r.nome, r.tipo
         """), {"operacao_id": operacao_id})
@@ -1908,19 +2000,50 @@ def estatisticas_ocorrencia(ocorrencia_id: int):
         }
 
 
+def _descricao_evento_para_exibicao(conn, evento, operacao_id):
+    descricao = evento["descricao"] or ""
+    # Eventos antigos guardavam os números internos em vez dos nomes.
+    if evento.get("elemento_id") and re.match(r"^Preparação do elemento \d+ atualizada", descricao):
+        elemento = conn.execute(text("""
+            SELECT nome, indicativo_radio FROM elementos
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": evento["elemento_id"], "operacao_id": operacao_id}).mappings().first()
+        if elemento:
+            designacao = elemento["nome"]
+            if elemento["indicativo_radio"]:
+                designacao += f" ({elemento['indicativo_radio']})"
+            descricao = re.sub(r"^Preparação do elemento \d+", lambda _: f"Preparação de {designacao}", descricao, count=1)
+    troca = re.search(r"\(recurso previsto: (\d+|nenhum) → (\d+|nenhum)\)$", descricao)
+    if troca:
+        def nome_recurso(valor):
+            if valor == "nenhum":
+                return "nenhum"
+            recurso = conn.execute(text("""
+                SELECT nome, indicativo_radio FROM recursos
+                WHERE id=:id AND operacao_id=:operacao_id
+            """), {"id": int(valor), "operacao_id": operacao_id}).mappings().first()
+            return (recurso["indicativo_radio"] or recurso["nome"]) if recurso else valor
+        descricao = (descricao[:troca.start()] + "(recurso previsto: "
+                     + nome_recurso(troca.group(1)) + " → " + nome_recurso(troca.group(2)) + ")")
+    return descricao
+
+
 @app.get("/timeline")
 def listar_timeline():
     with engine.connect() as conn:
+        operacao_id = exigir_operacao_ativa_id(conn)
         resultado = conn.execute(text("""
             SELECT id, tipo, descricao, recurso_id, elemento_id, ocorrencia_id, criado_em
             FROM timeline_eventos
             WHERE operacao_id = :operacao_id
             ORDER BY criado_em DESC
-        """), {"operacao_id": exigir_operacao_ativa_id(conn)})
+        """), {"operacao_id": operacao_id})
 
         dados = []
-        for linha in resultado:
-            dados.append(dict(linha._mapping))
+        for linha in resultado.fetchall():
+            evento = dict(linha._mapping)
+            evento["descricao"] = _descricao_evento_para_exibicao(conn, evento, operacao_id)
+            dados.append(evento)
 
         return dados
     
@@ -2547,6 +2670,14 @@ class Missao(BaseModel):
     situacao_operacional: str = "por_avaliar"
 
 
+class EdicaoMissaoPlaneada(BaseModel):
+    titulo: str
+    descricao: str = ""
+    zona: str | None = None
+    notas: str | None = None
+    recurso_id: int | None = None
+
+
 class EstadoMissao(BaseModel):
     estado: str
 
@@ -2604,6 +2735,10 @@ def criar_missao(missao: Missao):
     estado = missao.estado if missao.estado in estados_validos else "planeada"
     with engine.begin() as conn:
         operacao_id = exigir_operacao_editavel_id(conn)
+        if missao.recurso_id is not None and not conn.execute(text("""
+            SELECT 1 FROM recursos WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": missao.recurso_id, "operacao_id": operacao_id}).scalar():
+            raise HTTPException(status_code=404, detail="Recurso não encontrado na operação ativa")
         missao_id = conn.execute(text("""
             INSERT INTO missoes (
                 titulo, descricao, prioridade, estado, recurso_id, ocorrencia_id,
@@ -2645,6 +2780,61 @@ def criar_missao(missao: Missao):
         """), {"descricao": f"Miss\u00e3o criada: {missao.titulo.strip()}",
                  "operacao_id": operacao_id, "ocorrencia_id": missao.ocorrencia_id})
     return {"mensagem": "Miss\u00e3o criada com sucesso", "id": missao_id}
+
+@app.put("/missoes/{missao_id}")
+def editar_missao_planeada(missao_id: int, dados: EdicaoMissaoPlaneada):
+    titulo = dados.titulo.strip()
+    if not titulo:
+        raise HTTPException(status_code=400, detail="O nome da missão é obrigatório")
+    with engine.begin() as conn:
+        operacao_id = exigir_operacao_editavel_id(conn)
+        missao = conn.execute(text("""
+            SELECT id, titulo, estado, recurso_id, ocorrencia_id
+            FROM missoes WHERE id=:id AND operacao_id=:operacao_id FOR UPDATE
+        """), {"id": missao_id, "operacao_id": operacao_id}).mappings().first()
+        if not missao:
+            raise HTTPException(status_code=404, detail="Missão não encontrada")
+        if missao["estado"] != "planeada":
+            raise HTTPException(status_code=409, detail="Só é possível editar uma missão planeada")
+        if dados.recurso_id is not None and not conn.execute(text("""
+            SELECT 1 FROM recursos WHERE id=:id AND operacao_id=:operacao_id
+        """), {"id": dados.recurso_id, "operacao_id": operacao_id}).scalar():
+            raise HTTPException(status_code=404, detail="Recurso não encontrado na operação ativa")
+        ids = [row[0] for row in conn.execute(text("""
+            SELECT recurso_id FROM missao_recursos WHERE missao_id=:id ORDER BY atribuido_em, id
+        """), {"id": missao_id})]
+        if len(ids) > 1 and dados.recurso_id != missao["recurso_id"]:
+            raise HTTPException(status_code=409, detail="Esta missão tem vários recursos. Altere-os em Atribuir.")
+        conn.execute(text("""
+            UPDATE missoes SET titulo=:titulo, descricao=:descricao, zona=:zona,
+                notas=:notas, recurso_id=:recurso_id, responsavel=NULL, atualizada_em=NOW()
+            WHERE id=:id AND operacao_id=:operacao_id
+        """), {"titulo": titulo, "descricao": dados.descricao,
+               "zona": (dados.zona or "").strip() or None, "notas": dados.notas,
+               "recurso_id": dados.recurso_id, "id": missao_id, "operacao_id": operacao_id})
+        if len(ids) <= 1 and ids != ([dados.recurso_id] if dados.recurso_id is not None else []):
+            conn.execute(text("DELETE FROM missao_recursos WHERE missao_id=:id"), {"id": missao_id})
+            if dados.recurso_id is not None:
+                conn.execute(text("""
+                    INSERT INTO missao_recursos (missao_id, recurso_id) VALUES (:id, :recurso_id)
+                """), {"id": missao_id, "recurso_id": dados.recurso_id})
+        descricao_evento = f"Missão planeada atualizada: {titulo}"
+        if missao["recurso_id"] != dados.recurso_id:
+            recursos_evento = conn.execute(text("""
+                SELECT id, COALESCE(NULLIF(indicativo_radio, ''), nome) AS designacao
+                FROM recursos WHERE operacao_id=:operacao_id AND id IN (:anterior, :novo)
+            """), {"operacao_id": operacao_id, "anterior": missao["recurso_id"],
+                   "novo": dados.recurso_id}).mappings().all()
+            nomes = {r["id"]: r["designacao"] for r in recursos_evento}
+            anterior = nomes.get(missao["recurso_id"], "nenhum")
+            novo = nomes.get(dados.recurso_id, "nenhum")
+            descricao_evento += f" (recurso previsto: {anterior} → {novo})"
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
+            VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
+        """), {"descricao": descricao_evento, "operacao_id": operacao_id,
+               "ocorrencia_id": missao["ocorrencia_id"]})
+    return {"mensagem": "Missão planeada atualizada", "id": missao_id}
 
 @app.put("/missoes/{missao_id}/estado")
 def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
@@ -3381,7 +3571,7 @@ def historico_recurso(recurso_id: int):
 
         eventos = conn.execute(
             text("""
-                SELECT id, tipo, descricao, ocorrencia_id, criado_em
+                SELECT id, tipo, descricao, elemento_id, ocorrencia_id, criado_em
                 FROM timeline_eventos
                 WHERE recurso_id = :recurso_id
                 AND operacao_id = :operacao_id
@@ -3484,6 +3674,12 @@ def historico_recurso(recurso_id: int):
                 "tempo_empenhado_segundos": segundos
             })
 
+        eventos_visiveis = []
+        for linha in eventos:
+            evento = dict(linha._mapping)
+            evento["descricao"] = _descricao_evento_para_exibicao(conn, evento, operacao_id)
+            eventos_visiveis.append(evento)
+
         return {
             "recurso_id": recurso_id,
             "total_ocorrencias": total_ocorrencias,
@@ -3492,7 +3688,7 @@ def historico_recurso(recurso_id: int):
             "chegadas_registadas": chegadas_ids,
             "tempo_total_empenhado_segundos": tempo_total_empenhado_segundos,
             "ocorrencias_empenho": ocorrencias_empenho,
-            "eventos": [dict(linha._mapping) for linha in eventos]
+            "eventos": eventos_visiveis
         }
 
 

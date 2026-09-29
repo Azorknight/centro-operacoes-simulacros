@@ -33,9 +33,12 @@ import {
   libertarElemento,
   confirmarChegada,
   criarRecurso,
-  criarElemento,
+  editarRecurso,
+  criarElementoCatalogo,
+  adicionarElementoParticipante,
   criarOcorrencia,
   criarMissao,
+  atualizarMissao,
   criarOrdem,
   atribuirOcorrencia,
   atribuirRecursoMissao,
@@ -120,13 +123,27 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     prioridade: 'media',
     estado: 'planeada',
     responsavel: '',
+    recurso_id: '',
     notas: '',
     situacao_operacional: 'por_avaliar',
     ocorrencia_id: null,
     objetivo_id: null
   })
   const [mostrarFormMissao, setMostrarFormMissao] = useState(false)
+  const [missaoEmEdicao, setMissaoEmEdicao] = useState(null)
+  const [aGuardarMissao, setAGuardarMissao] = useState(false)
+  const guardarMissaoEmCursoRef = useRef(false)
   const [missaoParaAtribuir, setMissaoParaAtribuir] = useState(null)
+  const abrirEdicaoMissao = (missao) => {
+    setMissaoEmEdicao(missao)
+    setFormMissao({
+      titulo: missao.titulo || '', descricao: missao.descricao || '',
+      recurso_id: missao.recurso_id == null ? '' : String(missao.recurso_id),
+      zona: missao.zona || '', notas: missao.notas || '',
+      ocorrencia_id: missao.ocorrencia_id, objetivo_id: missao.objetivo_id
+    })
+    setMostrarFormMissao(true)
+  }
   const [formOrdem, setFormOrdem] = useState({
     titulo: '',
     descricao: '',
@@ -141,11 +158,16 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     nome: '',
     funcao: '',
     entidade: '',
+    posto: '',
     indicativo_radio: '',
     recurso_id: null
   })
 
   const [mostrarFormElemento, setMostrarFormElemento] = useState(false)
+  const [recursoEmEdicao, setRecursoEmEdicao] = useState(null)
+  const [aGuardarRecurso, setAGuardarRecurso] = useState(false)
+  const [aGuardarElemento, setAGuardarElemento] = useState(false)
+  const criarElementoEmCursoRef = useRef(false)
   const [modoMapa, setModoMapa] = useState({ tipo: 'normal', alvo: null })
   const [elementoParaReembarcar, setElementoParaReembarcar] = useState(null)
   const [historicoRecurso, setHistoricoRecurso] = useState(null)
@@ -553,8 +575,51 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     doc.text(String(nomeOperacao), 50, 88)
     doc.text(String(estadoOperacao), 50, 100)
 
-    // 2. Ocorrências
-    let y = tituloSecao(2, 'Ocorrências', 119)
+    let numeroSecao = 2
+    let y = 119
+    const missoesPlaneadasRelatorio = missoes.filter((missao) => missao.estado === 'planeada')
+
+    if (missoesPlaneadasRelatorio.length > 0) {
+      y = tituloSecao(numeroSecao++, 'Missões planeadas', y)
+      missoesPlaneadasRelatorio.forEach((missao, indice) => {
+        const ocorrencia = ocorrencias.find((item) => Number(item.id) === Number(missao.ocorrencia_id))
+        const informacoes = [
+          missao.zona ? `Zona / percurso: ${missao.zona}` : null,
+          missao.responsavel ? `Responsável previsto: ${missao.responsavel}` : null,
+          ocorrencia ? `Ocorrência: ${ocorrencia.titulo}` : null,
+          missao.descricao || null,
+          missao.notas ? `Observações: ${missao.notas}` : null
+        ].filter(Boolean)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9.2)
+        const titulo = doc.splitTextToSize(`${indice + 1}. ${missao.titulo}`, larguraTexto - 10)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.2)
+        const detalhes = informacoes.map((linha) => doc.splitTextToSize(linha, larguraTexto - 10))
+        const alturaBloco = 10 + (titulo.length + detalhes.reduce((total, linhas) => total + linhas.length, 0)) * 4.2
+
+        y = garantirEspaco(y, alturaBloco + 4)
+        doc.setDrawColor(218, 223, 230)
+        doc.roundedRect(margem, y - 4, larguraTexto, alturaBloco - 2, 1.5, 1.5, 'S')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9.2)
+        doc.setTextColor(...azulPSP)
+        doc.text(titulo, margem + 5, y + 2, { lineHeightFactor: 1.25 })
+        let yLinha = y + 2 + titulo.length * 4.2
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.2)
+        doc.setTextColor(55, 55, 55)
+        detalhes.forEach((linhas) => {
+          doc.text(linhas, margem + 5, yLinha, { lineHeightFactor: 1.25 })
+          yLinha += linhas.length * 4.2
+        })
+        y += alturaBloco + 4
+      })
+      y += 6
+    }
+
+    // Ocorrências
+    y = tituloSecao(numeroSecao++, 'Ocorrências', y)
 
     if (ocorrencias.length === 0) {
       y = escreverTexto('Não existem ocorrências registadas.', margem, y)
@@ -598,9 +663,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     y += 6
 
-    // 3. Recursos Operacionais
+    // Recursos Operacionais
     y = garantirEspaco(y, 53)
-    y = tituloSecao(3, 'Recursos Operacionais', y)
+    y = tituloSecao(numeroSecao++, 'Recursos Operacionais', y)
 
     const formatarTempoRelatorio = (segundos = 0) => {
       const total = Math.max(0, Math.floor(Number(segundos) || 0))
@@ -751,9 +816,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     y += 6
 
-    // 4. Ordens emitidas para as ocorrências
+    // Ordens emitidas para as ocorrências
     y = garantirEspaco(y, 45)
-    y = tituloSecao(4, 'Ordens', y)
+    y = tituloSecao(numeroSecao++, 'Ordens', y)
 
     const ordensOrdenadas = [...ordens].sort((a, b) => {
       const diferenca = new Date(a.criado_em || 0).getTime() - new Date(b.criado_em || 0).getTime()
@@ -816,8 +881,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     y += 6
 
-    // 5. Cronologia Operacional
-    y = tituloSecao(5, 'Cronologia Operacional', y)
+    // Cronologia Operacional
+    y = tituloSecao(numeroSecao++, 'Cronologia Operacional', y)
 
     const cronologiaOrdenada = [...timeline].sort((a, b) => {
       const dataA = new Date(a.criado_em || 0).getTime()
@@ -876,8 +941,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     y += 6
 
-    // 6. Síntese Final
-    y = tituloSecao(6, 'Síntese Final', y)
+    // Síntese Final
+    y = tituloSecao(numeroSecao++, 'Síntese Final', y)
 
     const ocorrenciasAtivasRelatorio = ocorrencias.filter((o) => !['fechada', 'encerrada', 'arquivada'].includes(o.estado)).length
     const recursosEmMissaoRelatorio = resumoRecursosOperacionais.filter(
@@ -1883,11 +1948,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         prioridade: 'media',
                         estado: 'planeada',
                         responsavel: '',
+                        recurso_id: '',
                         notas: '',
                         situacao_operacional: 'por_avaliar',
                         ocorrencia_id: ocorrenciaContexto?.id || null,
                         objetivo_id: o.id
                       })
+                      setMissaoEmEdicao(null)
                       setMostrarFormMissao(true)
                     }}
                   >
@@ -2118,13 +2185,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           <strong style={styles.sectionTitle}>Missões</strong>
           <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => {
             setFormMissao({ titulo: '', descricao: '', prioridade: 'media', estado: 'planeada',
-              responsavel: '', notas: '', situacao_operacional: 'por_avaliar', ocorrencia_id: null, objetivo_id: null })
+              recurso_id: '', notas: '', situacao_operacional: 'por_avaliar', ocorrencia_id: null, objetivo_id: null })
+            setMissaoEmEdicao(null)
             setMostrarFormMissao(true)
           }}>+ Planear missão</button>
           {missoes
             .filter((m) => m.estado !== 'concluida')
             .map((m) => {
               const recursosMissao = recursos.filter((r) => (m.recurso_ids || []).includes(r.id))
+              const recursoPrincipalMissao = recursos.find((r) => r.id === m.recurso_id)
 
               return (
               <div
@@ -2150,18 +2219,26 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 }}
               >
                 <div style={styles.itemTitle}>
-                  {m.titulo} ({m.prioridade})
+                  {m.titulo}
                 </div>
                 <div style={styles.itemMeta}>{m.estado}</div>
                 {m.zona && <div style={styles.itemSubtle}>Zona: {m.zona}</div>}
-                {m.responsavel && <div style={styles.itemSubtle}>Responsável: {m.responsavel}</div>}
+                {(recursoPrincipalMissao || m.responsavel) && (
+                  <div style={styles.itemSubtle}>Responsável: {recursoPrincipalMissao?.indicativo_radio || recursoPrincipalMissao?.nome || m.responsavel}</div>
+                )}
                 <div style={styles.itemSubtle}>
                   {recursosMissao.length === 0
                     ? 'Sem recursos atribuídos'
                     : `${recursosMissao.length} recurso${recursosMissao.length === 1 ? '' : 's'} atribuído${recursosMissao.length === 1 ? '' : 's'}`}
                 </div>
 
-                <div style={styles.buttonRow}>
+                <div style={{ ...styles.buttonRow, flexWrap: 'wrap' }}>
+                  {m.estado === 'planeada' && !modoBloqueado && (
+                    <button style={styles.smallButton} onClick={(e) => {
+                      e.stopPropagation()
+                      abrirEdicaoMissao(m)
+                    }}>Editar</button>
+                  )}
                   <button
                     style={styles.smallButton}
                     onClick={(e) => {
@@ -2915,8 +2992,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 />
                 {!modoBloqueado && <button type="button" style={styles.mainButton} onClick={() => {
                   setFormMissao({ titulo: '', descricao: '', prioridade: 'media', estado: 'planeada',
-                    responsavel: '', notas: '', situacao_operacional: 'por_avaliar',
+                    recurso_id: '', notas: '', situacao_operacional: 'por_avaliar',
                     ocorrencia_id: ocorrenciaAtual.id, objetivo_id: null })
+                  setMissaoEmEdicao(null)
                   setMostrarFormMissao(true)
                 }}>Planear missão nesta ocorrência</button>}
                 {missoes.some(m => Number(m.ocorrencia_id) === Number(ocorrenciaAtual.id)) && (
@@ -2989,6 +3067,22 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             <>
               <button
                 style={styles.mainButton}
+                disabled={modoBloqueado}
+                onClick={() => setRecursoEmEdicao({
+                  id: recursoDetalheAtual.id,
+                  nome: recursoDetalheAtual.nome || '',
+                  tipo: recursoDetalheAtual.tipo || '',
+                  ilha: recursoDetalheAtual.ilha || '',
+                  marca: recursoDetalheAtual.marca || '',
+                  matricula: recursoDetalheAtual.matricula || '',
+                  indicativo_operacional: recursoDetalheAtual.indicativo_radio || '',
+                  funcao: recursoDetalheAtual.funcao_operacional || ''
+                })}
+              >
+                Editar recurso
+              </button>
+              <button
+                style={styles.mainButton}
                 onClick={() => mudarEstado(detalhe.dados.id, 'em_missao')}
               >
                 Marcar em missão
@@ -3057,11 +3151,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
               <button
                 style={styles.mainButton}
+                disabled={modoBloqueado}
                 onClick={() => {
                   setFormElemento({
                     nome: '',
                     funcao: '',
                     entidade: '',
+                    posto: '',
                     indicativo_radio: '',
                     recurso_id: detalhe.dados.id
                   })
@@ -3069,7 +3165,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   setMostrarFormElemento(true)
                 }}
               >
-                Adicionar elemento
+                Criar elemento nesta viatura
               </button>
             </>
           )}
@@ -3077,6 +3173,11 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
             {detalhe.tipo === 'missao' && (
               <>
+                {detalhe.dados.estado === 'planeada' && !modoBloqueado && (
+                  <button style={styles.mainButton} onClick={() => abrirEdicaoMissao(detalhe.dados)}>
+                    Editar missão
+                  </button>
+                )}
                
                 <button
                   style={styles.mainButton}
@@ -3139,6 +3240,34 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               Fechar
             </button>
             </div>
+        </div>
+      )}
+
+      {recursoEmEdicao && (
+        <div style={styles.detailPanel}>
+          <div style={styles.panelTitle}>Editar recurso</div>
+          {[['nome', 'Nome *'], ['tipo', 'Tipo *'], ['indicativo_operacional', 'Indicativo rádio'],
+            ['funcao', 'Função nesta operação'], ['ilha', 'Ilha'], ['marca', 'Marca'], ['matricula', 'Matrícula']].map(([campo, rotulo]) => (
+            <label key={campo} style={styles.itemSubtle}>
+              {rotulo}
+              <input style={styles.input} value={recursoEmEdicao[campo] || ''}
+                onChange={(e) => setRecursoEmEdicao({ ...recursoEmEdicao, [campo]: e.target.value })} />
+            </label>
+          ))}
+          <button style={styles.mainButton} disabled={aGuardarRecurso || !recursoEmEdicao.nome.trim() || !recursoEmEdicao.tipo.trim()}
+            onClick={async () => {
+              if (aGuardarRecurso) return
+              setAGuardarRecurso(true)
+              try {
+                const { id, ...dados } = recursoEmEdicao
+                await editarRecurso(id, dados)
+                await refresh()
+                setRecursoEmEdicao(null)
+              } catch (erro) {
+                window.alert(erro.message || 'Não foi possível editar o recurso.')
+              } finally { setAGuardarRecurso(false) }
+            }}>Guardar alterações</button>
+          <button style={styles.mainButton} onClick={() => setRecursoEmEdicao(null)}>Cancelar</button>
         </div>
       )}
 
@@ -3416,7 +3545,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
       {mostrarFormMissao && (
         <div style={styles.detailPanel}>
-          <div style={styles.panelTitle}>Nova missão</div>
+          <div style={styles.panelTitle}>{missaoEmEdicao ? 'Editar missão planeada' : 'Nova missão'}</div>
 
           {(formMissao.ocorrencia_id || formMissao.objetivo_id) && (
             <div style={{ ...styles.itemCard, marginBottom: 10, background: '#f8fafc' }}>
@@ -3435,7 +3564,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <input
             style={styles.input}
-            placeholder="Título"
+            placeholder="Nome"
             value={formMissao.titulo}
             onChange={(e) =>
               setFormMissao({ ...formMissao, titulo: e.target.value })
@@ -3451,107 +3580,76 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             }
           />
 
-          <input
+          <label style={styles.itemSubtle} htmlFor="recurso-previsto-missao">Responsável (recurso previsto)</label>
+          <select
+            id="recurso-previsto-missao"
             style={styles.input}
-            placeholder="Responsável (opcional)"
-            value={formMissao.responsavel}
-            onChange={(e) =>
-              setFormMissao({ ...formMissao, responsavel: e.target.value })
-            }
-          />
+            value={formMissao.recurso_id ?? ''}
+            disabled={missaoEmEdicao && (missaoEmEdicao.recurso_ids || []).length > 1}
+            onChange={(e) => setFormMissao({ ...formMissao, recurso_id: e.target.value })}
+          >
+            <option value="">Sem recurso previsto</option>
+            {recursos.map((r) => (
+              <option key={r.id} value={r.id}>{r.indicativo_radio || r.nome}{r.indicativo_radio && r.nome ? ` — ${r.nome}` : ''}</option>
+            ))}
+          </select>
+          {missaoEmEdicao && (missaoEmEdicao.recurso_ids || []).length > 1 && (
+            <div style={styles.itemSubtle}>Esta missão tem vários recursos. Use «Atribuir» para alterar a equipa.</div>
+          )}
 
           <input style={styles.input} placeholder="Zona ou percurso atribuído (ex.: Posto A — Ponto de Encontro)" value={formMissao.zona || ''} onChange={e => setFormMissao({ ...formMissao, zona: e.target.value })} />
 
           <textarea
             style={{ ...styles.input, minHeight: 70, resize: 'vertical' }}
-            placeholder="Notas operacionais (opcional)"
+            placeholder="Notas adicionais (opcional)"
             value={formMissao.notas}
             onChange={(e) =>
               setFormMissao({ ...formMissao, notas: e.target.value })
             }
           />
 
-          <select
-            style={styles.input}
-            value={formMissao.situacao_operacional || 'por_avaliar'}
-            onChange={(e) => setFormMissao({ ...formMissao, situacao_operacional: e.target.value })}
-          >
-            <option value="por_avaliar">Por avaliar</option>
-            <option value="sob_controlo">Sob controlo</option>
-            <option value="estavel">Estável</option>
-            <option value="complexa">Complexa</option>
-            <option value="critica">Crítica</option>
-            <option value="necessita_reforco">Necessita de reforço</option>
-          </select>
-
-          <select
-            style={styles.input}
-            value={formMissao.estado || 'planeada'}
-            onChange={(e) =>
-              setFormMissao({ ...formMissao, estado: e.target.value })
-            }
-          >
-            <option value="planeada">Estado inicial: Planeada</option>
-            <option value="em_execucao">Estado inicial: Em execução</option>
-          </select>
-
-          <select
-            style={styles.input}
-            value={formMissao.prioridade}
-            onChange={(e) =>
-              setFormMissao({ ...formMissao, prioridade: e.target.value })
-            }
-          >
-            <option value="baixa">Baixa</option>
-            <option value="media">Média</option>
-            <option value="alta">Alta</option>
-          </select>
-
           <button
             style={styles.mainButton}
+            disabled={modoBloqueado || aGuardarMissao || !formMissao.titulo.trim()}
             onClick={async () => {
-              if (!formMissao.titulo) return
-
-              const novaMissao = await criarMissao({
-                titulo: formMissao.titulo,
-                descricao: formMissao.descricao,
-                prioridade: formMissao.prioridade,
-                estado: formMissao.estado || 'planeada',
-                responsavel: formMissao.responsavel || null,
-                zona: formMissao.zona || null,
-                notas: formMissao.notas || null,
-                situacao_operacional: formMissao.situacao_operacional || 'por_avaliar',
-                recurso_id: null,
-                ocorrencia_id: formMissao.ocorrencia_id
-              })
-
-              if (formMissao.objetivo_id && novaMissao?.id) {
-                await associarObjetivoMissao(novaMissao.id, formMissao.objetivo_id)
+              if (guardarMissaoEmCursoRef.current || !formMissao.titulo.trim()) return
+              guardarMissaoEmCursoRef.current = true
+              setAGuardarMissao(true)
+              try {
+                const dados = {
+                  titulo: formMissao.titulo.trim(), descricao: formMissao.descricao,
+                  zona: formMissao.zona || null, notas: formMissao.notas || null,
+                  recurso_id: formMissao.recurso_id ? Number(formMissao.recurso_id) : null
+                }
+                if (missaoEmEdicao) {
+                  await atualizarMissao(missaoEmEdicao.id, dados)
+                } else {
+                  const novaMissao = await criarMissao({
+                    ...dados, estado: 'planeada', prioridade: 'media',
+                    situacao_operacional: 'por_avaliar', ocorrencia_id: formMissao.ocorrencia_id
+                  })
+                  if (formMissao.objetivo_id && novaMissao?.id) {
+                    await associarObjetivoMissao(novaMissao.id, formMissao.objetivo_id)
+                  }
+                }
+                await refresh()
+                setDetalhe(null)
+                setMostrarFormMissao(false)
+                setMissaoEmEdicao(null)
+              } catch (erro) {
+                window.alert(erro.message || 'Não foi possível guardar a missão.')
+              } finally {
+                guardarMissaoEmCursoRef.current = false
+                setAGuardarMissao(false)
               }
-
-              await refresh()
-
-              setMostrarFormMissao(false)
-
-              setFormMissao({
-                titulo: '',
-                descricao: '',
-                prioridade: 'media',
-                responsavel: '',
-                zona: '',
-                notas: '',
-                situacao_operacional: 'por_avaliar',
-                ocorrencia_id: null,
-                objetivo_id: null
-              })
             }}
           >
-            Criar missão
+            {aGuardarMissao ? 'A guardar…' : missaoEmEdicao ? 'Guardar alterações' : 'Criar missão'}
           </button>
 
           <button
             style={styles.mainButton}
-            onClick={() => setMostrarFormMissao(false)}
+            onClick={() => { setMostrarFormMissao(false); setMissaoEmEdicao(null) }}
           >
             Cancelar
           </button>
@@ -3773,6 +3871,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <input
             style={styles.input}
+            placeholder="Posto"
+            value={formElemento.posto}
+            onChange={(e) => setFormElemento({ ...formElemento, posto: e.target.value })}
+          />
+
+          <input
+            style={styles.input}
             placeholder="Indicativo rádio"
             value={formElemento.indicativo_radio}
             onChange={(e) =>
@@ -3782,32 +3887,40 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <button
             style={styles.mainButton}
+            disabled={modoBloqueado || aGuardarElemento || !formElemento.nome.trim()}
             onClick={async () => {
-                if (!formElemento.nome) return
-
-                await criarElemento({
-                  nome: formElemento.nome,
-                  funcao: formElemento.funcao,
-                  entidade: formElemento.entidade,
-                  estado: 'disponivel',
-                  indicativo_radio: formElemento.indicativo_radio,
-                  recurso_id: formElemento.recurso_id,
-                  ocorrencia_id: null,
-                  latitude: null,
-                  longitude: null
-                })
-
-                await refresh()
-
-                setMostrarFormElemento(false)
-
-                setFormElemento({
-                  nome: '',
-                  funcao: '',
-                  entidade: '',
-                  indicativo_radio: '',
-                  recurso_id: null
-                })
+                if (criarElementoEmCursoRef.current || !formElemento.nome.trim()) return
+                criarElementoEmCursoRef.current = true
+                setAGuardarElemento(true)
+                try {
+                  const recurso = recursos.find((r) => r.id === formElemento.recurso_id)
+                  if (!recurso?.recurso_catalogo_id || !operacaoAtiva?.id) {
+                    throw new Error('Recurso não encontrado nesta operação.')
+                  }
+                  if (elementos.some((e) => e.nome?.trim().toLowerCase() === formElemento.nome.trim().toLowerCase()
+                    && (e.entidade || '').trim().toLowerCase() === formElemento.entidade.trim().toLowerCase()
+                    && e.estado !== 'retirado')) {
+                    throw new Error('Este elemento já participa na operação. Altere a viatura na ficha do elemento.')
+                  }
+                  const novo = await criarElementoCatalogo({
+                    nome: formElemento.nome.trim(), entidade: formElemento.entidade.trim() || null,
+                    posto: formElemento.posto.trim() || null
+                  })
+                  await adicionarElementoParticipante(operacaoAtiva.id, {
+                    elemento_catalogo_id: novo.id,
+                    indicativo_operacional: formElemento.indicativo_radio.trim() || null,
+                    funcao_operacional: formElemento.funcao.trim() || null,
+                    recurso_catalogo_id: recurso.recurso_catalogo_id
+                  })
+                  await refresh()
+                  setMostrarFormElemento(false)
+                  setFormElemento({ nome: '', funcao: '', entidade: '', posto: '', indicativo_radio: '', recurso_id: null })
+                } catch (erro) {
+                  window.alert(erro.message || 'Não foi possível criar o elemento.')
+                } finally {
+                  criarElementoEmCursoRef.current = false
+                  setAGuardarElemento(false)
+                }
               }}
           >
             Criar elemento

@@ -152,6 +152,17 @@ export function criarMissao(dados) {
   })
 }
 
+export function editarRecurso(id, dados) {
+  return request(`/recursos/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
+}
+
+export function atualizarMissao(id, dados) {
+  return request(`/missoes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(dados)
+  })
+}
+
 export function obterRecursosMissao(missaoId) {
   return request(`/missoes/${missaoId}/recursos`)
 }
@@ -327,6 +338,12 @@ export function adicionarRecursoParticipante(operacaoId, dados) {
   return request(`/operacoes/${operacaoId}/recursos-participantes`, {
     method: 'POST',
     body: JSON.stringify(dados)
+  })
+}
+
+export function editarRecursoParticipante(operacaoId, recursoCatalogoId, dados) {
+  return request(`/operacoes/${operacaoId}/recursos-participantes/${recursoCatalogoId}`, {
+    method: 'PUT', body: JSON.stringify(dados)
   })
 }
 
