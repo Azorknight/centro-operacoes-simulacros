@@ -1404,7 +1404,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           })}
           <strong style={styles.sectionTitle}>Elementos ({resumoElementosOperacionais.length})</strong>
           {resumoElementosOperacionais.map(el => <div key={el.elemento_id} style={styles.itemCard}>
-            <div style={styles.itemTitle}>{[el.posto, el.nome].filter(Boolean).join(' ')}</div>
+            <div style={styles.itemTitle}>{el.posto && !String(el.nome || '').toLocaleLowerCase('pt-PT').startsWith(`${String(el.posto).toLocaleLowerCase('pt-PT')} `) ? `${el.posto} ${el.nome}` : el.nome}</div>
             <div style={styles.itemSubtle}>{el.funcao || 'Elemento'} · {el.indicativo_radio || 'Sem indicativo'}</div>
             <div style={styles.itemMeta}>{el.ocorrencia_id ? (el.estado === 'apeado' ? 'Apeado em ocorrência' : 'Em ocorrência') : (recursos.find(r => r.id === el.recurso_id)?.estado === 'em_missao' ? 'Em missão' : el.estado === 'retirado' ? 'Retirado' : 'Disponível')} · {el.recurso_indicativo || el.recurso_nome || 'Sem viatura'}</div>
             <div>Ocorrências: {el.total_ocorrencias || 0} · Tempo total: {formatarTempoEmpenhado(el.tempo_total_empenhado_segundos)}</div>

@@ -3335,6 +3335,11 @@ def resumo_recursos_operacionais():
                 r.ocorrencia_id,
                 o.titulo AS ocorrencia_atual
             FROM recursos r
+            JOIN operacao_recursos opr
+              ON opr.operacao_id = r.operacao_id
+             AND opr.recurso_catalogo_id = r.recurso_catalogo_id
+             AND opr.estado = 'participante'
+             AND opr.saida_em IS NULL
             LEFT JOIN ocorrencias o
               ON o.id = r.ocorrencia_id
              AND o.operacao_id = r.operacao_id
