@@ -77,6 +77,14 @@ import {
   associarSetorMissao
 } from './services/api' 
 
+function nomeComPosto(elemento) {
+  const nome = String(elemento.nome || '').trim()
+  const posto = String(elemento.posto || '').trim()
+  return posto && !nome.toLocaleLowerCase('pt-PT').startsWith(`${posto.toLocaleLowerCase('pt-PT')} `)
+    ? `${posto} ${nome}`
+    : nome
+}
+
 function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null }) {
   const [recursos, setRecursos] = useState([])
   const [resumoRecursosOperacionais, setResumoRecursosOperacionais] = useState([])
@@ -620,6 +628,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     // Ocorrências
     y = tituloSecao(numeroSecao++, 'Ocorrências', y)
+    const horaRelatorio = (valor) => valor ? new Date(valor).toLocaleString('pt-PT', {
+      timeZone: 'Atlantic/Azores', day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }) : '—'
 
     if (ocorrencias.length === 0) {
       y = escreverTexto('Não existem ocorrências registadas.', margem, y)
@@ -627,7 +639,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       ocorrencias.forEach((ocorrencia, indice) => {
         const descricao = ocorrencia.descricao ? String(ocorrencia.descricao) : ''
         const linhasDescricao = descricao ? doc.splitTextToSize(descricao, larguraTexto - 6) : []
-        const alturaBloco = 17 + (linhasDescricao.length * 4.5)
+        const chegadas = timeline.filter((evento) => evento.tipo === 'chegada' && Number(evento.ocorrencia_id) === Number(ocorrencia.id))
+        const primeiraChegada = chegadas.length ? new Date(Math.min(...chegadas.map((evento) => new Date(evento.criado_em).getTime()))) : null
+        const horarios = [
+          `Receção: ${horaRelatorio(ocorrencia.recebida_em)}`,
+          `Primeira chegada: ${horaRelatorio(primeiraChegada)}`,
+          `Sob controlo: ${horaRelatorio(ocorrencia.sob_controlo_em)}`,
+          `Encerramento: ${horaRelatorio(ocorrencia.encerrada_em)}`
+        ]
+        const alturaBloco = 18 + (horarios.length * 4.2) + (linhasDescricao.length * 4.5)
 
         y = garantirEspaco(y, alturaBloco)
 
@@ -650,11 +670,12 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           `Estado: ${textoEstado(ocorrencia.estado)}`
         ].filter(Boolean).join('  |  ')
         doc.text(meta, margem + 6, y + 8)
+        doc.text(horarios, margem + 6, y + 14, { lineHeightFactor: 1.25 })
 
         if (linhasDescricao.length > 0) {
           doc.setTextColor(35, 35, 35)
           doc.setFontSize(9)
-          doc.text(linhasDescricao, margem + 6, y + 14, { lineHeightFactor: 1.3 })
+          doc.text(linhasDescricao, margem + 6, y + 14 + horarios.length * 4.2, { lineHeightFactor: 1.3 })
         }
 
         y += alturaBloco + 4
@@ -781,7 +802,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       y += 9
 
       resumoElementosOperacionais.forEach((elemento) => {
-        const nome = [elemento.posto, elemento.nome].filter(Boolean).join(' ') || `Elemento ${elemento.elemento_id}`
+        const nome = nomeComPosto(elemento) || `Elemento ${elemento.elemento_id}`
         const identificacao = [nome, elemento.indicativo_radio].filter(Boolean).join('  |  ')
         const linhaApoio = [elemento.funcao, elemento.recurso_indicativo || elemento.recurso_nome || 'Sem viatura']
           .filter(Boolean).join('  |  ')
@@ -839,7 +860,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         const elemento = elementos.find((item) => Number(item.id) === Number(ordem.elemento_id))
         const ocorrencia = ocorrencias.find((item) => Number(item.id) === Number(ordem.ocorrencia_id))
         const destinatario = elemento
-          ? [elemento.posto, elemento.nome].filter(Boolean).join(' ') || `Elemento ${ordem.elemento_id}`
+          ? nomeComPosto(elemento) || `Elemento ${ordem.elemento_id}`
           : recurso
             ? [recurso.indicativo_radio, recurso.nome].filter(Boolean).join(' — ')
             : ordem.elemento_id ? `Elemento ${ordem.elemento_id}` : `Recurso ${ordem.recurso_id}`
@@ -912,7 +933,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         const tipoEvento = evento.tipo
           ? (nomesTiposEvento[evento.tipo] || String(evento.tipo).replaceAll('_', ' ').replace(/\b\w/g, letra => letra.toUpperCase()))
           : 'Evento'
-        const descricaoEvento = String(evento.descricao || '—')
+        // A fonte base do PDF não desenha a seta Unicode de forma legível.
+        const descricaoEvento = String(evento.descricao || '—').replaceAll('→', ' para ')
         const linhasDescricao = doc.splitTextToSize(descricaoEvento, larguraTexto - 10)
         const alturaBloco = 15 + (linhasDescricao.length * 4.1)
 
@@ -1404,7 +1426,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           })}
           <strong style={styles.sectionTitle}>Elementos ({resumoElementosOperacionais.length})</strong>
           {resumoElementosOperacionais.map(el => <div key={el.elemento_id} style={styles.itemCard}>
-            <div style={styles.itemTitle}>{el.posto && !String(el.nome || '').toLocaleLowerCase('pt-PT').startsWith(`${String(el.posto).toLocaleLowerCase('pt-PT')} `) ? `${el.posto} ${el.nome}` : el.nome}</div>
+            <div style={styles.itemTitle}>{nomeComPosto(el)}</div>
             <div style={styles.itemSubtle}>{el.funcao || 'Elemento'} · {el.indicativo_radio || 'Sem indicativo'}</div>
             <div style={styles.itemMeta}>{el.ocorrencia_id ? (el.estado === 'apeado' ? 'Apeado em ocorrência' : 'Em ocorrência') : (recursos.find(r => r.id === el.recurso_id)?.estado === 'em_missao' ? 'Em missão' : el.estado === 'retirado' ? 'Retirado' : 'Disponível')} · {el.recurso_indicativo || el.recurso_nome || 'Sem viatura'}</div>
             <div>Ocorrências: {el.total_ocorrencias || 0} · Tempo total: {formatarTempoEmpenhado(el.tempo_total_empenhado_segundos)}</div>

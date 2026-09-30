@@ -2003,6 +2003,26 @@ def estatisticas_ocorrencia(ocorrencia_id: int):
 def _descricao_evento_para_exibicao(conn, evento, operacao_id):
     descricao = evento["descricao"] or ""
     # Eventos antigos guardavam os números internos em vez dos nomes.
+    recurso_antigo = re.fullmatch(r"Recurso (\d+) preparado", descricao)
+    if recurso_antigo:
+        nome = conn.execute(text("""
+            SELECT nome FROM recursos_catalogo WHERE id=:id
+        """), {"id": int(recurso_antigo.group(1))}).scalar()
+        if nome:
+            descricao = f"Recurso {nome} preparado"
+    elemento_antigo = re.fullmatch(r"Elemento (\d+) integrado (?:no recurso (\d+)|sem viatura)", descricao)
+    if elemento_antigo:
+        nome = conn.execute(text("""
+            SELECT nome FROM elementos_catalogo WHERE id=:id
+        """), {"id": int(elemento_antigo.group(1))}).scalar()
+        if nome:
+            if elemento_antigo.group(2):
+                viatura = conn.execute(text("""
+                    SELECT nome FROM recursos_catalogo WHERE id=:id
+                """), {"id": int(elemento_antigo.group(2))}).scalar()
+                descricao = f"Elemento {nome} integrado na viatura {viatura or elemento_antigo.group(2)}"
+            else:
+                descricao = f"Elemento {nome} integrado sem viatura"
     if evento.get("elemento_id") and re.match(r"^Preparação do elemento \d+ atualizada", descricao):
         elemento = conn.execute(text("""
             SELECT nome, indicativo_radio FROM elementos
