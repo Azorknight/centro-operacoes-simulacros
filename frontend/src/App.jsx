@@ -585,18 +585,36 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     let numeroSecao = 2
     let y = 119
-    const missoesPlaneadasRelatorio = missoes.filter((missao) => missao.estado === 'planeada')
+    const horaRelatorio = (valor) => valor ? new Date(valor).toLocaleString('pt-PT', {
+      timeZone: 'Atlantic/Azores', day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }) : '—'
 
-    if (missoesPlaneadasRelatorio.length > 0) {
-      y = tituloSecao(numeroSecao++, 'Missões planeadas', y)
-      missoesPlaneadasRelatorio.forEach((missao, indice) => {
+    if (missoes.length > 0) {
+      y = tituloSecao(numeroSecao++, 'Missões', y)
+      missoes.forEach((missao, indice) => {
         const ocorrencia = ocorrencias.find((item) => Number(item.id) === Number(missao.ocorrencia_id))
+        const recursosAtribuidos = recursos.filter((recurso) =>
+          (missao.recurso_ids || []).some((id) => Number(id) === Number(recurso.id))
+        )
+        const recursoPrevisto = recursos.find((recurso) => Number(recurso.id) === Number(missao.recurso_id))
+        const nomesRecursos = recursosAtribuidos.length
+          ? recursosAtribuidos.map((recurso) => recurso.indicativo_radio || recurso.nome).join(', ')
+          : (recursoPrevisto?.indicativo_radio || recursoPrevisto?.nome || missao.responsavel || 'Não definido')
+        const inicio = missao.iniciada_em ? new Date(missao.iniciada_em).getTime() : NaN
+        const fim = missao.concluida_em ? new Date(missao.concluida_em).getTime() : NaN
+        const duracaoSegundos = Number.isFinite(inicio) && Number.isFinite(fim) && fim >= inicio
+          ? Math.floor(fim / 1000) - Math.floor(inicio / 1000) : null
+        const duracao = duracaoSegundos === null ? '—'
+          : `${Math.floor(duracaoSegundos / 3600)}h ${String(Math.floor((duracaoSegundos % 3600) / 60)).padStart(2, '0')}m ${String(duracaoSegundos % 60).padStart(2, '0')}s`
         const informacoes = [
+          `Estado: ${textoEstado(missao.estado)} | Recurso: ${nomesRecursos}`,
           missao.zona ? `Zona / percurso: ${missao.zona}` : null,
-          missao.responsavel ? `Responsável previsto: ${missao.responsavel}` : null,
           ocorrencia ? `Ocorrência: ${ocorrencia.titulo}` : null,
+          `Início: ${horaRelatorio(missao.iniciada_em)}`,
+          `Conclusão: ${horaRelatorio(missao.concluida_em)} | Duração: ${duracao}`,
           missao.descricao || null,
-          missao.notas ? `Observações: ${missao.notas}` : null
+          missao.notas ? `Notas adicionais: ${missao.notas}` : null
         ].filter(Boolean)
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(9.2)
@@ -628,11 +646,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     // Ocorrências
     y = tituloSecao(numeroSecao++, 'Ocorrências', y)
-    const horaRelatorio = (valor) => valor ? new Date(valor).toLocaleString('pt-PT', {
-      timeZone: 'Atlantic/Azores', day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    }) : '—'
-
     if (ocorrencias.length === 0) {
       y = escreverTexto('Não existem ocorrências registadas.', margem, y)
     } else {
