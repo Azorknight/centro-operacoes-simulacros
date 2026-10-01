@@ -65,7 +65,8 @@ function Operacoes({ onAbrir }) {
 
   async function guardarOperacao(evento) {
     evento.preventDefault()
-    if (!formulario.nome.trim()) return
+    if (aGuardar || !formulario.nome.trim()) return
+    const preparar = evento.nativeEvent.submitter?.value === 'preparar'
 
     try {
       setAGuardar(true)
@@ -82,7 +83,11 @@ function Operacoes({ onAbrir }) {
       setFormulario(formularioInicial)
       setMostrarFormulario(false)
       await carregarOperacoes()
-      await abrirOperacao(criada)
+      if (preparar) {
+        setOperacaoAPreparar(criada)
+      } else {
+        await abrirOperacao(criada)
+      }
     } catch {
       setErro('Não foi possível criar a operação.')
     } finally {
@@ -352,7 +357,10 @@ function Operacoes({ onAbrir }) {
 
             <div className="modal-acoes">
               <button type="button" className="botao-secundario" onClick={() => setMostrarFormulario(false)}>Cancelar</button>
-              <button type="submit" className="botao-primario" disabled={aGuardar}>
+              <button type="submit" name="destino" value="preparar" className="botao-preparar" disabled={aGuardar}>
+                {aGuardar ? 'A guardar...' : 'Criar e preparar'}
+              </button>
+              <button type="submit" name="destino" value="abrir" className="botao-primario" disabled={aGuardar}>
                 {aGuardar ? 'A guardar...' : 'Criar e abrir'}
               </button>
             </div>
