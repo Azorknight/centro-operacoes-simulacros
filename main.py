@@ -1055,7 +1055,13 @@ def encerrar_operacao(operacao_id: int):
             raise HTTPException(status_code=404, detail="OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
         if operacao[2] == "arquivada":
             raise HTTPException(status_code=409, detail="Uma operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o arquivada nÃƒÆ’Ã‚Â£o pode ser encerrada")
+        if operacao[2] == "concluida":
+            raise HTTPException(status_code=409, detail="A operação já está encerrada")
         conn.execute(text("UPDATE operacoes SET estado = 'concluida', data_fim = NOW() WHERE id = :id"), {"id": operacao_id})
+        conn.execute(text("""
+            INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
+            VALUES ('operacao', 'Operação encerrada', :operacao_id)
+        """), {"operacao_id": operacao_id})
         return {"mensagem": "OperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o encerrada", "operacao_id": operacao_id, "nome": operacao[1]}
 
 

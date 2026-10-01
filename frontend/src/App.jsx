@@ -919,7 +919,17 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     // Cronologia Operacional
     y = tituloSecao(numeroSecao++, 'Cronologia Operacional', y)
 
-    const cronologiaOrdenada = [...timeline].sort((a, b) => {
+    // Operações encerradas antes do registo deste evento conservam a data_fim.
+    const eventosCronologia = [...timeline]
+    if (operacaoAtiva?.estado === 'concluida' && operacaoAtiva?.data_fim &&
+        !eventosCronologia.some((evento) => evento.tipo === 'operacao' && evento.descricao === 'Operação encerrada')) {
+      eventosCronologia.push({
+        tipo: 'operacao',
+        descricao: 'Operação encerrada',
+        criado_em: operacaoAtiva.data_fim
+      })
+    }
+    const cronologiaOrdenada = eventosCronologia.sort((a, b) => {
       const dataA = new Date(a.criado_em || 0).getTime()
       const dataB = new Date(b.criado_em || 0).getTime()
       return dataA - dataB
