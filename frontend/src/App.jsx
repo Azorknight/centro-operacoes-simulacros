@@ -2742,79 +2742,17 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               ['concluida', 'Concluída'],
               ['cancelada', 'Cancelada']
             ]
-            const ocorrenciaMissao = ocorrencias.find(o => o.id === missaoAtual.ocorrencia_id)
             const recursosMissao = recursos.filter(r => (missaoAtual.recurso_ids || []).includes(r.id))
+            const recursoPrincipalMissao = recursos.find(r => Number(r.id) === Number(missaoAtual.recurso_id))
             return (
               <>
                 <div style={{ ...styles.itemCard, border: '2px solid #7c3aed' }}>
-                  <h3 style={{ margin: 0 }}>🎯 {missaoAtual.titulo}</h3>
-                  <div style={{ color: '#64748b', marginBottom: 8 }}>
-                    Prioridade: {missaoAtual.prioridade || 'media'}
-                  </div>
-                  <div><strong>Estado:</strong> {estadosMissao.find(([id]) => id === missaoAtual.estado)?.[1] || missaoAtual.estado}</div>
-                  <div><strong>Situação:</strong> {{
-                    por_avaliar: '⚪ Por avaliar', sob_controlo: '🟢 Sob controlo', estavel: '🟡 Estável', complexa: '🟠 Complexa',
-                    critica: '🔴 Crítica', necessita_reforco: '⚫ Necessita de reforço'
-                  }[missaoAtual.situacao_operacional] || '⚪ Por avaliar'}</div>
-                  <div><strong>Responsável:</strong> {missaoAtual.responsavel || 'Não definido'}</div>
+                  <h3 style={{ margin: 0 }}>📋 {missaoAtual.titulo}</h3>
+                  <div style={{ marginTop: 8 }}><strong>Estado:</strong> {estadosMissao.find(([id]) => id === missaoAtual.estado)?.[1] || missaoAtual.estado}</div>
+                  <div><strong>Responsável:</strong> {recursoPrincipalMissao?.indicativo_radio || recursoPrincipalMissao?.nome || missaoAtual.responsavel || 'Não definido'}</div>
                   {missaoAtual.zona && <div><strong>Zona / percurso:</strong> {missaoAtual.zona}</div>}
-                  <div style={{ marginTop: 8 }}>
-                    <strong>Objetivo:</strong>{' '}
-                    <select
-                      value={missaoAtual.objetivo_id || ''}
-                      disabled={modoBloqueado || ['concluida', 'cancelada'].includes(missaoAtual.estado)}
-                      onChange={async (e) => {
-                        await associarObjetivoMissao(missaoAtual.id, e.target.value ? Number(e.target.value) : null)
-                        await atualizarDados()
-                        const atualizadas = await obterMissoes()
-                        setMissoes(atualizadas)
-                        const atualizada = atualizadas.find(m => m.id === missaoAtual.id)
-                        if (atualizada) setDetalhe({ tipo: 'missao', dados: atualizada })
-                      }}
-                      style={{ display: 'block', width: '100%', minWidth: 0, boxSizing: 'border-box', padding: 6, borderRadius: 6, marginTop: 4 }}
-                    >
-                      <option value="">Sem objetivo associado</option>
-                      {objetivos.filter(o => !o.arquivado).map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
-                    </select>
-                  </div>
                   {missaoAtual.descricao && <div style={{ marginTop: 8 }}>{missaoAtual.descricao}</div>}
-                </div>
-
-                <div style={styles.itemCard}>
-                  <strong>Indicadores objetivos</strong>
-                  <div>⏱️ Tempo decorrido: {formatarDuracao(estatisticasMissao?.tempo_decorrido_segundos)}</div>
-                  <div>🚓 Recursos: {estatisticasMissao?.total_recursos ?? recursosMissao.length}</div>
-                  <div>👥 Elementos: {estatisticasMissao?.total_elementos ?? '—'}</div>
-                  <div>📋 Ordens relacionadas: {estatisticasMissao?.total_ordens ?? '—'}</div>
-                  <div>🕒 Última atualização: {formatarDataHora(estatisticasMissao?.ultima_atualizacao || missaoAtual.atualizada_em)}</div>
-                  <div>📍 Ocorrência: {ocorrenciaMissao?.titulo || 'Sem ocorrência associada'}</div>
-                </div>
-
-                <div style={styles.itemCard}>
-                  <strong>Situação operacional</strong>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                    {[
-                      ['por_avaliar', '⚪ Por avaliar'],
-                      ['sob_controlo', '🟢 Sob controlo'],
-                      ['estavel', '🟡 Estável'],
-                      ['complexa', '🟠 Complexa'],
-                      ['critica', '🔴 Crítica'],
-                      ['necessita_reforco', '⚫ Necessita de reforço']
-                    ].map(([id, rotulo]) => (
-                      <button
-                        key={id}
-                        disabled={modoBloqueado || missaoAtual.situacao_operacional === id || ['concluida', 'cancelada'].includes(missaoAtual.estado)}
-                        style={{ ...styles.smallButton, background: missaoAtual.situacao_operacional === id ? '#7c3aed' : '#64748b' }}
-                        onClick={async () => {
-                          await alterarSituacaoMissao(missaoAtual.id, id)
-                          const atualizadas = await obterMissoes()
-                          setMissoes(atualizadas)
-                          const atualizada = atualizadas.find(m => m.id === missaoAtual.id)
-                          if (atualizada) setDetalhe({ tipo: 'missao', dados: atualizada })
-                        }}
-                      >{rotulo}</button>
-                    ))}
-                  </div>
+                  {missaoAtual.notas && <div style={{ marginTop: 8 }}><strong>Notas adicionais:</strong> {missaoAtual.notas}</div>}
                 </div>
 
                 <div style={styles.itemCard}>
@@ -3569,18 +3507,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         <div style={styles.detailPanel}>
           <div style={styles.panelTitle}>{missaoEmEdicao ? 'Editar missão planeada' : 'Nova missão'}</div>
 
-          {(formMissao.ocorrencia_id || formMissao.objetivo_id) && (
+          {formMissao.ocorrencia_id && (
             <div style={{ ...styles.itemCard, marginBottom: 10, background: '#f8fafc' }}>
-              {formMissao.ocorrencia_id && (
-                <div style={styles.itemSubtle}>
-                  <strong>🔴 Ocorrência:</strong> {ocorrencias.find((o) => Number(o.id) === Number(formMissao.ocorrencia_id))?.titulo || `ID ${formMissao.ocorrencia_id}`}
-                </div>
-              )}
-              {formMissao.objetivo_id && (
-                <div style={{ ...styles.itemSubtle, marginTop: formMissao.ocorrencia_id ? 4 : 0 }}>
-                  <strong>🎯 Objetivo:</strong> {objetivos.find((o) => Number(o.id) === Number(formMissao.objetivo_id))?.nome || `ID ${formMissao.objetivo_id}`}
-                </div>
-              )}
+              <strong>Ocorrência:</strong> {ocorrencias.find((o) => Number(o.id) === Number(formMissao.ocorrencia_id))?.titulo || `ID ${formMissao.ocorrencia_id}`}
             </div>
           )}
 
