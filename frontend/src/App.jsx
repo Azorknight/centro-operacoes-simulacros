@@ -470,6 +470,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         aberta: 'Aberta',
         em_curso: 'Em curso',
         planeado: 'Planeado',
+        planeada: 'Planeada',
         em_preparacao: 'Em preparação',
         em_execucao: 'Em execução',
         emitida: 'Emitida',
