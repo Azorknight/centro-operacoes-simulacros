@@ -2585,15 +2585,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <br />
 
-          <div>🟢 Missão sob controlo</div>
-          <div>🟡 Missão estável</div>
-          <div>🟠 Missão complexa</div>
-          <div>🔴 Missão crítica</div>
-          <div>⚫ Missão necessita de reforço</div>
-          <div>✅ Missão concluída</div>
-
-          <br />
-
           <div>🔵 Base operacional</div>
         </div>
       </div>
