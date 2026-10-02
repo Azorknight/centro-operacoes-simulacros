@@ -26,7 +26,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
   const noLocal = associados.filter(chegou)
   const elementosIndividuais = elementos.filter(e => !e.recurso_id && Number(e.ocorrencia_id) === Number(ocorrencia.id))
   const elementosDisponiveis = elementos.filter(e => !e.recurso_id && !e.ocorrencia_id && ['disponivel', 'apeado'].includes(e.estado))
-  const chegouElemento = e => eventos.some(ev => ev.tipo === 'chegada' && Number(ev.elemento_id) === Number(e.id) && new Date(ev.criado_em) >= new Date(deslocacaoAtual('elemento_id', e.id)))
+  const chegouElemento = e => (e.chegada_em && new Date(e.chegada_em) >= new Date(deslocacaoAtual('elemento_id', e.id))) || eventos.some(ev => ev.tipo === 'chegada' && Number(ev.elemento_id) === Number(e.id) && new Date(ev.criado_em) >= new Date(deslocacaoAtual('elemento_id', e.id)))
   const elementosNoLocal = elementosIndividuais.filter(chegouElemento)
   const alvo = valor => valor.startsWith('e:') ? { elemento_id: Number(valor.slice(2)) } : { recurso_id: Number(valor.slice(2)) }
   const nome = r => r.indicativo_radio || r.nome

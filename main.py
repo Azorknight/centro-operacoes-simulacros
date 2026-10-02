@@ -2427,6 +2427,44 @@ def atribuir_elemento_ocorrencia(elemento_id: int, ocorrencia_id: int):
     return {"mensagem": "Ordem de deslocação do elemento criada"}
 
 
+def chegada_elemento_na_ocorrencia(conn, operacao_id, elemento_id, ocorrencia_id):
+    """Reconhece a chegada individual ou com a viatura do empenho atual."""
+    return conn.execute(text("""
+        SELECT MIN(t.criado_em)
+        FROM elemento_empenhos ee
+        JOIN timeline_eventos t
+          ON t.operacao_id = ee.operacao_id
+         AND t.ocorrencia_id = ee.ocorrencia_id
+         AND t.tipo = 'chegada'
+        WHERE ee.operacao_id = :operacao_id
+          AND ee.elemento_id = :elemento_id
+          AND ee.ocorrencia_id = :ocorrencia_id
+          AND ee.fim_em IS NULL
+          AND t.criado_em >= ee.inicio_em
+          AND t.criado_em >= COALESCE((
+              SELECT MAX(o.criado_em) FROM ordens o
+              WHERE o.operacao_id = ee.operacao_id
+                AND o.ocorrencia_id = ee.ocorrencia_id
+                AND o.elemento_id = ee.elemento_id
+                AND o.titulo LIKE 'Desloca%'
+          ), ee.inicio_em)
+          AND (
+              t.elemento_id = ee.elemento_id
+              OR (
+                  t.elemento_id IS NULL AND t.recurso_id = ee.recurso_id
+                  AND t.criado_em >= COALESCE((
+                      SELECT MAX(o.criado_em) FROM ordens o
+                      WHERE o.operacao_id = ee.operacao_id
+                        AND o.ocorrencia_id = ee.ocorrencia_id
+                        AND o.recurso_id = ee.recurso_id
+                        AND o.titulo LIKE 'Desloca%'
+                  ), ee.inicio_em)
+              )
+          )
+    """), {"operacao_id": operacao_id, "elemento_id": elemento_id,
+           "ocorrencia_id": ocorrencia_id}).scalar()
+
+
 @app.put("/elementos/{elemento_id}/confirmar-chegada")
 def confirmar_chegada_elemento(elemento_id: int):
     with engine.begin() as conn:
@@ -2438,16 +2476,7 @@ def confirmar_chegada_elemento(elemento_id: int):
         if not elemento or elemento["ocorrencia_id"] is None:
             raise HTTPException(status_code=409, detail="O elemento não tem ocorrência associada")
         ocorrencia_id = elemento["ocorrencia_id"]
-        existe = conn.execute(text("""
-            SELECT id FROM timeline_eventos WHERE tipo='chegada' AND elemento_id=:elemento_id
-              AND ocorrencia_id=:ocorrencia_id AND operacao_id=:operacao_id
-              AND criado_em >= (
-                  SELECT MAX(criado_em) FROM ordens
-                  WHERE elemento_id=:elemento_id AND ocorrencia_id=:ocorrencia_id
-                    AND operacao_id=:operacao_id AND titulo LIKE 'Desloca%'
-              ) LIMIT 1
-        """), {"elemento_id": elemento_id, "ocorrencia_id": ocorrencia_id,
-               "operacao_id": operacao_id}).scalar()
+        existe = chegada_elemento_na_ocorrencia(conn, operacao_id, elemento_id, ocorrencia_id)
         if existe:
             return {"mensagem": "Chegada já registada"}
         conn.execute(text("""
@@ -2502,6 +2531,10 @@ def comunicar_situacao(ocorrencia_id: int, dados: ComunicacaoSituacao):
             LIMIT 1
         """), {"recurso_id": dados.recurso_id, "elemento_id": dados.elemento_id, "ocorrencia_id": ocorrencia_id,
                "operacao_id": operacao_id}).scalar()
+        if dados.elemento_id is not None:
+            chegada = chegada_elemento_na_ocorrencia(
+                conn, operacao_id, dados.elemento_id, ocorrencia_id
+            )
         if not chegada:
             raise HTTPException(status_code=409, detail="Confirme primeiro a chegada ao local")
         nome = (recurso["indicativo_radio"] if tabela == 'recursos' else None) or recurso["nome"]
@@ -3105,6 +3138,7 @@ def relatorio():
 @app.get("/elementos")
 def listar_elementos():
     with engine.connect() as conn:
+        operacao_id = exigir_operacao_ativa_id(conn)
         resultado = conn.execute(text("""
             SELECT
                 e.id,
@@ -3126,11 +3160,15 @@ def listar_elementos():
              AND ope.estado = 'participante'
              AND ope.saida_em IS NULL
             WHERE e.operacao_id = :operacao_id
-        """), {"operacao_id": exigir_operacao_ativa_id(conn)})
+        """), {"operacao_id": operacao_id})
 
         dados = []
         for linha in resultado:
-            dados.append(dict(linha._mapping))
+            elemento = dict(linha._mapping)
+            elemento["chegada_em"] = chegada_elemento_na_ocorrencia(
+                conn, operacao_id, elemento["id"], elemento["ocorrencia_id"]
+            ) if elemento["ocorrencia_id"] is not None else None
+            dados.append(elemento)
 
         return dados
     
