@@ -1534,8 +1534,12 @@ def registar_horarios_elemento(operacao_id: int, elemento_catalogo_id: int, dado
     if dados.chamado_em is None and dados.apresentado_em is None:
         raise HTTPException(status_code=400, detail="Indique a hora da chamada ou da apresentação")
     with engine.begin() as conn:
-        if exigir_operacao_editavel_id(conn) != operacao_id:
-            raise HTTPException(status_code=409, detail="Esta não é a operação ativa")
+        estado_operacao = conn.execute(text("SELECT estado FROM operacoes WHERE id=:id"),
+                                       {"id": operacao_id}).scalar()
+        if estado_operacao is None:
+            raise HTTPException(status_code=404, detail="Operação não encontrada")
+        if estado_operacao in ("concluida", "arquivada"):
+            raise HTTPException(status_code=409, detail="A operação não permite alterar horários")
         participante = conn.execute(text("""
             UPDATE operacao_elementos
             SET chamado_em=COALESCE(:chamado_em, chamado_em),
