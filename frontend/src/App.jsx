@@ -2542,11 +2542,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         </label>
 
 
-        <div style={styles.helpBox}>
-          <div>Click esquerdo: criar ocorrência</div>
-          <div>CTRL + Click esquerdo: criar recurso</div>
-        </div>
-
         <div style={styles.reportBox}>
           <div style={styles.sectionTitle}>Resumo</div>
           {relatorio && (
