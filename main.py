@@ -695,44 +695,7 @@ def preparar_separacao_por_operacao():
             )
             SELECT
                 rc.nome, rc.tipo, 'disponivel', opr.indicativo_operacional, rc.ilha,
-                COALESCE(
-                    (SELECT r2.localizacao
-                     FROM recursos r2
-                     WHERE r2.recurso_catalogo_id = rc.id
-                       AND r2.localizacao IS NOT NULL
-                     ORDER BY r2.criado_em DESC NULLS LAST, r2.id DESC
-                     LIMIT 1),
-                    ST_SetSRID(ST_MakePoint(
-                        CASE LOWER(COALESCE(rc.ilha, ''))
-                            WHEN 'sÃƒÆ’Ã‚Â£o miguel' THEN -25.50
-                            WHEN 'sao miguel' THEN -25.50
-                            WHEN 'santa maria' THEN -25.10
-                            WHEN 'terceira' THEN -27.22
-                            WHEN 'graciosa' THEN -28.02
-                            WHEN 'sÃƒÆ’Ã‚Â£o jorge' THEN -28.05
-                            WHEN 'sao jorge' THEN -28.05
-                            WHEN 'pico' THEN -28.32
-                            WHEN 'faial' THEN -28.63
-                            WHEN 'flores' THEN -31.20
-                            WHEN 'corvo' THEN -31.11
-                            ELSE -27.22
-                        END,
-                        CASE LOWER(COALESCE(rc.ilha, ''))
-                            WHEN 'sÃƒÆ’Ã‚Â£o miguel' THEN 37.78
-                            WHEN 'sao miguel' THEN 37.78
-                            WHEN 'santa maria' THEN 36.97
-                            WHEN 'terceira' THEN 38.66
-                            WHEN 'graciosa' THEN 39.05
-                            WHEN 'sÃƒÆ’Ã‚Â£o jorge' THEN 38.65
-                            WHEN 'sao jorge' THEN 38.65
-                            WHEN 'pico' THEN 38.47
-                            WHEN 'faial' THEN 38.58
-                            WHEN 'flores' THEN 39.45
-                            WHEN 'corvo' THEN 39.70
-                            ELSE 38.66
-                        END
-                    ), 4326)
-                ),
+                NULL,
                 opr.operacao_id, rc.id
             FROM operacao_recursos opr
             JOIN recursos_catalogo rc ON rc.id = opr.recurso_catalogo_id
@@ -1281,30 +1244,7 @@ def adicionar_recurso_participante(operacao_id: int, dados: ParticipacaoRecurso)
             )
             SELECT
                 rc.nome, rc.tipo, 'disponivel', :indicativo_operacional, rc.ilha,
-                COALESCE(
-                    (SELECT r2.localizacao
-                     FROM recursos r2
-                     WHERE r2.recurso_catalogo_id = rc.id
-                       AND r2.localizacao IS NOT NULL
-                     ORDER BY r2.criado_em DESC NULLS LAST, r2.id DESC
-                     LIMIT 1),
-                    ST_SetSRID(ST_MakePoint(
-                        CASE LOWER(COALESCE(rc.ilha, ''))
-                            WHEN 'sÃƒÆ’Ã‚Â£o miguel' THEN -25.50 WHEN 'sao miguel' THEN -25.50
-                            WHEN 'santa maria' THEN -25.10 WHEN 'terceira' THEN -27.22
-                            WHEN 'graciosa' THEN -28.02 WHEN 'sÃƒÆ’Ã‚Â£o jorge' THEN -28.05
-                            WHEN 'sao jorge' THEN -28.05 WHEN 'pico' THEN -28.32
-                            WHEN 'faial' THEN -28.63 WHEN 'flores' THEN -31.20
-                            WHEN 'corvo' THEN -31.11 ELSE -27.22 END,
-                        CASE LOWER(COALESCE(rc.ilha, ''))
-                            WHEN 'sÃƒÆ’Ã‚Â£o miguel' THEN 37.78 WHEN 'sao miguel' THEN 37.78
-                            WHEN 'santa maria' THEN 36.97 WHEN 'terceira' THEN 38.66
-                            WHEN 'graciosa' THEN 39.05 WHEN 'sÃƒÆ’Ã‚Â£o jorge' THEN 38.65
-                            WHEN 'sao jorge' THEN 38.65 WHEN 'pico' THEN 38.47
-                            WHEN 'faial' THEN 38.58 WHEN 'flores' THEN 39.45
-                            WHEN 'corvo' THEN 39.70 ELSE 38.66 END
-                    ), 4326)
-                ),
+                NULL,
                 :operacao_id, rc.id
             FROM recursos_catalogo rc
             WHERE rc.id = :recurso_catalogo_id
@@ -2337,6 +2277,15 @@ def confirmar_chegada(recurso_id: int):
             atualizar_estado_ocorrencia_interno(
                 conn, ocorrencia_id, "em_curso", exigir_operacao_ativa_id(conn)
             )
+
+        conn.execute(text("""
+            UPDATE recursos r
+            SET localizacao = o.localizacao
+            FROM ocorrencias o
+            WHERE r.id = :recurso_id AND r.operacao_id = :operacao_id
+              AND o.id = :ocorrencia_id AND o.operacao_id = r.operacao_id
+        """), {"recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id,
+               "operacao_id": exigir_operacao_ativa_id(conn)})
 
         concluir_deslocacao_na_chegada(conn, exigir_operacao_ativa_id(conn), ocorrencia_id,
                                       recurso_id=recurso_id)
