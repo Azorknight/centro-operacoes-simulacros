@@ -571,25 +571,46 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     doc.setTextColor(90, 90, 90)
     doc.text(`Gerado em: ${dataAtual} - Hora dos Açores`, margem, 57)
 
-    tituloSecao(1, 'Identificação da operação', 70)
+    const instanteExportacao = Date.now()
+    const horaRelatorio = (valor) => valor && Number.isFinite(new Date(valor).getTime())
+      ? new Date(valor).toLocaleString('pt-PT', {
+        timeZone: 'Atlantic/Azores', day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }) : '—'
+    const fimOperacao = operacaoAtiva?.data_fim ? new Date(operacaoAtiva.data_fim).getTime() : NaN
+    const limiteTempoMissao = Number.isFinite(fimOperacao) && ['concluida', 'arquivada'].includes(operacaoAtiva?.estado)
+      ? fimOperacao : instanteExportacao
 
-    doc.setFontSize(9.5)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...azulPSP)
-    doc.text('OPERAÇÃO', margem, 88)
-    doc.text('ESTADO', margem, 100)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(25, 25, 25)
-    doc.text(String(nomeOperacao), 50, 88)
-    doc.text(String(estadoOperacao), 50, 100)
-
+    let y = tituloSecao(1, 'Identificação da operação', 70)
+    const dadosIdentificacao = [
+      ['OPERAÇÃO', nomeOperacao],
+      ['ESTADO', estadoOperacao],
+      ['TIPO', operacaoAtiva?.tipo],
+      ['ENTIDADE', operacaoAtiva?.entidade_organizadora],
+      ['LOCAL', operacaoAtiva?.local],
+      ['RESPONSÁVEL', operacaoAtiva?.responsavel_nome],
+      ['POSTO', operacaoAtiva?.responsavel_posto],
+      ['FUNÇÃO', operacaoAtiva?.responsavel_funcao],
+      ['REGISTO', horaRelatorio(operacaoAtiva?.criado_em)],
+      ['INÍCIO', horaRelatorio(operacaoAtiva?.data_inicio)],
+      ['FIM', horaRelatorio(operacaoAtiva?.data_fim)]
+    ]
+    dadosIdentificacao.forEach(([rotulo, valor]) => {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      const linhas = doc.splitTextToSize(String(valor || '—'), larguraTexto - 42)
+      const altura = Math.max(8, linhas.length * 4.3 + 3)
+      y = garantirEspaco(y, altura)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...azulPSP)
+      doc.text(rotulo, margem, y)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(25, 25, 25)
+      doc.text(linhas, margem + 42, y, { lineHeightFactor: 1.3 })
+      y += altura
+    })
+    y += 8
     let numeroSecao = 2
-    let y = 119
-    const horaRelatorio = (valor) => valor ? new Date(valor).toLocaleString('pt-PT', {
-      timeZone: 'Atlantic/Azores', day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    }) : '—'
 
     if (missoes.length > 0) {
       y = tituloSecao(numeroSecao++, 'Missões', y)
@@ -603,17 +624,22 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           ? recursosAtribuidos.map((recurso) => recurso.indicativo_radio || recurso.nome).join(', ')
           : (recursoPrevisto?.indicativo_radio || recursoPrevisto?.nome || missao.responsavel || 'Não definido')
         const inicio = missao.iniciada_em ? new Date(missao.iniciada_em).getTime() : NaN
-        const fim = missao.concluida_em ? new Date(missao.concluida_em).getTime() : NaN
+        const fimRegistado = missao.concluida_em || missao.cancelada_em
+        const fim = fimRegistado ? new Date(fimRegistado).getTime()
+          : missao.estado === 'em_execucao' ? limiteTempoMissao : NaN
         const duracaoSegundos = Number.isFinite(inicio) && Number.isFinite(fim) && fim >= inicio
-          ? Math.floor(fim / 1000) - Math.floor(inicio / 1000) : null
+          ? Math.floor((fim - inicio) / 1000) : null
         const duracao = duracaoSegundos === null ? '—'
           : `${Math.floor(duracaoSegundos / 3600)}h ${String(Math.floor((duracaoSegundos % 3600) / 60)).padStart(2, '0')}m ${String(duracaoSegundos % 60).padStart(2, '0')}s`
+        const rotuloDuracao = missao.estado === 'em_execucao' && !fimRegistado
+          ? 'Tempo decorrido' : 'Duração'
         const informacoes = [
           `Estado: ${textoEstado(missao.estado)} | Recurso: ${nomesRecursos}`,
           missao.zona ? `Zona / percurso: ${missao.zona}` : null,
           ocorrencia ? `Ocorrência: ${ocorrencia.titulo}` : null,
           `Início: ${horaRelatorio(missao.iniciada_em)}`,
-          `Conclusão: ${horaRelatorio(missao.concluida_em)} | Duração: ${duracao}`,
+          `Conclusão: ${horaRelatorio(missao.concluida_em)} | ${rotuloDuracao}: ${duracao}`,
+          missao.cancelada_em ? `Cancelamento: ${horaRelatorio(missao.cancelada_em)}` : null,
           missao.descricao || null,
           missao.notas ? `Notas adicionais: ${missao.notas}` : null
         ].filter(Boolean)
@@ -740,6 +766,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
       y += 19
 
+      y = garantirEspaco(y, 18)
+      y = escreverTexto('Os tempos dos recursos e elementos abaixo referem-se apenas a ocorrências. A duração das missões consta da secção Missões.', margem, y, larguraTexto, 8.2) + 6
+
       resumoRecursosOperacionais.forEach((recurso) => {
         const nomeRecurso = recurso.indicativo_radio || recurso.nome || `Recurso ${recurso.recurso_id}`
         const identificacao = recurso.indicativo_radio && recurso.nome
@@ -763,8 +792,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           : 'Ocorrência atual: —'
 
         const linhaTempo = recurso.estado === 'em_missao' && Number(recurso.empenho_atual_segundos) > 0
-          ? `Tempo total empenhado: ${formatarTempoRelatorio(recurso.tempo_total_empenhado_segundos)}  |  Empenhamento atual: ${formatarTempoRelatorio(recurso.empenho_atual_segundos)}`
-          : `Tempo total empenhado: ${formatarTempoRelatorio(recurso.tempo_total_empenhado_segundos)}`
+          ? `Tempo em ocorrências: ${formatarTempoRelatorio(recurso.tempo_total_empenhado_segundos)}  |  Ocorrência atual: ${formatarTempoRelatorio(recurso.empenho_atual_segundos)}`
+          : `Tempo em ocorrências: ${formatarTempoRelatorio(recurso.tempo_total_empenhado_segundos)}`
 
         const linhasPrincipal = doc.splitTextToSize(linhaPrincipal, larguraTexto - 10)
         const linhasOcorrencia = doc.splitTextToSize(linhaOcorrencia, larguraTexto - 10)
@@ -820,7 +849,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         const identificacao = [nome, elemento.indicativo_radio].filter(Boolean).join('  |  ')
         const linhaApoio = [elemento.funcao, elemento.recurso_indicativo || elemento.recurso_nome || 'Sem viatura']
           .filter(Boolean).join('  |  ')
-        const linhaEstatisticas = `Ocorrências: ${Number(elemento.total_ocorrencias) || 0}  |  Tempo total empenhado: ${formatarTempoRelatorio(elemento.tempo_total_empenhado_segundos)}`
+        const linhaEstatisticas = `Ocorrências: ${Number(elemento.total_ocorrencias) || 0}  |  Tempo em ocorrências: ${formatarTempoRelatorio(elemento.tempo_total_empenhado_segundos)}`
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(9.2)
         const linhasNome = doc.splitTextToSize(identificacao, larguraTexto - 10)
@@ -952,13 +981,20 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
         const nomesTiposEvento = {
           ocorrencia: 'Ocorr\u00eancia',
-          missao: 'Miss\u00e3o'
+          missao: 'Miss\u00e3o',
+          operacao: 'Operação',
+          situacao: 'Situação'
         }
         const tipoEvento = evento.tipo
           ? (nomesTiposEvento[evento.tipo] || String(evento.tipo).replaceAll('_', ' ').replace(/\b\w/g, letra => letra.toUpperCase()))
           : 'Evento'
         // A fonte base do PDF não desenha a seta Unicode de forma legível.
-        const descricaoEvento = String(evento.descricao || '—').replaceAll('→', ' para ')
+        let descricaoEvento = String(evento.descricao || '—').replaceAll('→', ' para ')
+        // Resolve apenas o número de catálogo de eventos de preparação conhecidos.
+        descricaoEvento = descricaoEvento.replace(/^Recurso (\d+) preparado(?= —|$)/, (texto, id) => {
+          const recurso = recursos.find((item) => Number(item.recurso_catalogo_id) === Number(id))
+          return recurso ? `Recurso ${recurso.nome || recurso.indicativo_radio} preparado` : texto
+        }).replace(/(:\s*)concluida\b/g, '$1concluída')
         const linhasDescricao = doc.splitTextToSize(descricaoEvento, larguraTexto - 10)
         const alturaBloco = 15 + (linhasDescricao.length * 4.1)
 
