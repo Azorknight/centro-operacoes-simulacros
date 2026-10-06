@@ -522,8 +522,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       return y
     }
 
-    const tituloSecao = (numero, titulo, y) => {
-      y = garantirEspaco(y, 18)
+    const tituloSecao = (numero, titulo, y, alturaPrimeiroConteudo = 3) => {
+      y = garantirEspaco(y, 15 + alturaPrimeiroConteudo)
       doc.setFillColor(...begePSP)
       doc.rect(margem, y - 4.2, 9, 1.1, 'F')
       doc.setFillColor(...azulPSP)
@@ -672,7 +672,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     }
 
     // Ocorrências
-    y = tituloSecao(numeroSecao++, 'Ocorrências', y)
+    const primeiraDescricao = ocorrencias[0]?.descricao
+    const linhasPrimeiraDescricao = primeiraDescricao
+      ? doc.splitTextToSize(String(primeiraDescricao), larguraTexto - 6).length
+      : 0
+    const alturaPrimeiraOcorrencia = ocorrencias.length
+      ? 18 + (4 * 4.2) + (linhasPrimeiraDescricao * 4.5)
+      : 10
+    y = tituloSecao(numeroSecao++, 'Ocorrências', y, alturaPrimeiraOcorrencia)
     if (ocorrencias.length === 0) {
       y = escreverTexto('Não existem ocorrências registadas.', margem, y)
     } else {
@@ -1024,7 +1031,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     y += 6
 
     // Síntese Final
-    y = tituloSecao(numeroSecao++, 'Síntese Final', y)
+    y = tituloSecao(numeroSecao++, 'Síntese Final', y, 42)
 
     const ocorrenciasAtivasRelatorio = ocorrencias.filter((o) => !['fechada', 'encerrada', 'arquivada'].includes(o.estado)).length
     const recursosEmMissaoRelatorio = resumoRecursosOperacionais.filter(
