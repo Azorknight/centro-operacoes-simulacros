@@ -2730,7 +2730,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     <strong>{el.nome}</strong>
                     <div>{el.funcao}</div>
                     <div>Indicativo: {el.indicativo_radio || 'sem indicativo'}</div>
-                    <button
+                    {!modoBloqueado && <button
                       style={styles.smallButton}
                       onClick={() => {
                         setModoMapa({ tipo: 'apear_elemento', alvo: el })
@@ -2738,7 +2738,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       }}
                     >
                       Deixar apeado
-                    </button>
+                    </button>}
                   </div>
                 ))}
 
@@ -3038,7 +3038,24 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             )
           })()}
 
-          {detalhe.tipo !== 'recurso' && detalhe.tipo !== 'ocorrencia' && detalhe.tipo !== 'missao' && Object.entries(detalhe.dados).map(([key, value]) => {
+          {detalhe.tipo === 'elemento' && (() => {
+            const elemento = elementos.find(el => el.id === detalhe.dados.id) || detalhe.dados
+            const viatura = recursos.find(r => r.id === elemento.recurso_id)
+            const estados = { embarcado: 'Embarcado', apeado: 'Apeado', disponivel: 'Disponível', em_missao: 'Em missão', retirado: 'Retirado' }
+            return (
+              <div style={styles.itemCard}>
+                <div><strong>Nome:</strong> {elemento.nome || '—'}</div>
+                <div><strong>Posto:</strong> {elemento.posto || '—'}</div>
+                <div><strong>Entidade:</strong> {elemento.entidade || '—'}</div>
+                <div><strong>Função:</strong> {elemento.funcao || '—'}</div>
+                <div><strong>Indicativo rádio:</strong> {elemento.indicativo_radio || '—'}</div>
+                <div><strong>Estado:</strong> {estados[elemento.estado] || elemento.estado || '—'}</div>
+                <div><strong>Viatura:</strong> {viatura ? `${viatura.indicativo_radio || viatura.nome} — ${viatura.nome}` : (elemento.recurso_indicativo || elemento.recurso_nome || 'Sem viatura')}</div>
+              </div>
+            )
+          })()}
+
+          {detalhe.tipo !== 'recurso' && detalhe.tipo !== 'ocorrencia' && detalhe.tipo !== 'missao' && detalhe.tipo !== 'elemento' && Object.entries(detalhe.dados).map(([key, value]) => {
             const nomes = {
               id: 'ID',
               nome: 'Nome',
@@ -3226,7 +3243,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </>
             )}
 
-            {detalhe.tipo === 'elemento' && (
+            {detalhe.tipo === 'elemento' && !modoBloqueado && detalhe.dados.estado !== 'embarcado' && !detalhe.dados.recurso_id && (
               <>
                 <button
                   style={styles.mainButton}
@@ -5014,7 +5031,7 @@ function App() {
                   ].map(([titulo, item]) => (
                     <div key={titulo} style={styles.systemCard}>
                       <div style={styles.systemCardTitle}>{item?.ok ? '🟢' : '🔴'} {titulo}</div>
-                      <div style={styles.systemCardValue}>{item?.mensagem || 'Sem informação'}</div>
+                      <div style={styles.systemCardValue}>{titulo === 'Replay' && item?.ok ? 'Disponível' : (item?.mensagem || 'Sem informação')}</div>
                     </div>
                   ))}
                   <div style={styles.systemCard}>
