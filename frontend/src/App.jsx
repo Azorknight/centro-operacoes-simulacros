@@ -2163,15 +2163,28 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               <div style={styles.itemMeta}>{r.tipo} · {r.estado}</div>
             </div>
           ))}
-          {elementos.some(el => !el.recurso_id) && (
+          {elementos.length > 0 && (
             <>
-              <strong style={styles.sectionTitle}>Elementos sem viatura</strong>
-              {elementos.filter(el => !el.recurso_id).map(el => (
-                <div key={el.id} style={{ ...styles.itemCard, cursor: 'pointer' }} onClick={() => setDetalhe({ tipo: 'elemento', dados: el })}>
-                  <div style={styles.itemTitle}>👤 {el.indicativo_radio || el.nome}</div>
-                  <div style={styles.itemMeta}>{el.nome} · {el.funcao || 'Sem função'} · {el.estado}</div>
-                </div>
-              ))}
+              <strong style={styles.sectionTitle}>Elementos ({elementos.length})</strong>
+              {elementos.map(el => {
+                const viatura = recursos.find(r => Number(r.id) === Number(el.recurso_id))
+                const viaturaNome = viatura?.indicativo_radio || viatura?.nome || el.recurso_indicativo || el.recurso_nome
+                return (
+                  <div key={el.id} role="button" tabIndex={0}
+                    style={{ ...styles.itemCard, cursor: 'pointer' }}
+                    onClick={() => setDetalhe({ tipo: 'elemento', dados: el })}
+                    onKeyDown={evento => {
+                      if (evento.key === 'Enter' || evento.key === ' ') {
+                        evento.preventDefault()
+                        setDetalhe({ tipo: 'elemento', dados: el })
+                      }
+                    }}>
+                    <div style={styles.itemTitle}>👤 {nomeComPosto(el)}</div>
+                    <div style={styles.itemMeta}>{el.indicativo_radio || 'Sem indicativo'} · {el.funcao || 'Sem função'} · {el.estado}</div>
+                    <div style={styles.itemMeta}>{el.recurso_id ? `Embarcado · ${viaturaNome || 'Viatura associada'}` : 'Sem viatura'}</div>
+                  </div>
+                )
+              })}
             </>
           )}
         </>
