@@ -55,7 +55,8 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
     }
   }
 
-  const inativo = bloqueado || ocupado || ['encerrada', 'arquivada'].includes(ocorrencia.estado)
+  const apenasConsulta = bloqueado || ['encerrada', 'arquivada'].includes(ocorrencia.estado)
+  const inativo = apenasConsulta || ocupado
 
   return <div style={card}>
     <strong>Ordens e comunicações da ocorrência</strong>
@@ -67,6 +68,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
       {chamadas.map(c => <div key={c.id} style={{ marginTop: 7 }}>
         <small>{formatarDataHora(c.recebido_em)}{c.origem ? ` · ${c.origem}` : ''}{c.contacto ? ` · ${c.contacto}` : ''}</small><br />{c.informacao}
       </div>)}
+      {!apenasConsulta && <>
       <textarea aria-label="Informação recebida por telefone" style={{ ...field, minHeight: 55 }} placeholder="Nova informação recebida por telefone" value={chamada.informacao} onChange={e => setChamada({ ...chamada, informacao: e.target.value })} disabled={inativo} />
       <input aria-label="Origem da chamada" style={field} placeholder="Quem ligou (opcional)" value={chamada.origem} onChange={e => setChamada({ ...chamada, origem: e.target.value })} disabled={inativo} />
       <input aria-label="Contacto da chamada" style={field} placeholder="Contacto (opcional)" value={chamada.contacto} onChange={e => setChamada({ ...chamada, contacto: e.target.value })} disabled={inativo} />
@@ -77,8 +79,10 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
         setChamadas(await obterChamadasOcorrencia(ocorrencia.id))
         setChamada({ informacao: '', origem: '', contacto: '', recebido_em: '' })
       })}>Registar nova chamada</button>
+      </>}
     </div>
 
+    {!apenasConsulta && <>
     <div style={card}>
       <strong>1. Ordenar deslocação</strong>
       <select aria-label="Recurso a deslocar" style={field} value={recursoDespacho} onChange={e => setRecursoDespacho(e.target.value)} disabled={inativo}>
@@ -136,6 +140,8 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
         setDescricao('')
       })}>Emitir ordem</button>
     </div>
+
+    </>}
 
     <div style={card}>
       <strong>Ordens emitidas ({ordensOcorrencia.length})</strong>
