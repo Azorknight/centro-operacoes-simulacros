@@ -3106,7 +3106,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <div style={styles.detailActions}>
 
-          {detalhe.tipo === 'recurso' && (
+          {detalhe.tipo === 'recurso' && !modoBloqueado && (
             <>
               <button
                 style={styles.mainButton}
