@@ -691,3 +691,76 @@ O Manual de Utilização visual começa pelo procedimento `Criar/Registar uma Op
 ---
 
 FIM DA NOTA DE CONTINUIDADE
+
+---
+
+# CONTINUIDADE ATUAL — 09/10/2026
+Esta secção substitui as indicações antigas de estado e próximo passo.
+
+## Computadores
+- Martinex: desenvolvimento no serviço, fora da rede/VPN operacional.
+- PC Casa: segundo computador de desenvolvimento.
+- WPSPIAGHCM777: servidor piloto, Windows 10 Enterprise.
+- WPSPIAGHFOR15: cliente responsável, Windows 11.
+
+Código sincronizado pelo Git/GitHub, branch develop.
+Bases PostgreSQL independentes: não sincronizam pelo Git.
+Antes de mudar: commit e push dos ficheiros pretendidos.
+No destino: verificar estado e git pull --ff-only.
+Nunca usar git add . nem adicionar backups indiscriminadamente.
+
+## Código
+Último commit confirmado: ed7fc7e.
+.env deixou de ser rastreado e está no .gitignore.
+Permanece no histórico antigo; substituir credenciais reais se aplicável.
+No PC Casa, preservar uma cópia local do .env antes do primeiro pull.
+Não enviar o .env nem copiar automaticamente o do Martinex: a BD é local.
+
+## Servidor piloto
+Instalado em C:\SGO, a partir do pacote c6e277a.
+PostgreSQL 17.11, base sgo, utilizador sgo_app, PostGIS ativo.
+22 tabelas do SGO importadas sem dados; propriedade passada para sgo_app.
+PostgreSQL limitado a localhost.
+Dependências instaladas offline para Python 3.12 x64.
+Inicializador adaptado no pacote e servidor para validar as 22 tabelas
+vazias, sem reimportar SQL. Esta adaptação não está no Git.
+Caddy 2.11.7.
+Tarefas SGO-API e SGO-HTTPS configuradas para arranque como SYSTEM.
+API: 127.0.0.1:8000. HTTPS: https://wpspiaghcm777/
+Conta de teste: responsavel1 (perfil responsavel).
+Certificado público importado no servidor e WPSPIAGHFOR15.
+Entrada HTTPS validada nos dois computadores, sem aviso de certificado.
+Não executar novamente o instalador completo sobre C:\SGO.
+Autenticação e deployment do pacote piloto não constam do ZIP do
+repositório c6e277a: reconciliar essas alterações antes de gerar atualização.
+Ainda falta validar operador, concorrência, reinício e restantes fluxos.
+
+## Teste deixado no servidor
+Operação: TESTE PILOTO SGO — 09-10-2026.
+Viatura: VIATURA TESTE 01; indicativo TESTE 01.
+Elemento: ELEMENTO TESTE 01, PSP; indicativo ELEMENTO 01; sem viatura.
+Ocorrência: OCORRÊNCIA TESTE 01, Acidente.
+Validado: criação, preparação, abertura, chamada, deslocação e chegada.
+Chegada alterou ocorrência para Em curso e concluiu a ordem.
+Informação do local ainda não registada.
+Manter estes dados para retomar o teste após atualização.
+
+## Próxima funcionalidade acordada — ainda não implementada
+Configurar bases por operação, durante o registo/preparação.
+Cada base terá nome, ilha e localização; pode ser edifício ou base temporária.
+Escolher base inicial de cada viatura e elemento.
+Elementos não têm de ser associados a viaturas na preparação.
+Mostrar meios no mapa desde a abertura, na localização inicial escolhida.
+Não herdar automaticamente posições de operações anteriores.
+Permitir posteriormente deslocações entre bases, incluindo outras ilhas.
+Código atual cria recursos novos com localização NULL.
+Bases atuais são globais, ainda sem ligação à operação.
+Piloto ainda mostra "Viatura / equipa prevista": corrigir esse formulário.
+
+## Próximo passo
+No PC Casa, preservar .env local, verificar Git e sincronizar develop.
+Confirmar ambiente e BD locais antes de implementar.
+Começar pela estrutura e API de bases por operação, em pequenos passos.
+Validar tecnicamente, testar no navegador, commit e push por bloco.
+Atualização do servidor só depois de preparar procedimento que preserve
+.env, contas, certificado e dados do piloto.
