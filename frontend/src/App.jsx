@@ -22,7 +22,7 @@ import { desativarOperacao, encerrarOperacao, obterOperacaoAtiva, reabrirOperaca
 import {
   obterRecursos,
   obterOcorrencias,
-  obterBases,
+  obterBasesOperacao,
   obterTimeline,
   obterOrdens,
   obterMissoes,
@@ -306,7 +306,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       ] = await Promise.all([
         obterRecursos(),
         obterOcorrencias(),
-        obterBases(),
+        operacaoAtiva?.id ? obterBasesOperacao(operacaoAtiva.id) : Promise.resolve([]),
         obterTimeline(),
         obterOrdens(),
         obterMissoes(),
@@ -379,7 +379,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       window.removeEventListener('abrir-form-recurso', abrirFormRecurso)
       window.removeEventListener('abrir-form-ocorrencia', abrirFormOcorrencia)
     }
-  }, [])
+  }, [operacaoAtiva?.id])
 
   useEffect(() => {
     if (!recursoSelecionadoId) return
@@ -4161,7 +4161,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   Clique no marcador para abrir o detalhe operacional.
                 </Popup>
 
-                <Tooltip permanent direction="top">
+                <Tooltip direction="top">
                   {r.nome}
                   {r.indicativo_radio ? ` (${r.indicativo_radio})` : ''}
                 </Tooltip>
@@ -4251,7 +4251,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   }
                 }}
               >
-                <Tooltip permanent direction="top">
+                <Tooltip direction="top">
                   {el.nome}
                   {el.indicativo_radio ? ` (${el.indicativo_radio})` : ''}
                 </Tooltip>
@@ -4260,19 +4260,22 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           )}  
 
           {bases.map((b) =>
-            b.latitude && b.longitude ? (
+            Number.isFinite(b.latitude) && Number.isFinite(b.longitude) ? (
               <CircleMarker
                 key={b.id}
                 center={[b.latitude, b.longitude]}
                 radius={12}
                 pathOptions={{ color: 'blue' }}
               >
+                <Tooltip permanent direction="top">
+                  {b.nome}
+                </Tooltip>
                 <Popup>
                   <strong>{b.nome}</strong>
                   <br />
-                  {b.tipo}
+                  {[b.tipo, b.entidade, b.ilha].filter(Boolean).join(' / ')}
                   <br /><br />
-                  Base operacional.
+                  Base desta operação.
                 </Popup>
               </CircleMarker>
             ) : null
