@@ -1,8 +1,9 @@
 import BaseInicialParticipante from './BaseInicialParticipante'
 import BasesOperacao from './BasesOperacao'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   obterBasesOperacao,
+  editarPreparacaoElemento,
   adicionarElementoParticipante,
   adicionarRecursoParticipante,
   criarElementoCatalogo,
@@ -30,7 +31,6 @@ function PrepararOperacao({ operacao, onFechar }) {
   const [selecionado, setSelecionado] = useState('')
   const [indicativo, setIndicativo] = useState('')
   const [funcao, setFuncao] = useState('')
-  const [recursoSelecionado, setRecursoSelecionado] = useState('')
   const [mostrarNovo, setMostrarNovo] = useState(false)
   const [novoRecurso, setNovoRecurso] = useState(novoRecursoInicial)
   const [novoElemento, setNovoElemento] = useState(novoElementoInicial)
@@ -40,8 +40,6 @@ function PrepararOperacao({ operacao, onFechar }) {
   const [horariosPorElemento, setHorariosPorElemento] = useState({})
   const [edicaoElemento, setEdicaoElemento] = useState(null)
   const [edicaoRecurso, setEdicaoRecurso] = useState(null)
-  const [elementoNoRecurso, setElementoNoRecurso] = useState(null)
-  const guardarElementoNoRecursoRef = useRef(false)
 
   async function carregar() {
     try {
@@ -71,10 +69,8 @@ function PrepararOperacao({ operacao, onFechar }) {
     setSelecionado('')
     setIndicativo('')
     setFuncao('')
-    setRecursoSelecionado('')
     setEdicaoElemento(null)
     setEdicaoRecurso(null)
-    setElementoNoRecurso(null)
     setMostrarNovo(false)
     if (separador !== 'bases') carregar()
   }, [separador])
@@ -103,10 +99,10 @@ function PrepararOperacao({ operacao, onFechar }) {
           elemento_catalogo_id: Number(selecionado),
           indicativo_operacional: indicativo.trim() || null,
           funcao_operacional: funcao.trim() || null,
-          recurso_catalogo_id: recursoSelecionado ? Number(recursoSelecionado) : null
+          recurso_catalogo_id: null
         })
       }
-      setSelecionado(''); setIndicativo(''); setFuncao(''); setRecursoSelecionado('')
+      setSelecionado(''); setIndicativo(''); setFuncao('')
       await carregar()
     } catch {
       setErro(`Não foi possível adicionar o ${separador === 'recursos' ? 'recurso' : 'elemento'} à operação.`)
@@ -135,11 +131,9 @@ function PrepararOperacao({ operacao, onFechar }) {
     try {
       setAGuardar(true)
       setErro('')
-      await adicionarElementoParticipante(operacao.id, {
-        elemento_catalogo_id: edicaoElemento.id,
+      await editarPreparacaoElemento(operacao.id, edicaoElemento.id, {
         indicativo_operacional: edicaoElemento.indicativo.trim() || null,
-        funcao_operacional: edicaoElemento.funcao.trim() || null,
-        recurso_catalogo_id: edicaoElemento.recursoId ? Number(edicaoElemento.recursoId) : null
+        funcao_operacional: edicaoElemento.funcao.trim() || null
       })
       await carregar()
       setEdicaoElemento(null)
@@ -160,41 +154,6 @@ function PrepararOperacao({ operacao, onFechar }) {
     } catch (e) {
       setErro(e.message || 'Não foi possível editar o recurso.')
     } finally { setAGuardar(false) }
-  }
-
-  async function guardarElementoNoRecurso(evento) {
-    evento.preventDefault()
-    if (!elementoNoRecurso || guardarElementoNoRecursoRef.current) return
-    guardarElementoNoRecursoRef.current = true
-    try {
-      setAGuardar(true); setErro('')
-      const dados = elementoNoRecurso
-      let catalogoId = dados.catalogoId ? Number(dados.catalogoId) : null
-      if (!catalogoId) {
-        if (elementos.some((e) => e.nome?.trim().toLowerCase() === dados.nome.trim().toLowerCase()
-          && (e.entidade || '').trim().toLowerCase() === dados.entidade.trim().toLowerCase())) {
-          throw new Error('Este elemento já participa. Altere a viatura no separador Elementos.')
-        }
-        const novo = await criarElementoCatalogo({
-          nome: dados.nome.trim(), entidade: dados.entidade.trim() || null,
-          posto: dados.posto.trim() || null, estado: 'ativo'
-        })
-        catalogoId = novo.id
-      }
-      await adicionarElementoParticipante(operacao.id, {
-        elemento_catalogo_id: catalogoId,
-        indicativo_operacional: dados.indicativo.trim() || null,
-        funcao_operacional: dados.funcao.trim() || null,
-        recurso_catalogo_id: dados.recursoId
-      })
-      await carregar()
-      setElementoNoRecurso(null)
-    } catch (e) {
-      setErro(e.message || 'Não foi possível acrescentar o elemento ao recurso.')
-    } finally {
-      guardarElementoNoRecursoRef.current = false
-      setAGuardar(false)
-    }
   }
 
   async function guardarHorarios(item) {
@@ -285,15 +244,6 @@ function PrepararOperacao({ operacao, onFechar }) {
           </div>
           <div><label>Indicativo nesta operação</label><input value={indicativo} onChange={(e) => setIndicativo(e.target.value)} placeholder="Ex.: Alfa 01" /></div>
           <div><label>Função operacional</label><input value={funcao} onChange={(e) => setFuncao(e.target.value)} placeholder={separador === 'recursos' ? 'Ex.: Patrulhamento' : 'Ex.: Chefe de equipa'} /></div>
-          {separador === 'elementos' && <div>
-            <label>Viatura / equipa prevista</label>
-            <select value={recursoSelecionado} onChange={(e) => setRecursoSelecionado(e.target.value)}>
-              <option value="">Sem viatura atribuída</option>
-              {recursos.map((r) => <option key={r.recurso_catalogo_id} value={r.recurso_catalogo_id}>
-                {r.indicativo_operacional || r.nome} — {r.nome}
-              </option>)}
-            </select>
-          </div>}
           <button type="submit" className="botao-primario" disabled={aGuardar || !selecionado}>Adicionar</button>
         </form>
 
@@ -356,16 +306,10 @@ function PrepararOperacao({ operacao, onFechar }) {
                       <small>Elementos: {elementos.filter((e) => e.recurso_catalogo_id === item.recurso_catalogo_id).map((e) => e.nome).join(', ') || 'nenhum'}</small>
                       <div className="modal-acoes">
                         <button type="button" className="botao-secundario" onClick={() => {
-                          setElementoNoRecurso(null)
-                          setEdicaoRecurso({ id: item.recurso_catalogo_id, nome: item.nome || '', tipo: item.tipo || '',
+                                                setEdicaoRecurso({ id: item.recurso_catalogo_id, nome: item.nome || '', tipo: item.tipo || '',
                             ilha: item.ilha || '', marca: item.marca || '', matricula: item.matricula || '',
                             indicativo_operacional: item.indicativo_operacional || '', funcao: item.funcao || '' })
                         }}>Editar recurso</button>
-                        <button type="button" className="botao-secundario" onClick={() => {
-                          setEdicaoRecurso(null)
-                          setElementoNoRecurso({ recursoId: item.recurso_catalogo_id, catalogoId: '',
-                            nome: '', entidade: '', posto: '', indicativo: '', funcao: '' })
-                        }}>Adicionar elemento</button>
                       </div>
                     </div>
                   )}
@@ -385,42 +329,12 @@ function PrepararOperacao({ operacao, onFechar }) {
                       </div>
                     </form>
                   )}
-                  {separador === 'recursos' && elementoNoRecurso?.recursoId === item.recurso_catalogo_id && (
-                    <form className="novo-recurso-caixa" onSubmit={guardarElementoNoRecurso}>
-                      <h4>Adicionar elemento a {item.indicativo_operacional || item.nome}</h4>
-                      <label>Elemento permanente existente</label>
-                      <select value={elementoNoRecurso.catalogoId} onChange={(e) => setElementoNoRecurso({ ...elementoNoRecurso, catalogoId: e.target.value })}>
-                        <option value="">Registar novo elemento</option>
-                        {catalogoElementos.filter((e) => !idsElementos.has(e.id)).map((e) => (
-                          <option key={e.id} value={e.id}>{e.nome}{e.posto ? ` — ${e.posto}` : ''}</option>
-                        ))}
-                      </select>
-                      {!elementoNoRecurso.catalogoId && <>
-                        <label>Nome *</label><input required value={elementoNoRecurso.nome} onChange={(e) => setElementoNoRecurso({ ...elementoNoRecurso, nome: e.target.value })} />
-                        <label>Posto</label><input value={elementoNoRecurso.posto} onChange={(e) => setElementoNoRecurso({ ...elementoNoRecurso, posto: e.target.value })} />
-                        <label>Entidade</label><input value={elementoNoRecurso.entidade} onChange={(e) => setElementoNoRecurso({ ...elementoNoRecurso, entidade: e.target.value })} />
-                      </>}
-                      <label>Função operacional</label><input value={elementoNoRecurso.funcao} onChange={(e) => setElementoNoRecurso({ ...elementoNoRecurso, funcao: e.target.value })} />
-                      <label>Indicativo nesta operação</label><input value={elementoNoRecurso.indicativo} onChange={(e) => setElementoNoRecurso({ ...elementoNoRecurso, indicativo: e.target.value })} />
-                      <div className="modal-acoes">
-                        <button type="button" className="botao-secundario" onClick={() => setElementoNoRecurso(null)}>Cancelar</button>
-                        <button type="submit" className="botao-primario" disabled={aGuardar}>Adicionar à viatura</button>
-                      </div>
-                    </form>
-                  )}
                   {separador === 'elementos' && edicaoElemento?.id === item.elemento_catalogo_id && (
                     <form className="novo-recurso-caixa" onSubmit={guardarEdicaoElemento}>
                       <label>Indicativo nesta operação</label>
                       <input value={edicaoElemento.indicativo} onChange={e => setEdicaoElemento({ ...edicaoElemento, indicativo: e.target.value })} />
                       <label>Função operacional</label>
                       <input value={edicaoElemento.funcao} onChange={e => setEdicaoElemento({ ...edicaoElemento, funcao: e.target.value })} />
-                      <label>Viatura / equipa prevista</label>
-                      <select value={edicaoElemento.recursoId} onChange={e => setEdicaoElemento({ ...edicaoElemento, recursoId: e.target.value })}>
-                        <option value="">Sem viatura atribuída</option>
-                        {recursos.map(r => <option key={r.recurso_catalogo_id} value={r.recurso_catalogo_id}>
-                          {r.indicativo_operacional || r.nome} — {r.nome}
-                        </option>)}
-                      </select>
                       <div className="modal-acoes">
                         <button type="button" className="botao-secundario" onClick={() => setEdicaoElemento(null)} disabled={aGuardar}>Cancelar</button>
                         <button type="submit" className="botao-primario" disabled={aGuardar}>Guardar alterações</button>
@@ -438,8 +352,7 @@ function PrepararOperacao({ operacao, onFechar }) {
                 {separador === 'elementos' && <button type="button" className="botao-secundario" onClick={() => setEdicaoElemento({
                   id: item.elemento_catalogo_id,
                   indicativo: item.indicativo_operacional || '',
-                  funcao: item.funcao_operacional || '',
-                  recursoId: item.recurso_catalogo_id ? String(item.recurso_catalogo_id) : ''
+                  funcao: item.funcao_operacional || ''
                 })}>Editar</button>}
                 <button type="button" className="botao-retirar" onClick={() => retirar(item)}>Retirar</button>
               </article>

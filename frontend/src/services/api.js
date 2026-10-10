@@ -514,3 +514,10 @@ export function atribuirBaseInicial(operacaoId, tipo, catalogoId, baseId) {
     body: JSON.stringify({ base_inicial_id: Number(baseId) })
   })
 }
+
+export function editarPreparacaoElemento(operacaoId, catalogoId, dados) {
+  return request(`/operacoes/${operacaoId}/elementos-participantes/${catalogoId}/preparacao`, {
+    method: 'PUT',
+    body: JSON.stringify(dados)
+  })
+}

@@ -1563,6 +1563,75 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
         return {"mensagem": "Elemento adicionado ÃƒÆ’Ã‚Â  operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o"}
 
 
+class EdicaoPreparacaoElemento(BaseModel):
+    indicativo_operacional: str | None = None
+    funcao_operacional: str | None = None
+
+
+@app.put("/operacoes/{operacao_id}/elementos-participantes/{elemento_catalogo_id}/preparacao")
+def editar_preparacao_elemento(
+    operacao_id: int,
+    elemento_catalogo_id: int,
+    dados: EdicaoPreparacaoElemento
+):
+    parametros = {
+        "operacao_id": operacao_id,
+        "catalogo_id": elemento_catalogo_id,
+        "indicativo": (dados.indicativo_operacional or "").strip() or None,
+        "funcao": (dados.funcao_operacional or "").strip() or None
+    }
+    with engine.begin() as conn:
+        estado = conn.execute(text("""
+            SELECT estado FROM operacoes WHERE id=:operacao_id FOR UPDATE
+        """), parametros).scalar()
+        if estado is None:
+            raise HTTPException(status_code=404, detail="Operacao inexistente")
+        if estado in ("concluida", "arquivada"):
+            raise HTTPException(status_code=409, detail="Operacao encerrada")
+
+        participante = conn.execute(text("""
+            SELECT id FROM operacao_elementos
+            WHERE operacao_id=:operacao_id
+              AND elemento_catalogo_id=:catalogo_id
+              AND estado='participante' AND saida_em IS NULL
+            FOR UPDATE
+        """), parametros).scalar()
+        if participante is None:
+            raise HTTPException(status_code=404, detail="Participante inexistente")
+
+        meios = conn.execute(text("""
+            SELECT id FROM elementos
+            WHERE operacao_id=:operacao_id
+              AND elemento_catalogo_id=:catalogo_id
+            FOR UPDATE
+        """), parametros).scalars().all()
+        if len(meios) != 1:
+            raise HTTPException(
+                status_code=409,
+                detail="Representacao operacional ausente ou duplicada"
+            )
+
+        conn.execute(text("""
+            UPDATE operacao_elementos
+            SET indicativo_operacional=:indicativo, funcao_operacional=:funcao
+            WHERE id=:participante_id
+        """), {**parametros, "participante_id": participante})
+        conn.execute(text("""
+            UPDATE elementos
+            SET indicativo_radio=:indicativo, funcao=:funcao
+            WHERE id=:meio_id
+        """), {**parametros, "meio_id": meios[0]})
+        conn.execute(text("""
+            INSERT INTO timeline_eventos
+                (tipo, descricao, elemento_id, operacao_id)
+            VALUES ('elemento', :descricao, :meio_id, :operacao_id)
+        """), {
+            "descricao": "Indicativo e funcao do elemento atualizados na preparacao",
+            "meio_id": meios[0], "operacao_id": operacao_id
+        })
+    return {"mensagem": "Preparacao do elemento atualizada"}
+
+
 class HorariosElemento(BaseModel):
     chamado_em: datetime | None = None
     apresentado_em: datetime | None = None
