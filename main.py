@@ -1656,6 +1656,8 @@ def reposicionar_meio_no_mapa(
         """), parametros).scalar()
         if estado is None:
             raise HTTPException(status_code=404, detail="Operacao inexistente")
+        if estado in ("concluida", "arquivada"):
+            raise HTTPException(status_code=409, detail="Operacao encerrada: apenas consulta")
         if exigir_operacao_editavel_id(conn) != operacao_id:
             raise HTTPException(status_code=409, detail="Operacao diferente da ativa")
 
