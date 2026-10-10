@@ -1,3 +1,4 @@
+import MapaBaseInicial from './MapaBaseInicial'
 import { useEffect, useRef, useState } from 'react'
 import { criarBaseOperacao, obterBasesOperacao } from '../services/api'
 
@@ -102,6 +103,18 @@ export default function BasesOperacao({ operacaoId }) {
               </div>
             ))}
           </div>
+          <p>{'Clique no mapa para escolher a localiza\u00e7\u00e3o da nova base.'}</p>
+          <MapaBaseInicial
+            latitude={dados.latitude}
+            longitude={dados.longitude}
+            bases={bases}
+            disabled={guardando || !carregado}
+            onEscolher={(latitude, longitude) =>
+              setDados((anteriores) => ({
+                ...anteriores, latitude: String(latitude), longitude: String(longitude)
+              }))
+            }
+          />
           <div className="campos-duplos">
             {['latitude', 'longitude'].map((campo) => (
               <div key={campo}>
