@@ -194,7 +194,7 @@ BACKUP_DIR.mkdir(exist_ok=True)
 BACKUP_NAME_RE = re.compile(r"^backup_\d{8}_\d{6}\.sgo$")
 TABELAS_BACKUP = [
     "entidades", "recursos_catalogo", "elementos_catalogo", "operacoes",
-    "configuracao", "bases", "ocorrencias", "recursos", "elementos",
+    "configuracao", "bases", "operacao_bases", "ocorrencias", "recursos", "elementos",
     "setores", "objetivos", "objetivo_modelos", "missoes", "missao_recursos", "missao_notas", "decisoes_operacionais", "ordens", "timeline_eventos", "operacao_recursos",
     "operacao_elementos",
     "chamadas_ocorrencia", "elemento_empenhos",
@@ -759,9 +759,31 @@ def preparar_separacao_por_operacao():
             """), {"legado_id": legado_id})
 
 
+def preparar_bases_por_operacao():
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS operacao_bases (
+                id SERIAL PRIMARY KEY,
+                operacao_id INTEGER NOT NULL
+                    REFERENCES operacoes(id) ON DELETE CASCADE,
+                nome TEXT NOT NULL,
+                tipo TEXT,
+                entidade TEXT,
+                ilha TEXT NOT NULL,
+                localizacao geometry(Point,4326) NOT NULL,
+                criado_em TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_operacao_bases_operacao
+            ON operacao_bases (operacao_id)
+        """))
+
+
 @app.on_event("startup")
 def iniciar_estrutura_operacoes():
     preparar_separacao_por_operacao()
+    preparar_bases_por_operacao()
 
 
 @app.get("/operacoes")
