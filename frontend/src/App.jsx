@@ -1,3 +1,4 @@
+import AgrupamentoMeios from './components/AgrupamentoMeios'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
@@ -4078,8 +4079,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               concluirModo={() => setModoMapa({ tipo: 'normal', alvo: null })}
           />
 
-          {recursosFiltrados.map((r) => {
-            if (!r.latitude || !r.longitude) return null
+          <AgrupamentoMeios
+            recursos={recursosFiltrados}
+            elementos={elementos}
+            onSelecionar={(tipo, dados) => setDetalhe({ tipo, dados })}
+          >
+            {({ recursosVisiveis, elementosVisiveis }) => (
+              <>
+          {recursosVisiveis.map((r) => {
+            if (!Number.isFinite(r.latitude) || !Number.isFinite(r.longitude)) return null
 
             
             const totalElementos = elementos.filter(el => el.recurso_id === r.id).length    
@@ -4204,8 +4212,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             ) : null
           )}
 
-          {elementos.map((el) =>
-            el.latitude && el.longitude ? (
+          {elementosVisiveis.map((el) =>
+            Number.isFinite(el.latitude) && Number.isFinite(el.longitude) ? (
               <Marker
                 key={`elemento-${el.id}`}
                 position={[el.latitude, el.longitude]}
@@ -4258,6 +4266,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </Marker>
             ) : null
           )}  
+
+              </>
+            )}
+          </AgrupamentoMeios>
 
           {bases.map((b) =>
             Number.isFinite(b.latitude) && Number.isFinite(b.longitude) ? (
