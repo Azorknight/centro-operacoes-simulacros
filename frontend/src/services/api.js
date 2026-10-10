@@ -521,3 +521,10 @@ export function editarPreparacaoElemento(operacaoId, catalogoId, dados) {
     body: JSON.stringify(dados)
   })
 }
+
+export function reposicionarMeioMapa(operacaoId, tipo, meioId, latitude, longitude) {
+  return request(`/operacoes/${operacaoId}/meios/${tipo}/${meioId}/posicao`, {
+    method: 'PUT',
+    body: JSON.stringify({ latitude, longitude })
+  })
+}

@@ -3,7 +3,7 @@ import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 
 export default function AgrupamentoMeios({
-  recursos, elementos, onSelecionar, children
+  recursos, elementos, onSelecionar, onReposicionar, modoConsulta, children
 }) {
   const mapa = useMap()
   const [zoom, setZoom] = useState(mapa.getZoom())
@@ -93,7 +93,8 @@ export default function AgrupamentoMeios({
             <p>Selecione um meio para abrir a ficha.</p>
             <div style={{ maxHeight: 240, overflowY: 'auto' }}>
               {grupo.membros.map(({ tipo, dados }) => (
-                <button key={`${tipo}:${dados.id}`} type="button"
+                <div key={`${tipo}:${dados.id}`} style={{ marginBottom: 10 }}>
+                <button type="button"
                   style={{
                     display: 'block', width: '100%', marginBottom: 6,
                     padding: 8, textAlign: 'left', cursor: 'pointer'
@@ -107,6 +108,20 @@ export default function AgrupamentoMeios({
                   {tipo === 'recurso' ? 'Recurso' : 'Elemento'}
                   {' / '}{dados.nome}
                 </button>
+                {!modoConsulta && onReposicionar && (
+                  <button type="button"
+                    disabled={tipo === 'elemento' && dados.recurso_id != null}
+                    title={tipo === 'elemento' && dados.recurso_id != null
+                      ? 'Elemento embarcado: mova a viatura.' : ''}
+                    style={{ padding: 6, cursor: 'pointer' }}
+                    onClick={() => {
+                      mapa.closePopup()
+                      onReposicionar(tipo, dados)
+                    }}>
+                    Reposicionar no mapa
+                  </button>
+                )}
+                </div>
               ))}
             </div>
           </Popup>

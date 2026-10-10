@@ -4026,6 +4026,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               modoMapa.tipo === 'nova_ocorrencia' ? '📍 Modo: Nova ocorrência — clique no local' :
               modoMapa.tipo === 'novo_recurso' ? '🚓 Modo: Novo recurso — clique no local' :
               modoMapa.tipo === 'apear_elemento' ? `👤 Modo: Apear ${modoMapa.alvo?.nome || 'elemento'} — clique no destino` :
+              modoMapa.tipo === 'reposicionar_meio' ? `Reposicionar ${modoMapa.alvo?.indicativo_radio || modoMapa.alvo?.nome || 'meio'} \u2014 clique no destino` :
               'Modo operacional'}</strong>
             {modoMapa.tipo !== 'normal' && (
               <button type="button" onClick={() => setModoMapa({ tipo: 'normal', alvo: null })} style={styles.cancelarModoButton}>
@@ -4074,6 +4075,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <GestorCliquesMapa
               modoMapa={modoMapa}
+              operacaoId={operacaoAtiva?.id}
               refresh={refresh}
               modoConsulta={modoBloqueado}
               concluirModo={() => setModoMapa({ tipo: 'normal', alvo: null })}
@@ -4082,6 +4084,11 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           <AgrupamentoMeios
             recursos={recursosFiltrados}
             elementos={elementos}
+            modoConsulta={modoBloqueado}
+            onReposicionar={(tipo, dados) => {
+              setDetalhe(null)
+              setModoMapa({ tipo: 'reposicionar_meio', tipoMeio: tipo, alvo: dados })
+            }}
             onSelecionar={(tipo, dados) => setDetalhe({ tipo, dados })}
           >
             {({ recursosVisiveis, elementosVisiveis }) => (

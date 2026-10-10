@@ -1,3 +1,4 @@
+from pydantic import Field
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from database import testar_ligacao
@@ -1630,6 +1631,66 @@ def editar_preparacao_elemento(
             "meio_id": meios[0], "operacao_id": operacao_id
         })
     return {"mensagem": "Preparacao do elemento atualizada"}
+
+
+class PosicaoMeioMapa(BaseModel):
+    latitude: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
+
+
+@app.put("/operacoes/{operacao_id}/meios/{tipo}/{meio_id}/posicao")
+def reposicionar_meio_no_mapa(
+    operacao_id: int, tipo: str, meio_id: int, dados: PosicaoMeioMapa
+):
+    tabelas = {"recurso": "recursos", "elemento": "elementos"}
+    if tipo not in tabelas:
+        raise HTTPException(status_code=404, detail="Tipo de meio inexistente")
+    tabela = tabelas[tipo]
+    parametros = {
+        "operacao_id": operacao_id, "meio_id": meio_id,
+        "latitude": dados.latitude, "longitude": dados.longitude
+    }
+    with engine.begin() as conn:
+        estado = conn.execute(text("""
+            SELECT estado FROM operacoes WHERE id=:operacao_id FOR UPDATE
+        """), parametros).scalar()
+        if estado is None:
+            raise HTTPException(status_code=404, detail="Operacao inexistente")
+        if exigir_operacao_editavel_id(conn) != operacao_id:
+            raise HTTPException(status_code=409, detail="Operacao diferente da ativa")
+
+        meio = conn.execute(text(f"""
+            SELECT * FROM {tabela}
+            WHERE id=:meio_id AND operacao_id=:operacao_id
+            FOR UPDATE
+        """), parametros).mappings().first()
+        if meio is None:
+            raise HTTPException(status_code=404, detail="Meio inexistente nesta operacao")
+        if tipo == "elemento" and meio["recurso_id"] is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Elemento embarcado: mova a viatura ou registe primeiro o desembarque"
+            )
+
+        conn.execute(text(f"""
+            UPDATE {tabela}
+            SET localizacao=ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+            WHERE id=:meio_id AND operacao_id=:operacao_id
+        """), parametros)
+        conn.execute(text("""
+            INSERT INTO timeline_eventos
+                (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
+            VALUES (:tipo_evento, :descricao, :recurso_id, :elemento_id,
+                    :ocorrencia_id, :operacao_id)
+        """), {
+            "tipo_evento": tipo,
+            "descricao": f"Posicao atualizada no mapa: {meio['nome']}",
+            "recurso_id": meio_id if tipo == "recurso" else None,
+            "elemento_id": meio_id if tipo == "elemento" else None,
+            "ocorrencia_id": meio["ocorrencia_id"],
+            "operacao_id": operacao_id
+        })
+    return {"ok": True, "latitude": dados.latitude, "longitude": dados.longitude}
 
 
 class HorariosElemento(BaseModel):
