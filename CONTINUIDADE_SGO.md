@@ -848,3 +848,17 @@ esse bloqueio ainda não foi testado funcionalmente.
 Continuam pendentes testes de operação encerrada e coordenadas inválidas.
 O servidor piloto ainda não recebeu estas alterações.
 Próximo passo: validar os bloqueios deste método antes de avançar.
+## Bloqueios de reposicionamento validados — 10/10/2026
+Último commit funcional confirmado: 9645889, enviado ao GitHub.
+Latitude inválida: HTTP 422.
+Outra operação: HTTP 409.
+Nos dois pedidos, meios e Timeline permaneceram inalterados.
+Criado ELEMENTO TESTE EMBARCADO, indicativo EMBARCADO 01:
+elemento operacional 20, embarcado na viatura 19, operação 11.
+Reposicionamento independente recusado com HTTP 409;
+estado, viatura e posição permaneceram inalterados.
+Operações concluída e arquivada: HTTP 409, testados diretamente
+no método Python numa transação revertida, sem guardar esses estados.
+Operação 11 manteve o estado original planeada.
+Esta secção substitui as pendências desses testes nas notas anteriores.
+O servidor piloto continua sem atualização.
