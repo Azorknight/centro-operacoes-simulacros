@@ -528,3 +528,15 @@ export function reposicionarMeioMapa(operacaoId, tipo, meioId, latitude, longitu
     body: JSON.stringify({ latitude, longitude })
   })
 }
+
+export function editarBaseOperacao(operacaoId, baseId, dados) {
+  return request(`/operacoes/${operacaoId}/bases/${baseId}`, {
+    method: 'PUT', body: JSON.stringify(dados)
+  })
+}
+
+export function retirarBaseOperacao(operacaoId, baseId) {
+  return request(`/operacoes/${operacaoId}/bases/${baseId}`, {
+    method: 'DELETE'
+  })
+}

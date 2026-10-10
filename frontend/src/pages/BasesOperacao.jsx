@@ -1,6 +1,6 @@
 import MapaBaseInicial from './MapaBaseInicial'
 import { useEffect, useRef, useState } from 'react'
-import { criarBaseOperacao, obterBasesOperacao } from '../services/api'
+import { criarBaseOperacao, obterBasesOperacao, editarBaseOperacao, retirarBaseOperacao } from '../services/api'
 
 const inicial = {
   nome: '', tipo: '', entidade: '', ilha: '', latitude: '', longitude: ''
@@ -9,6 +9,8 @@ const inicial = {
 export default function BasesOperacao({ operacaoId }) {
   const [bases, setBases] = useState([])
   const [dados, setDados] = useState(inicial)
+  const [edicaoId, setEdicaoId] = useState(null)
+  const formulario = useRef(null)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [carregado, setCarregado] = useState(false)
@@ -22,6 +24,7 @@ export default function BasesOperacao({ operacaoId }) {
     setErro('')
     setBases([])
     setDados(inicial)
+    setEdicaoId(null)
     obterBasesOperacao(operacaoId)
       .then((lista) => {
         if (ativo) {
@@ -45,19 +48,54 @@ export default function BasesOperacao({ operacaoId }) {
     setGuardando(true)
     setErro('')
     try {
-      const criada = await criarBaseOperacao(operacaoId, {
+      const valores = {
         nome: dados.nome.trim(),
         ilha: dados.ilha.trim(),
         tipo: dados.tipo.trim() || null,
         entidade: dados.entidade.trim() || null,
         latitude: Number(dados.latitude),
         longitude: Number(dados.longitude)
-      })
-      setBases((lista) => [...lista, criada].sort((a, b) =>
-        a.nome.localeCompare(b.nome, 'pt')))
+      }
+      const guardada = edicaoId === null
+        ? await criarBaseOperacao(operacaoId, valores)
+        : await editarBaseOperacao(operacaoId, edicaoId, valores)
+      setBases((lista) => [...lista.filter((b) => b.id !== guardada.id), guardada]
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt')))
       setDados(inicial)
+      setEdicaoId(null)
     } catch (e) {
       setErro(e.message || 'N\u00e3o foi poss\u00edvel guardar a base.')
+    } finally {
+      bloqueio.current = false
+      setGuardando(false)
+    }
+  }
+
+  function editar(base) {
+    if (bloqueio.current) return
+    setErro('')
+    setEdicaoId(base.id)
+    setDados({
+      nome: base.nome, tipo: base.tipo || '', entidade: base.entidade || '',
+      ilha: base.ilha, latitude: String(base.latitude), longitude: String(base.longitude)
+    })
+    formulario.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  async function retirar(base) {
+    if (bloqueio.current || !window.confirm(`Retirar a base "${base.nome}" desta opera\u00e7\u00e3o?`)) return
+    bloqueio.current = true
+    setGuardando(true)
+    setErro('')
+    try {
+      await retirarBaseOperacao(operacaoId, base.id)
+      setBases((lista) => lista.filter((b) => b.id !== base.id))
+      if (edicaoId === base.id) {
+        setEdicaoId(null)
+        setDados(inicial)
+      }
+    } catch (e) {
+      setErro(e.message || 'N\u00e3o foi poss\u00edvel retirar a base.')
     } finally {
       bloqueio.current = false
       setGuardando(false)
@@ -85,13 +123,20 @@ export default function BasesOperacao({ operacaoId }) {
                 <strong>{base.nome}</strong>
                 <p>{[base.tipo, base.entidade, base.ilha].filter(Boolean).join(' \u00b7 ')}</p>
                 <small>Latitude: {base.latitude} | Longitude: {base.longitude}</small>
+                <div className="modal-acoes">
+                  <button type="button" className="botao-secundario"
+                    disabled={guardando} onClick={() => editar(base)}>Editar</button>
+                  <button type="button" className="botao-retirar"
+                    disabled={guardando} onClick={() => retirar(base)}>Retirar</button>
+                </div>
               </div>
             </article>
           ))}
         </div>
       )}
-      <form className="novo-recurso-caixa" onSubmit={guardar}>
-        <h3>Registar base</h3>
+      <form ref={formulario} className="novo-recurso-caixa" onSubmit={guardar}>
+        <h3>{edicaoId === null ? 'Registar base' : 'Editar base'}</h3>
+        {edicaoId !== null && <p>{'Se a base estiver atribu\u00edda a participantes, a ilha e a localiza\u00e7\u00e3o ficam protegidas.'}</p>}
         <fieldset disabled={guardando || !carregado} style={{ border: 0, padding: 0, margin: 0 }}>
           <div className="campos-duplos">
             {campos.map(([campo, rotulo, limite]) => (
@@ -103,7 +148,7 @@ export default function BasesOperacao({ operacaoId }) {
               </div>
             ))}
           </div>
-          <p>{'Clique no mapa para escolher a localiza\u00e7\u00e3o da nova base.'}</p>
+          <p>{'Clique no mapa para escolher a localiza\u00e7\u00e3o da base.'}</p>
           <MapaBaseInicial
             latitude={dados.latitude}
             longitude={dados.longitude}
@@ -127,10 +172,17 @@ export default function BasesOperacao({ operacaoId }) {
               </div>
             ))}
           </div>
+          {erro && <div className="operacoes-erro" role="alert">{erro}</div>}
           <div className="modal-acoes">
             <button className="botao-primario" type="submit">
-              {guardando ? 'A guardar...' : 'Guardar base'}
+              {guardando ? 'A guardar...' : edicaoId === null ? 'Guardar base' : 'Guardar altera\u00e7\u00f5es'}
             </button>
+            {edicaoId !== null && (
+              <button type="button" className="botao-secundario"
+                onClick={() => { setEdicaoId(null); setDados(inicial); setErro('') }}>
+                {'Cancelar edi\u00e7\u00e3o'}
+              </button>
+            )}
           </div>
         </fieldset>
       </form>

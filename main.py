@@ -2535,6 +2535,81 @@ def criar_base_operacao(operacao_id: int, dados: BaseOperacao):
         return dict(resultado)
 
 
+def bloquear_base_para_edicao(conn, operacao_id, base_id):
+    parametros = {"operacao_id": operacao_id, "base_id": base_id}
+    estado = conn.execute(text("""
+        SELECT estado FROM operacoes WHERE id=:operacao_id FOR UPDATE
+    """), parametros).scalar()
+    if estado is None:
+        raise HTTPException(status_code=404, detail="Operacao inexistente")
+    if estado in ("concluida", "arquivada"):
+        raise HTTPException(status_code=409, detail="Operacao em modo de consulta")
+    base = conn.execute(text("""
+        SELECT * FROM operacao_bases
+        WHERE id=:base_id AND operacao_id=:operacao_id FOR UPDATE
+    """), parametros).mappings().first()
+    if base is None:
+        raise HTTPException(status_code=404, detail="Base inexistente nesta operacao")
+    atribuida = conn.execute(text("""
+        SELECT EXISTS (
+            SELECT 1 FROM operacao_recursos WHERE base_inicial_id=:base_id
+            UNION ALL
+            SELECT 1 FROM operacao_elementos WHERE base_inicial_id=:base_id
+        )
+    """), parametros).scalar()
+    return base, atribuida
+
+
+@app.put("/operacoes/{operacao_id}/bases/{base_id}")
+def editar_base_operacao(operacao_id: int, base_id: int, dados: BaseOperacao):
+    valores = dados.model_dump()
+    for campo in ("nome", "ilha", "tipo", "entidade"):
+        if valores[campo] is not None:
+            valores[campo] = valores[campo].strip()
+    if not valores["nome"] or not valores["ilha"]:
+        raise HTTPException(status_code=422, detail="Nome e ilha sao obrigatorios")
+    valores.update(operacao_id=operacao_id, base_id=base_id)
+    with engine.begin() as conn:
+        base, atribuida = bloquear_base_para_edicao(conn, operacao_id, base_id)
+        mesma_posicao = conn.execute(text("""
+            SELECT ST_Equals(localizacao,
+                ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))
+            FROM operacao_bases
+            WHERE id=:base_id AND operacao_id=:operacao_id
+        """), valores).scalar()
+        if atribuida and (not mesma_posicao or valores["ilha"] != base["ilha"]):
+            raise HTTPException(
+                status_code=409,
+                detail="Base atribuida: preservar ilha e localizacao"
+            )
+        resultado = conn.execute(text("""
+            UPDATE operacao_bases
+            SET nome=:nome, tipo=:tipo, entidade=:entidade, ilha=:ilha,
+                localizacao=ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+            WHERE id=:base_id AND operacao_id=:operacao_id
+            RETURNING id, operacao_id, nome, tipo, entidade, ilha,
+                      ST_Y(localizacao) AS latitude,
+                      ST_X(localizacao) AS longitude, criado_em
+        """), valores).mappings().one()
+        return dict(resultado)
+
+
+@app.delete("/operacoes/{operacao_id}/bases/{base_id}")
+def retirar_base_operacao(operacao_id: int, base_id: int):
+    with engine.begin() as conn:
+        _, atribuida = bloquear_base_para_edicao(conn, operacao_id, base_id)
+        if atribuida:
+            raise HTTPException(
+                status_code=409,
+                detail="Base atribuida a participantes: nao pode ser retirada"
+            )
+        conn.execute(text("""
+            DELETE FROM operacao_bases
+            WHERE id=:base_id AND operacao_id=:operacao_id
+        """), {"base_id": base_id, "operacao_id": operacao_id})
+    return {"ok": True}
+
+
 class AtribuicaoBaseInicial(BaseModel):
     base_inicial_id: int = Field(gt=0)
 
