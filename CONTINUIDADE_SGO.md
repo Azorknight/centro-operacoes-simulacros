@@ -821,3 +821,16 @@ Estes dados não estão sincronizados com Martinex nem com o servidor.
 Inspecionar o mapa operacional e ligar a consulta das bases à operação ativa.
 Não atualizar o servidor nem repetir o instalador completo nesta fase.
 Antes de mudar de PC: commit/push; no destino, verificar estado e pull --ff-only.
+## Atualização do mapa — 10/10/2026
+Último commit funcional confirmado: 4cea4c2, enviado ao GitHub.
+139a9f3: mapa operacional mostra apenas as bases da operação aberta.
+Nomes das bases permanentes; nomes dos meios ao passar o rato.
+Isolamento validado noutra operação sem bases.
+4cea4c2: meios próximos no ecrã agrupados com contagem e lista de seleção.
+Validados: agrupamento, separação com zoom e abertura da ficha correta.
+Agrupamento visual não escreve coordenadas na base de dados.
+Meios na mesma posição continuam agrupados mesmo com zoom elevado.
+Arrasto disponível nos marcadores individuais; grupo não é arrastável.
+Próximo passo: permitir selecionar e reposicionar um meio que permanece
+agrupado, sem deslocar os restantes. Inspecionar primeiro os controlos
+de reposicionamento existentes.
