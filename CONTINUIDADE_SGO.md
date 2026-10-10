@@ -862,3 +862,18 @@ no método Python numa transação revertida, sem guardar esses estados.
 Operação 11 manteve o estado original planeada.
 Esta secção substitui as pendências desses testes nas notas anteriores.
 O servidor piloto continua sem atualização.
+## Edicao e retirada de bases — 10/10/2026
+Ultimo commit funcional confirmado: 7eaddb0, enviado ao GitHub.
+Bases livres podem ser editadas, incluindo localizacao, ou retiradas.
+Bases referenciadas por participacoes atuais ou antigas:
+- Permitem corrigir nome, tipo e entidade.
+- Bloqueiam alteracao de ilha/localizacao e retirada com HTTP 409.
+Validados no navegador: edicao com persistencia, retirada de base livre,
+bloqueio de deslocacao e retirada de base atribuida.
+Renomear base atribuida atualizou o nome mostrado na participacao,
+mantendo a posicao atual da viatura.
+Erros apresentados tambem junto dos botoes do formulario.
+Bases atuais da operacao 11:
+BASE TESTE PSP EDITADA, BASE TESTE 02 e BASE TESTE MAPA EDITADA.
+BASE TESTE REMOVER foi criada e retirada durante o teste.
+Servidor piloto ainda sem atualizacao; manual ainda por consolidar.
