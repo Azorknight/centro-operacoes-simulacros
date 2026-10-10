@@ -2318,6 +2318,74 @@ def confirmar_chegada(recurso_id: int):
 
     return {"mensagem": "Chegada registada"}
 
+from pydantic import Field
+
+
+class BaseOperacao(BaseModel):
+    nome: str = Field(min_length=1, max_length=200)
+    ilha: str = Field(min_length=1, max_length=100)
+    tipo: str | None = Field(default=None, max_length=100)
+    entidade: str | None = Field(default=None, max_length=200)
+    latitude: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
+
+
+@app.get("/operacoes/{operacao_id}/bases")
+def listar_bases_operacao(operacao_id: int):
+    with engine.connect() as conn:
+        existe = conn.execute(
+            text("SELECT id FROM operacoes WHERE id=:id"),
+            {"id": operacao_id},
+        ).scalar()
+        if existe is None:
+            raise HTTPException(status_code=404, detail="Operacao inexistente")
+        resultado = conn.execute(text("""
+            SELECT id, operacao_id, nome, tipo, entidade, ilha,
+                   ST_Y(localizacao) AS latitude,
+                   ST_X(localizacao) AS longitude, criado_em
+            FROM operacao_bases
+            WHERE operacao_id=:operacao_id
+            ORDER BY nome, id
+        """), {"operacao_id": operacao_id})
+        return [dict(linha) for linha in resultado.mappings()]
+
+
+@app.post("/operacoes/{operacao_id}/bases", status_code=201)
+def criar_base_operacao(operacao_id: int, dados: BaseOperacao):
+    valores = dados.model_dump()
+    for campo in ("nome", "ilha", "tipo", "entidade"):
+        if valores[campo] is not None:
+            valores[campo] = valores[campo].strip()
+    if not valores["nome"] or not valores["ilha"]:
+        raise HTTPException(
+            status_code=422, detail="Nome e ilha sao obrigatorios"
+        )
+    valores["operacao_id"] = operacao_id
+    with engine.begin() as conn:
+        operacao = conn.execute(
+            text("SELECT estado FROM operacoes WHERE id=:id FOR UPDATE"),
+            {"id": operacao_id},
+        ).mappings().first()
+        if operacao is None:
+            raise HTTPException(status_code=404, detail="Operacao inexistente")
+        if operacao["estado"] in ("concluida", "arquivada"):
+            raise HTTPException(
+                status_code=409,
+                detail="A operacao nao permite alterar bases",
+            )
+        resultado = conn.execute(text("""
+            INSERT INTO operacao_bases
+                (operacao_id, nome, tipo, entidade, ilha, localizacao)
+            VALUES
+                (:operacao_id, :nome, :tipo, :entidade, :ilha,
+                 ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))
+            RETURNING id, operacao_id, nome, tipo, entidade, ilha,
+                      ST_Y(localizacao) AS latitude,
+                      ST_X(localizacao) AS longitude, criado_em
+        """), valores).mappings().one()
+        return dict(resultado)
+
+
 @app.get("/bases")
 def listar_bases():
     with engine.connect() as conn:
