@@ -1,6 +1,8 @@
+import BaseInicialParticipante from './BaseInicialParticipante'
 import BasesOperacao from './BasesOperacao'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  obterBasesOperacao,
   adicionarElementoParticipante,
   adicionarRecursoParticipante,
   criarElementoCatalogo,
@@ -22,6 +24,7 @@ function PrepararOperacao({ operacao, onFechar }) {
   const [separador, setSeparador] = useState('bases')
   const [catalogoRecursos, setCatalogoRecursos] = useState([])
   const [recursos, setRecursos] = useState([])
+  const [bases, setBases] = useState([])
   const [catalogoElementos, setCatalogoElementos] = useState([])
   const [elementos, setElementos] = useState([])
   const [selecionado, setSelecionado] = useState('')
@@ -43,16 +46,18 @@ function PrepararOperacao({ operacao, onFechar }) {
   async function carregar() {
     try {
       setErro('')
-      const [catR, partR, catE, partE] = await Promise.all([
+      const [catR, partR, catE, partE, listaBases] = await Promise.all([
         obterCatalogoRecursos(),
         obterRecursosParticipantes(operacao.id),
         obterCatalogoElementos(),
-        obterElementosParticipantes(operacao.id)
+        obterElementosParticipantes(operacao.id),
+        obterBasesOperacao(operacao.id)
       ])
       setCatalogoRecursos(catR)
       setRecursos(partR)
       setCatalogoElementos(catE)
       setElementos(partE)
+      setBases(listaBases)
     } catch {
       setErro('Não foi possível carregar a preparação da operação.')
     } finally {
@@ -71,6 +76,7 @@ function PrepararOperacao({ operacao, onFechar }) {
     setEdicaoRecurso(null)
     setElementoNoRecurso(null)
     setMostrarNovo(false)
+    if (separador !== 'bases') carregar()
   }, [separador])
 
   const idsRecursos = useMemo(() => new Set(recursos.map((i) => i.recurso_catalogo_id)), [recursos])
@@ -340,6 +346,11 @@ function PrepararOperacao({ operacao, onFechar }) {
                     {(item.funcao || item.funcao_operacional) ? ` · Função: ${item.funcao || item.funcao_operacional}` : ''}
                     {separador === 'elementos' && ` · Viatura: ${item.recurso_nome ? [item.recurso_indicativo, item.recurso_nome].filter(Boolean).join(' — ') : 'sem viatura'}`}
                   </small>
+                  <BaseInicialParticipante
+                    key={`${separador}:${item.participacao_id}:${item.base_inicial_id}`}
+                    operacaoId={operacao.id} tipo={separador}
+                    item={item} bases={bases} onGuardada={carregar}
+                  />
                   {separador === 'recursos' && (
                     <div style={{ marginTop: 8 }}>
                       <small>Elementos: {elementos.filter((e) => e.recurso_catalogo_id === item.recurso_catalogo_id).map((e) => e.nome).join(', ') || 'nenhum'}</small>

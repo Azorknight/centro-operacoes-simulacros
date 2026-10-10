@@ -507,3 +507,10 @@ export function criarBaseOperacao(operacaoId, dados) {
     body: JSON.stringify(dados)
   })
 }
+
+export function atribuirBaseInicial(operacaoId, tipo, catalogoId, baseId) {
+  return request(`/operacoes/${operacaoId}/participantes/${tipo}/${catalogoId}/base-inicial`, {
+    method: 'PUT',
+    body: JSON.stringify({ base_inicial_id: Number(baseId) })
+  })
+}
