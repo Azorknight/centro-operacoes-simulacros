@@ -495,3 +495,15 @@ export function associarSetorMissao(missaoId, setorId) {
     body: JSON.stringify({ setor_id: setorId || null })
   })
 }
+
+// Bases da operacao
+export function obterBasesOperacao(operacaoId) {
+  return request(`/operacoes/${operacaoId}/bases`)
+}
+
+export function criarBaseOperacao(operacaoId, dados) {
+  return request(`/operacoes/${operacaoId}/bases`, {
+    method: 'POST',
+    body: JSON.stringify(dados)
+  })
+}

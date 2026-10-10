@@ -1,3 +1,4 @@
+import BasesOperacao from './BasesOperacao'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   adicionarElementoParticipante,
@@ -18,7 +19,7 @@ const novoRecursoInicial = { nome: '', tipo: '', ilha: '', marca: '', matricula:
 const novoElementoInicial = { nome: '', entidade: '', posto: '', estado: 'ativo' }
 
 function PrepararOperacao({ operacao, onFechar }) {
-  const [separador, setSeparador] = useState('recursos')
+  const [separador, setSeparador] = useState('bases')
   const [catalogoRecursos, setCatalogoRecursos] = useState([])
   const [recursos, setRecursos] = useState([])
   const [catalogoElementos, setCatalogoElementos] = useState([])
@@ -245,6 +246,7 @@ function PrepararOperacao({ operacao, onFechar }) {
         </div>
 
         <div className="preparacao-tabs">
+          <button type="button" className={separador === 'bases' ? 'ativo' : ''} onClick={() => setSeparador('bases')}>Bases</button>
           <button className={separador === 'recursos' ? 'ativo' : ''} onClick={() => setSeparador('recursos')}>
             Recursos ({recursos.length})
           </button>
@@ -255,6 +257,7 @@ function PrepararOperacao({ operacao, onFechar }) {
 
         {erro && <div className="operacoes-erro erro-no-modal">{erro}</div>}
 
+        {separador === 'bases' ? <BasesOperacao operacaoId={operacao.id} /> : <>
         <div className="preparacao-resumo">
           <strong>{participantes.length}</strong>
           <span>{separador === 'recursos' ? 'recursos participantes' : 'elementos participantes'}</span>
@@ -432,6 +435,8 @@ function PrepararOperacao({ operacao, onFechar }) {
             ))}
           </div>
         )}
+
+        </>}
 
         <div className="modal-acoes preparacao-rodape"><button type="button" className="botao-abrir" onClick={onFechar}>Concluir preparação</button></div>
       </section>
