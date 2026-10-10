@@ -780,6 +780,15 @@ def preparar_bases_por_operacao():
         """))
 
 
+    with engine.begin() as conn:
+        for tabela in ("operacao_recursos", "operacao_elementos"):
+            conn.execute(text(f"""
+                ALTER TABLE {tabela}
+                ADD COLUMN IF NOT EXISTS base_inicial_id INTEGER
+                    REFERENCES operacao_bases(id) ON DELETE SET NULL
+            """))
+
+
 @app.on_event("startup")
 def iniciar_estrutura_operacoes():
     preparar_separacao_por_operacao()
