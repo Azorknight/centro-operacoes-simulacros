@@ -834,3 +834,17 @@ Arrasto disponível nos marcadores individuais; grupo não é arrastável.
 Próximo passo: permitir selecionar e reposicionar um meio que permanece
 agrupado, sem deslocar os restantes. Inspecionar primeiro os controlos
 de reposicionamento existentes.
+## Reposicionamento de meios agrupados — 10/10/2026
+Último commit funcional: 341eab2, enviado ao GitHub.
+Grupo permite abrir ficha ou escolher Reposicionar no mapa.
+Após escolher o meio, clicar no destino; Esc cancela sem deslocar.
+Novo método altera apenas coordenadas e regista evento na Timeline.
+Validados no navegador: cancelamento, movimento individual de elemento
+e recurso, preservação dos restantes e persistência após atualizar.
+Elemento de teste manteve estado apeado, sem viatura nem ocorrência.
+Backend limita a operação ativa editável e valida coordenadas.
+Elemento embarcado tem bloqueio de reposicionamento independente;
+esse bloqueio ainda não foi testado funcionalmente.
+Continuam pendentes testes de operação encerrada e coordenadas inválidas.
+O servidor piloto ainda não recebeu estas alterações.
+Próximo passo: validar os bloqueios deste método antes de avançar.
