@@ -764,3 +764,60 @@ Começar pela estrutura e API de bases por operação, em pequenos passos.
 Validar tecnicamente, testar no navegador, commit e push por bloco.
 Atualização do servidor só depois de preparar procedimento que preserve
 .env, contas, certificado e dados do piloto.
+---
+
+# CONTINUIDADE ATUAL — 10/10/2026
+Esta secção atualiza o estado de desenvolvimento da nota de 09/10/2026.
+
+## Computador e código
+Trabalho realizado no PC Casa, DESKTOP-5L4M7PK.
+Branch develop; último commit funcional confirmado: e65641e, enviado ao GitHub.
+Python local 3.14.2; ligação PostgreSQL local validada.
+O piloto continua em Python 3.12: compatibilidade ainda por validar.
+frontend/package-lock.json tem alterações locais não incluídas nos commits.
+Existe um stash anterior desse ficheiro; não aplicar nem eliminar sem verificar.
+Preservar os backups não rastreados e o .env local, que está ignorado pelo Git.
+
+## Bases por operação — implementado e testado
+- Tabela operacao_bases e campos base_inicial_id nos participantes.
+- API de criação e consulta de bases, isoladas por operação.
+- Validação de coordenadas e rejeição de bases de outra operação.
+- Separador Bases na preparação.
+- Escolha da localização da nova base por clique no mapa.
+- Escolha e persistência da base inicial de recursos e elementos.
+- Meio novo aparece no mapa na base escolhida, sem ordem nem chegada.
+- Atribuição inicial bloqueada quando o meio foi utilizado ou reposicionado.
+- Preparação sem controlos de associação de elementos a viaturas.
+- Edição de indicativo e função preserva estado, posição e associação operacional.
+
+Commits enviados:
+44d93bc, 268b564, 5687603, dc592b4, 711f51e,
+a69b9ed, f2496d4 e e65641e.
+
+## Dados de teste apenas no PC Casa
+Operação 11: TESTE — CRIAR E PREPARAR.
+Bases: BASE TESTE PSP, BASE TESTE 02 e BASE TESTE MAPA.
+BASE TESTE MAPA: latitude 38.730801, longitude -27.0645404.
+Viatura: VIATURA TESTE BASE 01, indicativo BASE 01.
+Elementos: ELEMENTO TESTE BASE 01 e ELEMENTO TESTE BASE 02.
+Elemento 01 reposicionado, estado apeado: alteração de base recusada com 409.
+Editar a sua função preservou exatamente estado e coordenadas.
+Elemento 02: BASE TESTE 02 guardada; presença inicial no mapa confirmada.
+Estes dados não estão sincronizados com Martinex nem com o servidor.
+
+## Trabalho ainda pendente
+- Rever abertura de outras operações para garantir que não herda posições antigas.
+- Mostrar as bases por operação no mapa operacional.
+- Edição/remoção de bases com proteção das referências e posições dos meios.
+- Deslocações operacionais entre bases, incluindo outras ilhas.
+- Consolidar o bloco validado no Manual de Utilização visual.
+  Colocar os procedimentos nos capítulos respetivos, não todos no roteiro.
+- Reconciliar autenticação/deployment do pacote piloto com o repositório.
+- Validar compatibilidade Python 3.12 e preparar atualização que preserve
+  .env, contas, certificado e dados do piloto.
+- Retomar os testes de operador, concorrência, reinício e restantes fluxos.
+
+## Próximo passo
+Inspecionar o mapa operacional e ligar a consulta das bases à operação ativa.
+Não atualizar o servidor nem repetir o instalador completo nesta fase.
+Antes de mudar de PC: commit/push; no destino, verificar estado e pull --ff-only.
