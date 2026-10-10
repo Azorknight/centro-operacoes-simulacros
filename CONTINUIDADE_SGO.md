@@ -877,3 +877,12 @@ Bases atuais da operacao 11:
 BASE TESTE PSP EDITADA, BASE TESTE 02 e BASE TESTE MAPA EDITADA.
 BASE TESTE REMOVER foi criada e retirada durante o teste.
 Servidor piloto ainda sem atualizacao; manual ainda por consolidar.
+## Isolamento entre operacoes validado — 10/10/2026
+Criada TESTE BASES — SEGUNDA OPERAÇÃO, com BASE SEGUNDA OPERAÇÃO.
+Adicionada a mesma viatura permanente VIATURA TESTE BASE 01,
+com indicativo BASE 02: base inicial Por definir, sem elementos herdados.
+Atribuida a nova base; ao abrir, viatura localizada nessa base.
+Mapa mostrou apenas a base da segunda operacao.
+Ao regressar a TESTE — CRIAR E PREPARAR, BASE 01 manteve
+a posicao operacional onde tinha sido deixada.
+Teste realizado no PC Casa; dados nao sincronizados pelo Git.
