@@ -1228,7 +1228,11 @@ def listar_recursos_participantes(operacao_id: int):
                    rc.id AS recurso_catalogo_id, rc.nome, rc.tipo, rc.ilha, rc.marca, rc.matricula,
                    rc.entidade_id, e.nome AS entidade_nome,
                    opr.indicativo_operacional, opr.funcao, opr.estado,
-                   opr.entrada_em, opr.saida_em
+                   opr.entrada_em, opr.saida_em,
+                   opr.base_inicial_id,
+                   (SELECT b.nome FROM operacao_bases b
+                    WHERE b.id=opr.base_inicial_id
+                      AND b.operacao_id=opr.operacao_id) AS base_inicial_nome
             FROM operacao_recursos opr
             JOIN recursos_catalogo rc ON rc.id = opr.recurso_catalogo_id
             LEFT JOIN entidades e ON e.id = rc.entidade_id
@@ -1402,7 +1406,11 @@ def listar_elementos_participantes(operacao_id: int):
                    ope.recurso_catalogo_id, rc.nome AS recurso_nome,
                    rc.tipo AS recurso_tipo, opr.indicativo_operacional AS recurso_indicativo,
                    ope.estado, ope.entrada_em, ope.saida_em,
-                   ope.chamado_em, ope.apresentado_em
+                   ope.chamado_em, ope.apresentado_em,
+                   ope.base_inicial_id,
+                   (SELECT b.nome FROM operacao_bases b
+                    WHERE b.id=ope.base_inicial_id
+                      AND b.operacao_id=ope.operacao_id) AS base_inicial_nome
             FROM operacao_elementos ope
             JOIN elementos_catalogo ec ON ec.id = ope.elemento_catalogo_id
             LEFT JOIN recursos_catalogo rc ON rc.id = ope.recurso_catalogo_id
@@ -2393,6 +2401,123 @@ def criar_base_operacao(operacao_id: int, dados: BaseOperacao):
                       ST_X(localizacao) AS longitude, criado_em
         """), valores).mappings().one()
         return dict(resultado)
+
+
+class AtribuicaoBaseInicial(BaseModel):
+    base_inicial_id: int = Field(gt=0)
+
+
+@app.put("/operacoes/{operacao_id}/participantes/{tipo}/{catalogo_id}/base-inicial")
+def atribuir_base_inicial(
+    operacao_id: int, tipo: str, catalogo_id: int,
+    dados: AtribuicaoBaseInicial,
+):
+    tipos = {
+        "recursos": ("operacao_recursos", "recursos", "recurso_catalogo_id", "recurso_id"),
+        "elementos": ("operacao_elementos", "elementos", "elemento_catalogo_id", "elemento_id"),
+    }
+    if tipo not in tipos:
+        raise HTTPException(status_code=404, detail="Tipo de participante inexistente")
+    participacoes, meios, coluna_catalogo, coluna_ordem = tipos[tipo]
+    parametros = {
+        "operacao_id": operacao_id,
+        "catalogo_id": catalogo_id,
+        "base_id": dados.base_inicial_id,
+    }
+    with engine.begin() as conn:
+        operacao = conn.execute(
+            text("SELECT estado FROM operacoes WHERE id=:operacao_id FOR UPDATE"),
+            parametros,
+        ).mappings().first()
+        if operacao is None:
+            raise HTTPException(status_code=404, detail="Operacao inexistente")
+        if operacao["estado"] in ("concluida", "arquivada"):
+            raise HTTPException(status_code=409, detail="Operacao em modo de consulta")
+
+        base = conn.execute(text("""
+            SELECT id, nome FROM operacao_bases
+            WHERE id=:base_id AND operacao_id=:operacao_id
+            FOR SHARE
+        """), parametros).mappings().first()
+        if base is None:
+            raise HTTPException(
+                status_code=422, detail="A base nao pertence a esta operacao"
+            )
+
+        participante = conn.execute(text(f"""
+            SELECT id, base_inicial_id FROM {participacoes}
+            WHERE operacao_id=:operacao_id
+              AND {coluna_catalogo}=:catalogo_id
+              AND saida_em IS NULL
+            FOR UPDATE
+        """), parametros).mappings().first()
+        if participante is None:
+            raise HTTPException(status_code=404, detail="Participante inexistente")
+        parametros["base_anterior"] = participante["base_inicial_id"]
+
+        registos = conn.execute(text(f"""
+            SELECT *, (
+                localizacao IS NULL OR ST_Equals(localizacao, (
+                    SELECT b.localizacao FROM operacao_bases b
+                    WHERE b.id=:base_anterior AND b.operacao_id=:operacao_id
+                ))
+            ) AS na_posicao_inicial
+            FROM {meios}
+            WHERE operacao_id=:operacao_id
+              AND {coluna_catalogo}=:catalogo_id
+            FOR UPDATE
+        """), parametros).mappings().all()
+        if len(registos) != 1:
+            raise HTTPException(
+                status_code=409, detail="Representacao operacional ausente ou duplicada"
+            )
+        meio = registos[0]
+        if (meio["estado"] != "disponivel"
+                or meio["ocorrencia_id"] is not None
+                or (tipo == "elementos" and meio["recurso_id"] is not None)
+                or not meio["na_posicao_inicial"]):
+            raise HTTPException(
+                status_code=409,
+                detail="Meio em atividade ou reposicionado: preservar a posicao atual",
+            )
+        parametros["meio_id"] = meio["id"]
+
+        tem_ordens = conn.execute(text(f"""
+            SELECT EXISTS (
+                SELECT 1 FROM ordens
+                WHERE operacao_id=:operacao_id AND {coluna_ordem}=:meio_id
+            )
+        """), parametros).scalar()
+        tabela_historico = "missao_recursos" if tipo == "recursos" else "elemento_empenhos"
+        tem_empenho = conn.execute(text(f"""
+            SELECT EXISTS (
+                SELECT 1 FROM {tabela_historico}
+                WHERE {coluna_ordem}=:meio_id
+            )
+        """), parametros).scalar()
+        if tem_ordens or tem_empenho:
+            raise HTTPException(
+                status_code=409,
+                detail="Meio ja utilizado: a base inicial nao altera a sua posicao",
+            )
+
+        conn.execute(text(f"""
+            UPDATE {participacoes} SET base_inicial_id=:base_id
+            WHERE id=:participacao_id
+        """), {**parametros, "participacao_id": participante["id"]})
+        conn.execute(text(f"""
+            UPDATE {meios} m
+            SET localizacao=b.localizacao
+            FROM operacao_bases b
+            WHERE m.id=:meio_id
+              AND m.operacao_id=:operacao_id
+              AND b.id=:base_id AND b.operacao_id=:operacao_id
+        """), parametros)
+        return {
+            "base_inicial_id": base["id"],
+            "base_inicial_nome": base["nome"],
+            "posicao_inicial_aplicada": True,
+        }
 
 
 @app.get("/bases")
