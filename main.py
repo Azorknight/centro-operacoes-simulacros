@@ -833,7 +833,7 @@ def criar_operacao(operacao: Operacao):
             """),
             operacao.model_dump()
         ).mappings().fetchone()
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
             VALUES ('operacao', :descricao, :operacao_id)
         """), {"descricao": f"Operação registada: {operacao.nome}", "operacao_id": nova["id"]})
@@ -1053,7 +1053,7 @@ def encerrar_operacao(operacao_id: int):
         if operacao[2] == "concluida":
             raise HTTPException(status_code=409, detail="A operação já está encerrada")
         conn.execute(text("UPDATE operacoes SET estado = 'concluida', data_fim = NOW() WHERE id = :id"), {"id": operacao_id})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
             VALUES ('operacao', 'Operação encerrada', :operacao_id)
         """), {"operacao_id": operacao_id})
@@ -1191,7 +1191,7 @@ def _editar_recurso_participante(conn, operacao_id: int, catalogo_id: int, dados
         WHERE operacao_id=:operacao_id AND recurso_catalogo_id=:catalogo_id
         RETURNING id
     """), valores).scalar()
-    conn.execute(text("""
+    registar_evento_operacional(conn, text("""
         INSERT INTO timeline_eventos (tipo, descricao, recurso_id, operacao_id)
         VALUES ('recurso', :descricao, :recurso_id, :operacao_id)
     """), {"descricao": f"Recurso atualizado: {nome} ({valores['indicativo'] or tipo})",
@@ -1305,7 +1305,7 @@ def adicionar_recurso_participante(operacao_id: int, dados: ParticipacaoRecurso)
             "indicativo_operacional": dados.indicativo_operacional
         })
 
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
             VALUES ('recurso', :descricao, :operacao_id)
         """), {"descricao": f"Recurso {dados.recurso_catalogo_id} preparado"
@@ -1551,7 +1551,7 @@ def adicionar_elemento_participante(operacao_id: int, dados: ParticipacaoElement
             designacao_elemento += f" ({dados.indicativo_operacional})"
         designacao_recurso = (recurso_operacional["nome"] if recurso_operacional else None)
 
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, elemento_id, recurso_id, ocorrencia_id, operacao_id)
             VALUES ('elemento', :descricao,
                     (SELECT id FROM elementos WHERE operacao_id=:operacao_id
@@ -1622,7 +1622,7 @@ def editar_preparacao_elemento(
             SET indicativo_radio=:indicativo, funcao=:funcao
             WHERE id=:meio_id
         """), {**parametros, "meio_id": meios[0]})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos
                 (tipo, descricao, elemento_id, operacao_id)
             VALUES ('elemento', :descricao, :meio_id, :operacao_id)
@@ -1679,7 +1679,7 @@ def reposicionar_meio_no_mapa(
             SET localizacao=ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
             WHERE id=:meio_id AND operacao_id=:operacao_id
         """), parametros)
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos
                 (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
             VALUES (:tipo_evento, :descricao, :recurso_id, :elemento_id,
@@ -1728,7 +1728,7 @@ def registar_horarios_elemento(operacao_id: int, elemento_catalogo_id: int, dado
         for tipo, valor in (("Chamado", dados.chamado_em), ("Apresentou-se", dados.apresentado_em)):
             if valor is None:
                 continue
-            conn.execute(text("""
+            registar_evento_operacional(conn, text("""
                 INSERT INTO timeline_eventos (tipo, descricao, operacao_id, criado_em)
                 VALUES ('elemento', :descricao, :operacao_id, :hora)
             """), {"descricao": f"{nome}: {tipo.lower()} ao serviço",
@@ -1873,7 +1873,7 @@ def criar_recurso(recurso: Recurso):
                 WHERE id = :id
             """), {**parametros_recurso, "id": recurso_operacional_id})
 
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id)
             VALUES ('recurso', :descricao, :operacao_id)
         """), {
@@ -1939,7 +1939,7 @@ def criar_ocorrencia(ocorrencia: Ocorrencia):
               AND NOT EXISTS (SELECT 1 FROM ocorrencias
                               WHERE operacao_id=:operacao_id AND id<>:ocorrencia_id)
         """), {"recebido_em": recebido_em, "operacao_id": operacao_id, "ocorrencia_id": nova})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id, criado_em)
             VALUES ('chamada', :descricao, :ocorrencia_id, :operacao_id, :recebido_em)
         """), {
@@ -1987,7 +1987,7 @@ def registar_chamada_ocorrencia(ocorrencia_id: int, dados: ChamadaOcorrencia):
         """), {"operacao_id": operacao_id, "ocorrencia_id": ocorrencia_id,
                "recebido_em": recebido_em, "origem": (dados.origem or "").strip() or None,
                "contacto": (dados.contacto or "").strip() or None, "informacao": informacao}).scalar_one()
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id, criado_em)
             VALUES ('chamada', :descricao, :ocorrencia_id, :operacao_id, :recebido_em)
         """), {"descricao": f"Chamada recebida: {informacao}"
@@ -2033,7 +2033,7 @@ def atualizar_estado_ocorrencia_interno(conn, ocorrencia_id: int, novo_estado: s
         SET estado=:estado, {coluna}=COALESCE({coluna}, NOW())
         WHERE id=:id AND operacao_id=:operacao_id
     """), {"estado": novo_estado, "id": ocorrencia_id, "operacao_id": operacao_id})
-    conn.execute(text("""
+    registar_evento_operacional(conn, text("""
         INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
         VALUES ('ocorrencia', :descricao, :ocorrencia_id, :operacao_id)
     """), {
@@ -2169,16 +2169,53 @@ def _descricao_evento_para_exibicao(conn, evento, operacao_id):
     return descricao
 
 
+def registar_evento_operacional(conn, instrucao, parametros):
+    operacao_id = parametros.get("operacao_id", parametros.get("op"))
+    if operacao_id is None:
+        operacao_id = conn.execute(text("""
+            SELECT CAST(valor AS INTEGER) FROM configuracao
+            WHERE chave='operacao_ativa'
+        """)).scalar()
+    if operacao_id is None:
+        return None
+    if inicio_timeline_operacional(conn, operacao_id) is None:
+        return None
+    return conn.execute(instrucao, parametros)
+
+
+def inicio_timeline_operacional(conn, operacao_id):
+    primeira_chamada = conn.execute(text("""
+        SELECT MIN(recebido_em) FROM chamadas_ocorrencia
+        WHERE operacao_id=:operacao_id
+    """), {"operacao_id": operacao_id}).scalar()
+    if primeira_chamada is not None:
+        return primeira_chamada
+
+    # Compatibilidade com historicos anteriores ao registo de chamadas.
+    return conn.execute(text("""
+        SELECT MIN(criado_em) FROM timeline_eventos
+        WHERE operacao_id=:operacao_id AND tipo='ocorrencia'
+          AND descricao LIKE :prefixo
+    """), {
+        "operacao_id": operacao_id,
+        "prefixo": "Ocorr\u00eancia recebida:%"
+    }).scalar()
+
+
 @app.get("/timeline")
 def listar_timeline():
     with engine.connect() as conn:
         operacao_id = exigir_operacao_ativa_id(conn)
+        inicio = inicio_timeline_operacional(conn, operacao_id)
+        if inicio is None:
+            return []
         resultado = conn.execute(text("""
             SELECT id, tipo, descricao, recurso_id, elemento_id, ocorrencia_id, criado_em
             FROM timeline_eventos
             WHERE operacao_id = :operacao_id
-            ORDER BY criado_em DESC
-        """), {"operacao_id": operacao_id})
+              AND criado_em >= :inicio
+            ORDER BY criado_em DESC, id DESC
+        """), {"operacao_id": operacao_id, "inicio": inicio})
 
         dados = []
         for linha in resultado.fetchall():
@@ -2232,7 +2269,7 @@ def atualizar_estado(recurso_id: int, dados: dict):
                 UPDATE elementos SET ocorrencia_id=NULL
                 WHERE operacao_id=:operacao_id AND recurso_id=:recurso_id
             """), {"recurso_id": recurso_id, "operacao_id": operacao_id})
-            conn.execute(text("""
+            registar_evento_operacional(conn, text("""
                 INSERT INTO timeline_eventos (
                     tipo, descricao, recurso_id, ocorrencia_id, operacao_id
                 )
@@ -2262,7 +2299,7 @@ def atualizar_estado(recurso_id: int, dados: dict):
             "operacao_id": operacao_id
         })
 
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (
                 tipo, descricao, recurso_id, ocorrencia_id, operacao_id
             )
@@ -2323,7 +2360,7 @@ def libertar_recurso(recurso_id: int):
             """), {"recurso_id": recurso_id, "ocorrencia_id": recurso[2],
                    "operacao_id": operacao_id}).mappings().all()
             for ordem in ordens_canceladas:
-                conn.execute(text("""
+                registar_evento_operacional(conn, text("""
                     INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
                     VALUES ('ordem', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
                 """), {"descricao": f"Ordem {ordem['titulo']}: anulada com a libertação do recurso",
@@ -2331,7 +2368,7 @@ def libertar_recurso(recurso_id: int):
                        "ocorrencia_id": recurso[2], "operacao_id": operacao_id})
 
         nome = recurso[1] or recurso[0]
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
             VALUES ('recurso', :descricao, :recurso_id, :ocorrencia_id, :operacao_id)
         """), {
@@ -2376,7 +2413,7 @@ def concluir_deslocacao_na_chegada(conn, operacao_id: int, ocorrencia_id: int,
     """), {"operacao_id": operacao_id, "ocorrencia_id": ocorrencia_id,
            "recurso_id": recurso_id, "elemento_id": elemento_id}).mappings().all()
     for ordem in ordens:
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
             VALUES ('ordem', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Ordem {ordem['titulo']}: concluída com a chegada",
@@ -2435,7 +2472,7 @@ def confirmar_chegada(recurso_id: int):
         if chegada_existente:
             return {"mensagem": "Chegada j\u00e1 registada"}
 
-        conn.execute(
+        registar_evento_operacional(conn,
             text("""
                 INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
                 VALUES ('chegada', :descricao, :recurso_id, :ocorrencia_id, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
@@ -2794,13 +2831,13 @@ def atribuir_ocorrencia(recurso_id: int, ocorrencia_id: int):
                 ON CONFLICT (operacao_id, elemento_id) WHERE fim_em IS NULL DO NOTHING
             """), {"operacao_id": operacao_id, "elemento_id": membro["id"],
                    "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id})
-            conn.execute(text("""
+            registar_evento_operacional(conn, text("""
                 INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
                 VALUES ('elemento', :descricao, :recurso_id, :ocorrencia_id, :operacao_id)
             """), {"descricao": f"{membro['nome']} mobilizado na equipa {nome}",
                    "recurso_id": recurso_id, "ocorrencia_id": ocorrencia_id,
                    "operacao_id": operacao_id})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, recurso_id, ocorrencia_id, operacao_id)
             VALUES ('ordem', :descricao, :recurso_id, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Ordem de deslocação para {nome}: {ocorrencia['titulo']}",
@@ -2849,7 +2886,7 @@ def atribuir_elemento_ocorrencia(elemento_id: int, ocorrencia_id: int):
         """), {"descricao": f"{elemento['nome']}: deslocar para {ocorrencia['titulo']}",
                "elemento_id": elemento_id, "ocorrencia_id": ocorrencia_id,
                "operacao_id": operacao_id})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, elemento_id, ocorrencia_id, operacao_id)
             VALUES ('ordem', :descricao, :elemento_id, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Ordem de deslocação para {elemento['nome']}: {ocorrencia['titulo']}",
@@ -2910,7 +2947,7 @@ def confirmar_chegada_elemento(elemento_id: int):
         existe = chegada_elemento_na_ocorrencia(conn, operacao_id, elemento_id, ocorrencia_id)
         if existe:
             return {"mensagem": "Chegada já registada"}
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, elemento_id, ocorrencia_id, operacao_id)
             VALUES ('chegada', :descricao, :elemento_id, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Chegada ao local: {elemento['nome']}", "elemento_id": elemento_id,
@@ -2969,7 +3006,7 @@ def comunicar_situacao(ocorrencia_id: int, dados: ComunicacaoSituacao):
         if not chegada:
             raise HTTPException(status_code=409, detail="Confirme primeiro a chegada ao local")
         nome = (recurso["indicativo_radio"] if tabela == 'recursos' else None) or recurso["nome"]
-        evento_id = conn.execute(text("""
+        evento_id = registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
             VALUES ('situacao', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
             RETURNING id
@@ -3027,7 +3064,7 @@ def criar_ordem(ordem: Ordem):
         """), {"titulo": titulo, "descricao": descricao, "recurso_id": ordem.recurso_id, "elemento_id": ordem.elemento_id,
                "ocorrencia_id": ordem.ocorrencia_id, "operacao_id": operacao_id}).scalar_one()
         nome = (recurso["indicativo_radio"] if tabela == 'recursos' else None) or recurso["nome"]
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
             VALUES ('ordem', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Ordem para {nome}: {titulo}" + (f" — {descricao}" if descricao else ""),
@@ -3069,7 +3106,7 @@ def atualizar_estado_ordem(ordem_id: int, dados: dict):
                 raise HTTPException(status_code=409, detail="O destinatário já não está afeto a esta ocorrência; anule a ordem pendente")
         conn.execute(text("UPDATE ordens SET estado=:estado WHERE id=:id AND operacao_id=:operacao_id"),
                      {"estado": estado, "id": ordem_id, "operacao_id": operacao_id})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
             VALUES ('ordem', :descricao, :recurso_id, :elemento_id, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Ordem {ordem['titulo']}: {estado}",
@@ -3217,7 +3254,7 @@ def criar_missao(missao: Missao):
                     WHERE id=:recurso_id AND operacao_id=:operacao_id AND ocorrencia_id IS NULL
                       AND estado IN ('disponivel', 'em_missao')
                 """), {"recurso_id": missao.recurso_id, "operacao_id": operacao_id})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
         """), {"descricao": f"Miss\u00e3o criada: {missao.titulo.strip()}",
@@ -3272,7 +3309,7 @@ def editar_missao_planeada(missao_id: int, dados: EdicaoMissaoPlaneada):
             anterior = nomes.get(missao["recurso_id"], "nenhum")
             novo = nomes.get(dados.recurso_id, "nenhum")
             descricao_evento += f" (recurso previsto: {anterior} → {novo})"
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
         """), {"descricao": descricao_evento, "operacao_id": operacao_id,
@@ -3321,7 +3358,7 @@ def alterar_estado_missao(missao_id: int, dados: EstadoMissao):
         rotulos = {"recebida": "Recebida", "planeada": "Planeada",
                    "em_execucao": "Em execu\u00e7\u00e3o", "concluida": "Conclu\u00edda",
                    "cancelada": "Cancelada"}
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
         """), {"descricao": f"Miss\u00e3o {missao['titulo']} alterada para {rotulos[dados.estado]}",
@@ -3348,7 +3385,7 @@ def alterar_situacao_missao(missao_id: int, dados: SituacaoMissao):
             "por_avaliar": "Por avaliar", "sob_controlo": "Sob controlo", "estavel": "Est\u00e1vel", "complexa": "Complexa",
             "critica": "Cr\u00edtica", "necessita_reforco": "Necessita de refor\u00e7o"
         }
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
         """), {"descricao": f"Situa\u00e7\u00e3o da miss\u00e3o {missao['titulo']}: {rotulos[dados.situacao_operacional]}",
@@ -3388,7 +3425,7 @@ def adicionar_nota_missao(missao_id: int, nota: NotaMissao):
             VALUES (:missao_id, :autor, :texto) RETURNING id
         """), {"missao_id": missao_id, "autor": (nota.autor or "Operador").strip(), "texto": texto_nota}).scalar_one()
         conn.execute(text("UPDATE missoes SET atualizada_em=NOW() WHERE id=:id"), {"id": missao_id})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
         """), {"descricao": f"Nova nota na miss\u00e3o {missao['titulo']}: {texto_nota}",
@@ -3485,7 +3522,7 @@ def atribuir_recurso_missao(missao_id: int, recurso_id: int):
                   AND ocorrencia_id IS NULL AND estado IN ('disponivel', 'em_missao')
             """), {"id": recurso_id, "operacao_id": operacao_id})
         nome_recurso = recurso["indicativo_radio"] or recurso["nome"] or f"Recurso {recurso_id}"
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
         """), {"descricao": f"{nome_recurso} adicionado ÃƒÆ’Ã‚Â  missÃƒÆ’Ã‚Â£o {missao['titulo']}",
@@ -3513,7 +3550,7 @@ def remover_recurso_missao(missao_id: int, recurso_id: int):
         _atualizar_recurso_principal_missao(conn, missao_id)
         _libertar_recurso_se_sem_missao_ativa(conn, recurso_id)
         nome_recurso = ((recurso or {}).get("indicativo_radio") or (recurso or {}).get("nome") or f"Recurso {recurso_id}")
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, operacao_id, ocorrencia_id)
             VALUES ('missao', :descricao, :operacao_id, :ocorrencia_id)
         """), {"descricao": f"{nome_recurso} removido da missÃƒÆ’Ã‚Â£o {missao['titulo']}",
@@ -3705,7 +3742,7 @@ def atualizar_posicao_elemento(elemento_id: int, dados: dict):
             }
         )
 
-        conn.execute(
+        registar_evento_operacional(conn,
             text("""
                 INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
                 VALUES ('elemento', :descricao, :ocorrencia_id, (SELECT CAST(valor AS INTEGER) FROM configuracao WHERE chave='operacao_ativa'))
@@ -3758,7 +3795,7 @@ def reembarcar_elemento(elemento_id: int, recurso_id: int):
                    "recurso_id": recurso_id, "ocorrencia_id": recurso["ocorrencia_id"]})
         nome_elemento = elemento["nome"] + (f" ({elemento['indicativo_radio']})" if elemento["indicativo_radio"] else "")
         nome_recurso = recurso["nome"] + (f" ({recurso['indicativo_radio']})" if recurso["indicativo_radio"] else "")
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, elemento_id, recurso_id, ocorrencia_id, operacao_id)
             VALUES ('elemento', :descricao, :elemento_id, :recurso_id, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Elemento reembarcado: {nome_elemento} em {nome_recurso}",
@@ -3977,7 +4014,7 @@ def libertar_elemento(elemento_id: int):
             UPDATE elementos SET ocorrencia_id=NULL, recurso_id=NULL, estado='disponivel'
             WHERE id=:elemento_id AND operacao_id=:operacao_id
         """), {"elemento_id": elemento_id, "operacao_id": operacao_id})
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, ocorrencia_id, operacao_id)
             VALUES ('elemento', :descricao, :ocorrencia_id, :operacao_id)
         """), {"descricao": f"Elemento libertado: {elemento['nome']}",
@@ -4196,7 +4233,7 @@ def criar_setor(dados: SetorOperacional):
             VALUES (:op,:nome,:descricao,:cor,:estado,:comandante,:notas)
             RETURNING id
         """), {**dados.model_dump(), "op": operacao_id, "nome": dados.nome.strip()}).scalar_one()
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo,descricao,operacao_id)
             VALUES ('setor',:descricao,:op)
         """), {"descricao": f"Setor criado: {dados.nome.strip()}", "op": operacao_id})
@@ -4217,7 +4254,7 @@ def atualizar_setor(setor_id: int, dados: SetorAtualizacao):
         """), {**dados.model_dump(), "id": setor_id, "op": operacao_id, "nome": dados.nome.strip()}).scalar()
         if not atualizado:
             raise HTTPException(status_code=404, detail="Setor nÃƒÆ’Ã‚Â£o encontrado")
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo,descricao,operacao_id)
             VALUES ('setor',:descricao,:op)
         """), {"descricao": f"Setor atualizado: {dados.nome.strip()}", "op": operacao_id})
@@ -4263,7 +4300,7 @@ def associar_setor_objetivo(objetivo_id: int, dados: AssociacaoSetor):
         """), {"setor_id": dados.setor_id, "id": objetivo_id, "op": operacao_id}).mappings().first()
         if not objetivo:
             raise HTTPException(status_code=404, detail="Objetivo nÃƒÆ’Ã‚Â£o encontrado")
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id)
             VALUES ('setor',:descricao,:op,:oc)
         """), {"descricao": f"Setor do objetivo {objetivo['nome']} atualizado", "op": operacao_id, "oc": objetivo["ocorrencia_id"]})
@@ -4287,7 +4324,7 @@ def associar_setor_missao(missao_id: int, dados: AssociacaoSetor):
         """), {"setor_id": dados.setor_id, "id": missao_id, "op": operacao_id}).mappings().first()
         if not missao:
             raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
-        conn.execute(text("""
+        registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id)
             VALUES ('setor',:descricao,:op,:oc)
         """), {"descricao": f"Setor da missÃƒÆ’Ã‚Â£o {missao['titulo']} atualizado", "op": operacao_id, "oc": missao["ocorrencia_id"]})
@@ -4352,7 +4389,7 @@ def criar_objetivo(dados: ObjetivoOperacional):
             INSERT INTO objetivos (operacao_id, ocorrencia_id, modelo_id, nome, descricao, prioridade, estado, responsavel, latitude, longitude, notas, concluido_em)
             VALUES (:operacao_id,:ocorrencia_id,:modelo_id,:nome,:descricao,:prioridade,:estado,:responsavel,:latitude,:longitude,:notas,CASE WHEN :estado='concluido' THEN NOW() END) RETURNING id
         """), {**dados.model_dump(), "operacao_id":operacao_id, "nome":dados.nome.strip()}).scalar_one()
-        conn.execute(text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"), {"d":f"Objetivo criado: {dados.nome.strip()}","op":operacao_id,"oc":dados.ocorrencia_id})
+        registar_evento_operacional(conn, text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"), {"d":f"Objetivo criado: {dados.nome.strip()}","op":operacao_id,"oc":dados.ocorrencia_id})
         return {"id":oid,"mensagem":"Objetivo criado"}
 
 @app.put("/objetivos/{objetivo_id}")
@@ -4363,7 +4400,7 @@ def atualizar_objetivo(objetivo_id:int, dados: ObjetivoAtualizacao):
         existe=conn.execute(text("SELECT 1 FROM objetivos WHERE id=:id AND operacao_id=:op"),{"id":objetivo_id,"op":operacao_id}).scalar()
         if not existe: raise HTTPException(status_code=404, detail="Objetivo nÃƒÆ’Ã‚Â£o encontrado")
         conn.execute(text("""UPDATE objetivos SET ocorrencia_id=:ocorrencia_id,modelo_id=:modelo_id,nome=:nome,descricao=:descricao,prioridade=:prioridade,estado=:estado,responsavel=:responsavel,latitude=:latitude,longitude=:longitude,notas=:notas,arquivado=:arquivado,atualizado_em=NOW(),concluido_em=CASE WHEN :estado='concluido' THEN COALESCE(concluido_em,NOW()) ELSE concluido_em END WHERE id=:id"""), {**dados.model_dump(),"id":objetivo_id,"nome":dados.nome.strip()})
-        conn.execute(text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"),{"d":f"Objetivo atualizado: {dados.nome.strip()}","op":operacao_id,"oc":dados.ocorrencia_id})
+        registar_evento_operacional(conn, text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"),{"d":f"Objetivo atualizado: {dados.nome.strip()}","op":operacao_id,"oc":dados.ocorrencia_id})
     return {"mensagem":"Objetivo atualizado"}
 
 @app.delete("/objetivos/{objetivo_id}")
@@ -4387,7 +4424,7 @@ def associar_objetivo_missao(missao_id:int, dados:AssociacaoObjetivoMissao):
             if not ok: raise HTTPException(status_code=404, detail="Objetivo nÃƒÆ’Ã‚Â£o encontrado")
         atualizado=conn.execute(text("UPDATE missoes SET objetivo_id=:oid,atualizada_em=NOW() WHERE id=:id AND operacao_id=:op RETURNING titulo,ocorrencia_id"),{"oid":dados.objetivo_id,"id":missao_id,"op":operacao_id}).mappings().first()
         if not atualizado: raise HTTPException(status_code=404, detail="MissÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o encontrada")
-        conn.execute(text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"),{"d":f"Objetivo da missÃƒÆ’Ã‚Â£o {atualizado['titulo']} atualizado","op":operacao_id,"oc":atualizado['ocorrencia_id']})
+        registar_evento_operacional(conn, text("INSERT INTO timeline_eventos (tipo,descricao,operacao_id,ocorrencia_id) VALUES ('objetivo',:d,:op,:oc)"),{"d":f"Objetivo da missÃƒÆ’Ã‚Â£o {atualizado['titulo']} atualizado","op":operacao_id,"oc":atualizado['ocorrencia_id']})
     return {"mensagem":"Objetivo da missÃƒÆ’Ã‚Â£o atualizado"}
 
 @app.get("/objetivo-modelos")
