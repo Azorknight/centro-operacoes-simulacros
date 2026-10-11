@@ -886,3 +886,24 @@ Mapa mostrou apenas a base da segunda operacao.
 Ao regressar a TESTE — CRIAR E PREPARAR, BASE 01 manteve
 a posicao operacional onde tinha sido deixada.
 Teste realizado no PC Casa; dados nao sincronizados pelo Git.
+## Timeline e preparacao — 11/10/2026
+Ultimo commit funcional confirmado: 7a7799e, enviado ao GitHub.
+Regra esclarecida: bases e posicionamento inicial dos meios fazem parte
+da preparacao. Nao exigem ordens, chegadas ou eventos na Timeline.
+Nao implementar o fluxo de deslocacao entre bases anteriormente proposto.
+Timeline operacional comeca na primeira chamada.
+Gravacao de eventos protegida em 42 pontos: antes do inicio, nao grava.
+Consulta exclui eventos anteriores ao inicio, sem apagar dados antigos.
+Compatibilidade: nas operacoes antigas sem chamadas registadas,
+o inicio e a primeira "Ocorrencia recebida" existente na Timeline.
+Validados:
+- Timeline e alertas vazios na operacao 11 antes da chamada.
+- Editar funcao na preparacao nao acrescentou evento: total manteve 10.
+- Historico operacional antigo preservado.
+- Primeira chamada apareceu sem os registos antigos de preparacao.
+- Ordem, mobilizacao de elemento embarcado e chegada registadas depois.
+- Chegada concluiu ordem e passou ocorrencia para Em curso.
+Operacao 11 tem agora ocorrencia TESTE INICIO TIMELINE em curso,
+viatura BASE 01 chegada e ELEMENTO TESTE EMBARCADO mobilizado.
+Servidor piloto continua sem atualizacao.
+Manual visual ainda por consolidar com os procedimentos validados.
