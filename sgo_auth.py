@@ -36,7 +36,7 @@ def digest(password, salt):
 def set_user(name, password, role):
     if role not in ('operador', 'responsavel'): raise ValueError('Perfil inválido')
     name = name.strip().lower()
-    if not name or len(password) < 12: raise ValueError('Nome obrigatório; palavra-passe com pelo menos 12 caracteres')
+    if not name or len(password) < 8: raise ValueError('Nome obrigatório; palavra-passe com pelo menos 8 caracteres')
     salt = secrets.token_hex(16)
     with connect() as c:
         c.execute('INSERT INTO users VALUES (?,?,?,?,1) ON CONFLICT(name) DO UPDATE SET salt=excluded.salt,digest=excluded.digest,role=excluded.role,enabled=1', (name,salt,digest(password,salt),role))
