@@ -1,0 +1,41 @@
+/* Acesso e conta: estilos limitados a estes componentes. */
+.sgo-acesso { min-height:100dvh; display:grid; place-items:center; box-sizing:border-box; padding:32px 20px; background:#0f172a; color:#0f172a; font-family:Arial,sans-serif; }
+.sgo-acesso-estado { color:#f8fafc; }
+.sgo-acesso-cartao { width:min(100%,520px); overflow:hidden; border-radius:20px; background:#fff; box-shadow:0 24px 70px #0005; }
+.sgo-acesso-marca { display:flex; gap:16px; align-items:center; padding:28px; background:linear-gradient(120deg,#0f2744,#164e63); color:#fff; }
+.sgo-acesso-logo { display:grid; place-items:center; width:64px; height:64px; flex-shrink:0; background:#f6a623; color:#0f172a; border-radius:16px; font-size:23px; font-weight:800; }
+.sgo-acesso-marca h1 { margin:0 0 7px; color:#fff; font-size:22px; line-height:1.2; }
+.sgo-acesso-marca p { margin:0; color:#dbeafe; font-size:14px; line-height:1.4; }
+.sgo-acesso-conteudo { padding:30px 32px 34px; }
+.sgo-acesso-conteudo h2 { margin:0 0 8px; color:#0f172a; font-size:24px; }
+.sgo-acesso-conteudo > p { margin:0 0 26px; color:#475569; line-height:1.5; font-size:15px; }
+.sgo-acesso-conteudo form { display:flex; flex-direction:column; gap:10px; }
+.sgo-acesso-conteudo label { font-size:14px; font-weight:700; color:#334155; }
+.sgo-acesso-conteudo input { width:100%; box-sizing:border-box; min-height:46px; padding:11px 13px; margin:0 0 10px; border:1px solid #94a3b8; border-radius:9px; font:inherit; color:#0f172a; background:#fff; }
+.sgo-acesso-conteudo input:focus-visible { outline:3px solid #bfdbfe; border-color:#2563eb; }
+.sgo-acesso-conteudo button { margin-top:8px; min-height:46px; padding:12px; border:0; border-radius:9px; background:#f6a623; color:#0f172a; font:inherit; font-weight:700; cursor:pointer; }
+.sgo-acesso-conteudo button:hover { background:#e99412; }
+.sgo-acesso-conteudo button:disabled { opacity:.6; cursor:wait; }
+.sgo-acesso-conteudo .sgo-acesso-erro { margin:0; color:#b91c1c; font-size:14px; line-height:1.4; }
+.sgo-conta { display:flex; align-items:center; gap:12px; flex-shrink:0; position:relative; font-family:Arial,sans-serif; color:#fff; }
+.sgo-conta-identidade { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.sgo-conta-identidade strong { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
+.sgo-conta-identidade span { color:#cbd5e1; font-size:11px; }
+.sgo-conta button { border:1px solid #64748b; border-radius:8px; padding:8px 12px; background:transparent; color:#fff; font-size:13px; cursor:pointer; }
+.sgo-conta button:hover:not(:disabled) { background:#ffffff15; }
+.sgo-conta button:disabled { opacity:.5; cursor:default; }
+.sgo-conta button:focus-visible { outline:3px solid #93c5fd; outline-offset:2px; }
+.sgo-conta-erro { position:absolute; right:0; top:100%; width:250px; padding:10px; background:#fff; color:#b91c1c; border-radius:8px; font-size:13px; z-index:5000; }
+.sgo-topo-conta { gap:16px; }
+.sgo-topo-conta > :first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.sgo-topo-conta > :nth-child(2) { flex:1; }
+.operacoes-header { flex-wrap:wrap; }
+.operacoes-header .sgo-conta { margin-left:auto; }
+@media (max-width:700px) {
+  .sgo-acesso { padding:20px 12px; }
+  .sgo-acesso-marca { padding:22px; gap:12px; }
+  .sgo-acesso-marca h1 { font-size:19px; }
+  .sgo-acesso-logo { width:52px; height:52px; font-size:19px; }
+  .sgo-acesso-conteudo { padding:26px 22px; }
+  .operacoes-header .sgo-conta { width:100%; margin-left:0; justify-content:space-between; }
+}

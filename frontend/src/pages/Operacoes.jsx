@@ -1,3 +1,4 @@
+import { ContaSessao } from '../Acesso'
 import { useEffect, useState } from 'react'
 import {
   arquivarOperacao,
@@ -163,6 +164,7 @@ function Operacoes({ onAbrir }) {
             <h1>Sistema de Gestão Operacional</h1>
             <p>Gestão de exercícios e simulacros</p>
           </div>
+          <ContaSessao />
         </header>
 
         {erro && <div className="operacoes-erro">{erro}</div>}

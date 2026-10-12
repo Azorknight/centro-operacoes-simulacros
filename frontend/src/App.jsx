@@ -1,3 +1,4 @@
+import { ContaSessao } from './Acesso'
 import { apiUrl } from './services/apiUrl'
 import AgrupamentoMeios from './components/AgrupamentoMeios'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -2513,7 +2514,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
   return (
     <div style={styles.appShell}>
-      <div style={styles.topBar}>
+      <div className="sgo-topo-conta" style={styles.topBar}>
         <div style={styles.topBarTitle}>Centro de Operações e Simulacros</div>
         <div style={styles.kpiRow}>
           <div style={styles.kpiBox}>
@@ -2547,6 +2548,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             <div style={styles.kpiValue}>{ordens.length}</div>
           </div>
         </div>
+        <ContaSessao />
       </div>
 
       <div style={styles.commandStrip}>

@@ -1,5 +1,28 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import './Acesso.css'
 import { apiUrl } from './services/apiUrl'
+
+const SessaoContext = createContext(null)
+
+export function ContaSessao() {
+  const sessao = useContext(SessaoContext)
+  if (!sessao?.user) return null
+  return (
+    <div className="sgo-conta">
+      <div className="sgo-conta-identidade">
+        <strong title={sessao.user.username || sessao.user.name}>
+          {sessao.user.username || sessao.user.name}
+        </strong>
+        <span>{sessao.user.role === 'responsavel' ? 'Responsável' : 'Operador'}</span>
+      </div>
+      <button type="button" onClick={sessao.logout}
+        disabled={sessao.busy || sessao.desenvolvimento}>
+        {sessao.busy ? 'A sair…' : 'Sair'}
+      </button>
+      {sessao.error && <span className="sgo-conta-erro" role="alert">{sessao.error}</span>}
+    </div>
+  )
+}
 
 export default function Acesso({ children }) {
   const [user, setUser] = useState(null)
@@ -32,18 +55,43 @@ export default function Acesso({ children }) {
       window.location.reload()
     } catch (e) { setError(e.message); setBusy(false) }
   }
-  if (import.meta.env.DEV) return children
-  if (loading) return <p>A verificar sessão…</p>
-  if (!user) return <main style={{ maxWidth: 420, margin: '10vh auto', padding: 24 }}>
-    <h1>SGO</h1><p>Entre com a sua conta do SGO.</p>
-    <form onSubmit={login} style={{ display: 'grid', gap: 12 }}>
-      <label>Utilizador<input name="username" autoComplete="username" required /></label>
-      <label>Palavra-passe<input name="password" type="password" autoComplete="current-password" required /></label>
-      <button disabled={busy}>{busy ? 'A entrar…' : 'Entrar'}</button>
-    </form>{error && <p role="alert">{error}</p>}
-  </main>
-  return <><div style={{ position: 'fixed', bottom: 8, left: 240, zIndex: 10000, background: 'white', padding: 8, borderRadius: 8 }}>
-    {user.username || user.name} · {user.role === 'responsavel' ? 'Responsável' : 'Operador'}{' '}
-    <button onClick={logout} disabled={busy}>Sair</button>{error && <span role="alert">{error}</span>}
-  </div>{children}</>
+  const mostrarLogin = import.meta.env.DEV
+    ? new URLSearchParams(window.location.search).get('visual') === 'login'
+    : !user
+  if (loading) return (
+    <main className="sgo-acesso"><p className="sgo-acesso-estado" role="status">A verificar sessão…</p></main>
+  )
+  if (mostrarLogin) return (
+    <main className="sgo-acesso">
+      <section className="sgo-acesso-cartao" aria-labelledby="sgo-acesso-titulo">
+        <div className="sgo-acesso-marca">
+          <span className="sgo-acesso-logo" aria-hidden="true">SGO</span>
+          <div><h1 id="sgo-acesso-titulo">Sistema de Gestão Operacional</h1>
+            <p>Gestão de exercícios e simulacros</p></div>
+        </div>
+        <div className="sgo-acesso-conteudo">
+          <h2>Entrar no SGO</h2>
+          <p>Introduza os dados da sua conta para continuar.</p>
+          <form onSubmit={import.meta.env.DEV ? (event) => {
+            event.preventDefault()
+            setError('Pré-visualização do login no desenvolvimento.')
+          } : login}>
+            <label htmlFor="sgo-utilizador">Utilizador</label>
+            <input id="sgo-utilizador" name="username" autoComplete="username"
+              autoCapitalize="none" spellCheck={false} required disabled={busy} />
+            <label htmlFor="sgo-password">Palavra-passe</label>
+            <input id="sgo-password" name="password" type="password"
+              autoComplete="current-password" required disabled={busy} />
+            {error && <p className="sgo-acesso-erro" role="alert">{error}</p>}
+            <button type="submit" disabled={busy}>{busy ? 'A entrar…' : 'Entrar'}</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  )
+  const sessao = {
+    user: import.meta.env.DEV ? { name: 'Desenvolvimento', role: 'responsavel' } : user,
+    logout, busy, error, desenvolvimento: import.meta.env.DEV
+  }
+  return <SessaoContext.Provider value={sessao}>{children}</SessaoContext.Provider>
 }
