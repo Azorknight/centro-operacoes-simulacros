@@ -90,6 +90,7 @@ function nomeComPosto(elemento) {
 }
 
 function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null, acoesOperacao = null }) {
+  const responsavel = useResponsavel()
   const [recursos, setRecursos] = useState([])
   const [resumoRecursosOperacionais, setResumoRecursosOperacionais] = useState([])
   const [resumoElementosOperacionais, setResumoElementosOperacionais] = useState([])
@@ -3120,7 +3121,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           {detalhe.tipo === 'recurso' && !modoBloqueado && (
             <>
-              <button
+              {responsavel && (<button
                 style={styles.mainButton}
                 disabled={modoBloqueado}
                 onClick={() => setRecursoEmEdicao({
@@ -3135,22 +3136,22 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 })}
               >
                 Editar recurso
-              </button>
-              <button
+              </button>)}
+              {responsavel && (<button
                 style={styles.mainButton}
                 onClick={() => mudarEstado(detalhe.dados.id, 'em_missao')}
               >
                 Marcar em missão
-              </button>
+              </button>)}
 
-              <button
+              {responsavel && (<button
                 style={styles.mainButton}
                 onClick={() => mudarEstado(detalhe.dados.id, 'disponivel')}
               >
                 Marcar disponível
-              </button>
+              </button>)}
 
-              <button
+              {responsavel && (<button
                 style={{ ...styles.mainButton, background: '#dc2626' }}
                 disabled={modoBloqueado}
                 onClick={async () => {
@@ -3161,16 +3162,16 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 }}
               >
                 Libertar recurso
-              </button>
+              </button>)}
 
-              <button
+              {responsavel && (<button
                 style={styles.mainButton}
                 onClick={() => {
                   setRecursoParaAtribuirOcorrencia(detalhe.dados)
                 }}
               >
                 Ordenar deslocação
-              </button>
+              </button>)}
 
           {recursoDetalheAtual.ocorrencia_id && !chegouRecursoNesteDespacho(recursoDetalheAtual) && (
               <button
@@ -3188,7 +3189,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </button>
             )}
 
-              <button
+              {responsavel && (<button
                 style={styles.mainButton}
                 onClick={() => {
                   setFormOrdem({
@@ -3202,9 +3203,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 }}
               >
                 Dar nova ordem
-              </button>
+              </button>)}
 
-              <button
+              {responsavel && (<button
                 style={styles.mainButton}
                 disabled={modoBloqueado}
                 onClick={() => {
@@ -3221,7 +3222,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 }}
               >
                 Criar elemento nesta viatura
-              </button>
+              </button>)}
             </>
           )}
 
@@ -4053,13 +4054,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             >
               📍 Nova ocorrência
             </button>
-            <button
+            {responsavel && (<button
               type="button"
               style={{ ...styles.mapaToolButton, ...(modoMapa.tipo === 'novo_recurso' ? styles.mapaToolButtonActive : {}) }}
               onClick={() => setModoMapa({ tipo: 'novo_recurso', alvo: null })}
             >
               🚓 Novo recurso
-            </button>
+            </button>)}
             <button
               type="button"
               style={styles.mapaToolButton}
