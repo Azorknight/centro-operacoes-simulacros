@@ -941,3 +941,10 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Melhorias visuais acordadas: login com contraste e campos alinhados,
   cabeçalho sem sobreposição e conta/perfil/Sair integrados no cabeçalho.
 - Desenvolver e validar no Martinex antes de nova atualização do servidor.
+## Melhorias visuais validadas — 12/10/2026
+- b563397: login com contraste e conta/perfil/Sair no cabeçalho.
+- 93f30cc: cabeçalho organizado e comandos sem sobreposição.
+- Compilação frontend e git diff --check passaram.
+- Validado no Martinex, incluindo janela estreita, Estado do Sistema e Replay.
+- Servidor piloto permanece em 5b77c22; melhorias visuais ainda não transferidas.
+- Próximo passo: preparar atualização do frontend do servidor.
