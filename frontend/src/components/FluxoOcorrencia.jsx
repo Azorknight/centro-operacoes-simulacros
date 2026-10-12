@@ -1,3 +1,4 @@
+import { useResponsavel } from '../Acesso'
 import { useEffect, useRef, useState } from 'react'
 import { atribuirOcorrencia, atribuirElementoOcorrencia, confirmarChegada, confirmarChegadaElemento, comunicarSituacao, criarOrdem, alterarEstadoOrdem, obterChamadasOcorrencia, registarChamadaOcorrencia } from '../services/api'
 import { formatarDataHora } from '../utils/formatacao'
@@ -7,6 +8,7 @@ const field = { width: '100%', boxSizing: 'border-box', padding: 8, marginTop: 7
 const button = { padding: '8px 10px', marginTop: 8, border: 0, borderRadius: 6, color: '#fff', background: '#172033', cursor: 'pointer' }
 
 export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], ordens, eventos, bloqueado, atualizar }) {
+  const responsavel = useResponsavel()
   const [recursoDespacho, setRecursoDespacho] = useState('')
   const [recursoSituacao, setRecursoSituacao] = useState('')
   const [situacao, setSituacao] = useState('')
@@ -83,6 +85,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
     </div>
 
     {!apenasConsulta && <>
+    {responsavel && (
     <div style={card}>
       <strong>1. Ordenar deslocação</strong>
       <select aria-label="Recurso a deslocar" style={field} value={recursoDespacho} onChange={e => setRecursoDespacho(e.target.value)} disabled={inativo}>
@@ -97,6 +100,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
         setRecursoDespacho('')
       })}>Emitir ordem de deslocação</button>
     </div>
+    )}
 
     <div style={card}>
       <strong>2. Confirmar chegada</strong>
@@ -125,6 +129,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
       })}>Registar informação recebida</button>
     </div>
 
+    {responsavel && (
     <div style={card}>
       <strong>4. Dar nova ordem</strong>
       <select aria-label="Destinatário da ordem" style={field} value={recursoOrdem} onChange={e => setRecursoOrdem(e.target.value)} disabled={inativo}>
@@ -140,6 +145,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
         setDescricao('')
       })}>Emitir ordem</button>
     </div>
+    )}
 
     </>}
 

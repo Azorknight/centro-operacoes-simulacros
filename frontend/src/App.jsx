@@ -1,5 +1,5 @@
 import './Cabecalho.css'
-import { ContaSessao } from './Acesso'
+import { ContaSessao, useResponsavel } from './Acesso'
 import { apiUrl } from './services/apiUrl'
 import AgrupamentoMeios from './components/AgrupamentoMeios'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -79,7 +79,7 @@ import {
   eliminarSetor,
   associarSetorObjetivo,
   associarSetorMissao
-} from './services/api' 
+} from './services/api'
 
 function nomeComPosto(elemento) {
   const nome = String(elemento.nome || '').trim()
@@ -393,7 +393,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       .catch(erro => { if (ativo) console.error('Erro ao carregar histórico do recurso:', erro) })
     return () => { ativo = false }
   }, [recursoSelecionadoId])
-    
+
   async function mudarEstado(id, novoEstado) {
     await alterarEstadoRecurso(id, novoEstado)
     await refresh()
@@ -2732,7 +2732,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </div>
             )
           })()}
-          
+
           {detalhe.tipo === 'recurso' && (
             <>
               {elementos
@@ -3233,7 +3233,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     Editar missão
                   </button>
                 )}
-               
+
                 <button
                   style={styles.mainButton}
                   onClick={() => {
@@ -4107,8 +4107,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           {recursosVisiveis.map((r) => {
             if (!Number.isFinite(r.latitude) || !Number.isFinite(r.longitude)) return null
 
-            
-            const totalElementos = elementos.filter(el => el.recurso_id === r.id).length    
+
+            const totalElementos = elementos.filter(el => el.recurso_id === r.id).length
 
             return (
               <Marker
@@ -4283,7 +4283,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 </Tooltip>
               </Marker>
             ) : null
-          )}  
+          )}
 
               </>
             )}
@@ -4735,6 +4735,7 @@ const styles = {
 }
 
 function App() {
+  const responsavel = useResponsavel()
   const [operacaoAtiva, setOperacaoAtiva] = useState(undefined)
   const [mostrarReplay, setMostrarReplay] = useState(false)
   const [replayAtivo, setReplayAtivo] = useState(false)
@@ -4780,7 +4781,7 @@ function App() {
       setBackups(await obterBackups())
     } catch (erro) {
       console.error(erro)
-      setErroBackup('Não foi possível carregar os backups.')
+      setErroBackup(erro.message || 'Não foi possível carregar os backups.')
     } finally {
       setBackupsAcarregar(false)
     }
@@ -4802,7 +4803,7 @@ function App() {
       await carregarBackups()
     } catch (erro) {
       console.error(erro)
-      setErroBackup('Não foi possível criar o backup.')
+      setErroBackup(erro.message || 'Não foi possível criar o backup.')
     } finally {
       setBackupEmCurso(false)
     }
@@ -4962,17 +4963,17 @@ function App() {
         modoReplay={mostrarReplay} replayEventoAtual={eventoReplayAtual}
         operacaoAtiva={operacaoAtiva} acoesOperacao={
           <div className="sgo-comandos-operacao">
-        {operacaoAtiva.estado === 'concluida' ? (
+        {responsavel && (operacaoAtiva.estado === 'concluida' ? (
           <button style={styles.reabrirOperacaoButton} onClick={reabrirAtual}>Reabrir operação</button>
         ) : (
           <button style={styles.encerrarOperacaoButton} onClick={encerrarAtual}>Encerrar operação</button>
-        )}
+        ))}
         <button style={styles.systemButton} onClick={abrirEstadoSistema}>
           ⚙ Estado do Sistema
         </button>
-        <button style={styles.backupButton} onClick={abrirBackups}>
+        {responsavel && (<button style={styles.backupButton} onClick={abrirBackups}>
           💾 Backups
-        </button>
+        </button>)}
         <button style={styles.replayButton} onClick={abrirReplay}>
           ▶ Replay
         </button>

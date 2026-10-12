@@ -4,6 +4,10 @@ import { apiUrl } from './services/apiUrl'
 
 const SessaoContext = createContext(null)
 
+export function useResponsavel() {
+  return useContext(SessaoContext)?.user?.role === 'responsavel'
+}
+
 export function ContaSessao() {
   const sessao = useContext(SessaoContext)
   if (!sessao?.user) return null
