@@ -1,7 +1,7 @@
-const API_URL = 'http://127.0.0.1:8000'
+import { apiUrl } from './apiUrl'
 
 async function request(endpoint, options = {}) {
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(apiUrl(endpoint), {
     headers: {
       'Content-Type': 'application/json',
       ...(options.headers || {})

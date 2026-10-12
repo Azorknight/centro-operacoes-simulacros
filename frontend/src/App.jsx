@@ -1,3 +1,4 @@
+import { apiUrl } from './services/apiUrl'
 import AgrupamentoMeios from './components/AgrupamentoMeios'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -225,7 +226,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       setDecisoesOperacionais([])
       return
     }
-    fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`)
+    fetch(apiUrl(`/operacoes/${operacaoAtiva.id}/decisoes`))
       .then(r => r.ok ? r.json() : Promise.reject(new Error('Não foi possível carregar as decisões.')))
       .then(setDecisoesOperacionais)
       .catch(console.error)
@@ -316,7 +317,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         obterSetores(mostrarArquivadosSetores),
         obterRelatorio(),
         obterElementos(),
-        fetch('http://127.0.0.1:8000/recursos-operacionais/resumo').then(r => r.ok ? r.json() : []),
+        fetch(apiUrl('/recursos-operacionais/resumo')).then(r => r.ok ? r.json() : []),
         obterResumoElementos()
       ])
 
@@ -1308,7 +1309,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     setAGuardarIntencao(true)
     setMensagemIntencao('')
     try {
-      const resposta = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/intencao-comandante`, {
+      const resposta = await fetch(apiUrl(`/operacoes/${operacaoAtiva.id}/intencao-comandante`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ intencao_comandante: intencaoComandante })
@@ -1331,7 +1332,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   async function carregarDecisoesOperacionais() {
     if (!operacaoAtiva?.id) return setDecisoesOperacionais([])
     try {
-      const r = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`)
+      const r = await fetch(apiUrl(`/operacoes/${operacaoAtiva.id}/decisoes`))
       if (!r.ok) throw new Error('Não foi possível carregar as decisões.')
       setDecisoesOperacionais(await r.json())
     } catch (erro) { console.error(erro) }
@@ -1342,7 +1343,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     if (!texto || !operacaoAtiva?.id || modoBloqueado) return
     setAGuardarDecisao(true); setMensagemDecisao('')
     try {
-      const r = await fetch(`http://127.0.0.1:8000/operacoes/${operacaoAtiva.id}/decisoes`, {
+      const r = await fetch(apiUrl(`/operacoes/${operacaoAtiva.id}/decisoes`), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto, autor: 'Comandante' })
       })
