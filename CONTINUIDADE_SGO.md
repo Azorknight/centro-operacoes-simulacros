@@ -948,3 +948,14 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Validado no Martinex, incluindo janela estreita, Estado do Sistema e Replay.
 - Servidor piloto permanece em 5b77c22; melhorias visuais ainda não transferidas.
 - Próximo passo: preparar atualização do frontend do servidor.
+
+## Frontend atualizado no servidor — 12/10/2026
+- Frontend do WPSPIAGHCM777 atualizado para 9596c50.
+- Backend permanece em 5b77c22.
+- Novo login e cabeçalho com conta/perfil/Sair validados no servidor.
+- Pede credenciais ao abrir a página e ao atualizar com F5.
+- Validado: Ctrl+F5, entrada com responsavel1 e fechar/reabrir o navegador.
+- Operação e registos anteriores mantidos após nova entrada.
+- Cópia anterior: C:\SGO_Copias\Frontend_antes_9596c50_20261012_115048.
+- Ainda pendentes: operador, cliente após atualização, concorrência,
+  arranque após reinício e teste de restauro.
