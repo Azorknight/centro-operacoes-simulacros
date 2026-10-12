@@ -193,11 +193,10 @@ function Operacoes({ onAbrir }) {
         ) : operacoes.length === 0 ? (
           <div className="operacoes-vazio">
             <strong>Ainda não existem operações ativas.</strong>
-            <span>{responsavel ? 'Crie uma nova operação ou restaure uma do arquivo.' : 'Aguarde que o responsável prepare e abra uma operação.'}</span>
+            <span>{responsavel ? 'Crie uma nova operação ou restaure uma do arquivo.' : 'Aguarde que o responsável crie ou restaure uma operação.'}</span>
           </div>
         ) : (
           <div className="operacoes-lista">
-            {!responsavel && <p>Peça ao responsável para abrir a operação a acompanhar.</p>}
             {operacoes.map((operacao) => (
               <article className="operacao-item" key={operacao.id}>
                 <div className="operacao-info">
@@ -210,15 +209,15 @@ function Operacoes({ onAbrir }) {
                   {operacao.responsavel_nome && <small> · Responsável: {operacao.responsavel_posto ? `${operacao.responsavel_posto} ` : ''}{operacao.responsavel_nome}{operacao.responsavel_funcao ? ` (${operacao.responsavel_funcao})` : ''}</small>}
                 </div>
                 <div className="operacao-acoes">
-                  {responsavel && (<button className="botao-preparar" onClick={() => setOperacaoAPreparar(operacao)}>
+                  <button className="botao-preparar" onClick={() => setOperacaoAPreparar(operacao)}>
                     Preparar
-                  </button>)}
+                  </button>
                   {responsavel && (<button className="botao-arquivar" onClick={() => arquivar(operacao)}>
                     Arquivar
                   </button>)}
-                  {responsavel && (<button className="botao-abrir" onClick={() => abrirOperacao(operacao)}>
+                  <button className="botao-abrir" onClick={() => abrirOperacao(operacao)}>
                     Abrir operação
-                  </button>)}
+                  </button>
                 </div>
               </article>
             ))}
@@ -249,9 +248,9 @@ function Operacoes({ onAbrir }) {
                       <small>Estado: arquivada</small>
                     </div>
                     <div className="operacao-acoes">
-                      {responsavel && (<button className="botao-eliminar" onClick={() => pedirEliminacao(operacao)}>
+                      <button className="botao-eliminar" onClick={() => pedirEliminacao(operacao)}>
                         Eliminar definitivamente
-                      </button>)}
+                      </button>
                       {responsavel && (<button className="botao-restaurar" onClick={() => restaurar(operacao)}>
                         Restaurar
                       </button>)}

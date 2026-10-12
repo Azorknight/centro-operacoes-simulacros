@@ -1,5 +1,9 @@
 .operacoes-page {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   overflow-y: auto;
   padding: 40px 20px;
   background: radial-gradient(circle at top, #1e3a5f 0, #0f172a 48%, #07101f 100%);

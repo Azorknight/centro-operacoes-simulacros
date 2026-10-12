@@ -1514,7 +1514,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 {p.ocorrencia_titulo} · {formatarTempoEmpenhado(p.tempo_empenhado_segundos)}{p.em_curso ? ' · Em curso' : ''}
               </div>)}
             </details>
-            {responsavel && el.ocorrencia_id && !modoBloqueado && <button style={styles.smallButton} onClick={async () => { await libertarElemento(el.elemento_id); await refresh() }}>Libertar elemento</button>}
+            {el.ocorrencia_id && !modoBloqueado && <button style={styles.smallButton} onClick={async () => { await libertarElemento(el.elemento_id); await refresh() }}>Libertar elemento</button>}
           </div>)}
         </>
       )
@@ -2290,12 +2290,12 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       return (
         <>
           <strong style={styles.sectionTitle}>Missões</strong>
-          {responsavel && (<button style={styles.smallButton} disabled={modoBloqueado} onClick={() => {
+          <button style={styles.smallButton} disabled={modoBloqueado} onClick={() => {
             setFormMissao({ titulo: '', descricao: '', prioridade: 'media', estado: 'planeada',
               recurso_id: '', notas: '', situacao_operacional: 'por_avaliar', ocorrencia_id: null, objetivo_id: null })
             setMissaoEmEdicao(null)
             setMostrarFormMissao(true)
-          }}>+ Planear missão</button>)}
+          }}>+ Planear missão</button>
           {missoes
             .filter((m) => m.estado !== 'concluida')
             .map((m) => {
@@ -2339,7 +2339,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     : `${recursosMissao.length} recurso${recursosMissao.length === 1 ? '' : 's'} atribuído${recursosMissao.length === 1 ? '' : 's'}`}
                 </div>
 
-                {responsavel && (
                 <div style={{ ...styles.buttonRow, flexWrap: 'wrap' }}>
                   {m.estado === 'planeada' && !modoBloqueado && (
                     <button style={styles.smallButton} onClick={(e) => {
@@ -2380,7 +2379,6 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     Concluir
                   </button>
                 </div>
-                )}
               </div>
             )
           })}
@@ -2628,9 +2626,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               <div>Ordens: {relatorio.ordens}</div>
             </div>
           )}
-          <button style={styles.mainButton} onClick={exportarPdf}>
+          {responsavel && (<button style={styles.mainButton} onClick={exportarPdf}>
             Exportar PDF
-          </button>
+          </button>)}
         </div>
 
         <div style={styles.legendBox}>
@@ -2839,13 +2837,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 <div style={styles.itemCard}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                     <strong>Equipa da missão</strong>
-                    {responsavel && (<button
+                    <button
                       style={styles.smallButton}
                       disabled={modoBloqueado || ['concluida', 'cancelada'].includes(missaoAtual.estado)}
                       onClick={() => setMissaoParaAtribuir(missaoAtual)}
                     >
                       Gerir recursos
-                    </button>)}
+                    </button>
                   </div>
                   {recursosMissao.length === 0 ? (
                     <div style={{ color: '#64748b', marginTop: 8 }}>Ainda não existem recursos atribuídos.</div>
@@ -2853,7 +2851,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     recursosMissao.map((recurso) => (
                       <div key={recurso.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 }}>
                         <span>{recurso.indicativo_radio || recurso.nome} — {recurso.tipo}</span>
-                        {responsavel && (<button
+                        <button
                           style={{ ...styles.smallButton, background: '#b91c1c' }}
                           disabled={modoBloqueado || ['concluida', 'cancelada'].includes(missaoAtual.estado)}
                           onClick={async () => {
@@ -2865,7 +2863,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                           }}
                         >
                           Remover
-                        </button>)}
+                        </button>
                       </div>
                     ))
                   )}
@@ -2873,7 +2871,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
                 <div style={styles.itemCard}>
                   <strong>Diário operacional</strong>
-                  {responsavel && !modoBloqueado && !['concluida', 'cancelada'].includes(missaoAtual.estado) && (
+                  {!modoBloqueado && !['concluida', 'cancelada'].includes(missaoAtual.estado) && (
                     <div style={{ marginTop: 8 }}>
                       <input style={styles.input} placeholder="Autor" value={novaNotaMissao.autor}
                         onChange={(e) => setNovaNotaMissao({ ...novaNotaMissao, autor: e.target.value })} />
@@ -2913,7 +2911,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 <div style={styles.itemCard}>
                   <strong>Estado da missão</strong>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                    {responsavel && estadosMissao.map(([id, rotulo]) => (
+                    {estadosMissao.map(([id, rotulo]) => (
                       <button
                         key={id}
                         disabled={modoBloqueado || missaoAtual.estado === id || ['concluida', 'cancelada'].includes(missaoAtual.estado)}
@@ -2968,7 +2966,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     {estados.map(([id, rotulo], indice) => (
                       <button
                         key={id}
-                        disabled={!responsavel || modoBloqueado || indice < indiceAtual || ocorrenciaAtual.estado === 'arquivada'}
+                        disabled={modoBloqueado || indice < indiceAtual || ocorrenciaAtual.estado === 'arquivada'}
                         onClick={async () => {
                           await alterarEstadoOcorrencia(ocorrenciaAtual.id, id)
                           await atualizarDados()
@@ -3031,7 +3029,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   bloqueado={modoBloqueado}
                   atualizar={refresh}
                 />
-                {responsavel && !modoBloqueado && <button type="button" style={styles.mainButton} onClick={() => {
+                {!modoBloqueado && <button type="button" style={styles.mainButton} onClick={() => {
                   setFormMissao({ titulo: '', descricao: '', prioridade: 'media', estado: 'planeada',
                     recurso_id: '', notas: '', situacao_operacional: 'por_avaliar',
                     ocorrencia_id: ocorrenciaAtual.id, objetivo_id: null })
@@ -3123,7 +3121,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           {detalhe.tipo === 'recurso' && !modoBloqueado && (
             <>
-              {responsavel && (<button
+              <button
                 style={styles.mainButton}
                 disabled={modoBloqueado}
                 onClick={() => setRecursoEmEdicao({
@@ -3138,22 +3136,22 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 })}
               >
                 Editar recurso
-              </button>)}
-              {responsavel && (<button
+              </button>
+              <button
                 style={styles.mainButton}
                 onClick={() => mudarEstado(detalhe.dados.id, 'em_missao')}
               >
                 Marcar em missão
-              </button>)}
+              </button>
 
-              {responsavel && (<button
+              <button
                 style={styles.mainButton}
                 onClick={() => mudarEstado(detalhe.dados.id, 'disponivel')}
               >
                 Marcar disponível
-              </button>)}
+              </button>
 
-              {responsavel && (<button
+              <button
                 style={{ ...styles.mainButton, background: '#dc2626' }}
                 disabled={modoBloqueado}
                 onClick={async () => {
@@ -3164,16 +3162,16 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 }}
               >
                 Libertar recurso
-              </button>)}
+              </button>
 
-              {responsavel && (<button
+              <button
                 style={styles.mainButton}
                 onClick={() => {
                   setRecursoParaAtribuirOcorrencia(detalhe.dados)
                 }}
               >
                 Ordenar deslocação
-              </button>)}
+              </button>
 
           {recursoDetalheAtual.ocorrencia_id && !chegouRecursoNesteDespacho(recursoDetalheAtual) && (
               <button
@@ -3191,7 +3189,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </button>
             )}
 
-              {responsavel && (<button
+              <button
                 style={styles.mainButton}
                 onClick={() => {
                   setFormOrdem({
@@ -3205,9 +3203,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 }}
               >
                 Dar nova ordem
-              </button>)}
+              </button>
 
-              {responsavel && (<button
+              <button
                 style={styles.mainButton}
                 disabled={modoBloqueado}
                 onClick={() => {
@@ -3224,12 +3222,12 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 }}
               >
                 Criar elemento nesta viatura
-              </button>)}
+              </button>
             </>
           )}
 
 
-            {responsavel && detalhe.tipo === 'missao' && (
+            {detalhe.tipo === 'missao' && (
               <>
                 {detalhe.dados.estado === 'planeada' && !modoBloqueado && (
                   <button style={styles.mainButton} onClick={() => abrirEdicaoMissao(detalhe.dados)}>
@@ -4056,13 +4054,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             >
               📍 Nova ocorrência
             </button>
-            {responsavel && (<button
+            <button
               type="button"
               style={{ ...styles.mapaToolButton, ...(modoMapa.tipo === 'novo_recurso' ? styles.mapaToolButtonActive : {}) }}
               onClick={() => setModoMapa({ tipo: 'novo_recurso', alvo: null })}
             >
               🚓 Novo recurso
-            </button>)}
+            </button>
             <button
               type="button"
               style={styles.mapaToolButton}
@@ -4117,7 +4115,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               <Marker
                 key={r.id}
                 position={[r.latitude, r.longitude]}
-                draggable={responsavel && !modoBloqueado}
+                draggable={!modoBloqueado}
                 icon={L.divIcon({
                   className: '',
                   html: `<div style="
@@ -4966,23 +4964,23 @@ function App() {
         modoReplay={mostrarReplay} replayEventoAtual={eventoReplayAtual}
         operacaoAtiva={operacaoAtiva} acoesOperacao={
           <div className="sgo-comandos-operacao">
-        {responsavel && (operacaoAtiva.estado === 'concluida' ? (
+        {operacaoAtiva.estado === 'concluida' ? (
           <button style={styles.reabrirOperacaoButton} onClick={reabrirAtual}>Reabrir operação</button>
         ) : (
           <button style={styles.encerrarOperacaoButton} onClick={encerrarAtual}>Encerrar operação</button>
-        ))}
+        )}
         <button style={styles.systemButton} onClick={abrirEstadoSistema}>
           ⚙ Estado do Sistema
         </button>
         {responsavel && (<button style={styles.backupButton} onClick={abrirBackups}>
           💾 Backups
         </button>)}
-        <button style={styles.replayButton} onClick={abrirReplay}>
+        {responsavel && (<button style={styles.replayButton} onClick={abrirReplay}>
           ▶ Replay
-        </button>
-        {responsavel && (<button style={styles.trocarOperacaoButton} onClick={voltarAoGestor}>
-          Trocar operação
         </button>)}
+        <button style={styles.trocarOperacaoButton} onClick={voltarAoGestor}>
+          Trocar operação
+        </button>
 
           </div>
         } />

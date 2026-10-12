@@ -43,12 +43,17 @@ def set_user(name, password, role):
         c.execute('DELETE FROM sessions WHERE name=?',(name,))
 
 def permitted(role, method, path):
-    if path in ('/auth/me','/auth/logout'): return True
+    if path in ('/auth/me', '/auth/logout'): return True
     if role == 'responsavel': return True
-    if method in ('GET','HEAD'): return not path.startswith(('/backups','/auth/users','/docs','/openapi.json','/redoc'))
-    # O operador regista comunicações e execução de instruções já emitidas.
+    if role != 'operador': return False
     import re
-    return (method == 'POST' and (path == '/ocorrencias' or re.fullmatch(r'/ocorrencias/\d+/(chamadas|situacao)',path) is not None)) or (method == 'PUT' and re.fullmatch(r'/(recursos/\d+/confirmar-chegada|elementos/\d+/(confirmar-chegada|posicao|reembarcar/\d+)|ordens/\d+/estado)',path) is not None)
+    if path.startswith(('/backups', '/auth/users', '/docs', '/openapi.json', '/redoc', '/replay')):
+        return False
+    if method == 'POST' and path == '/operacoes': return False
+    if method == 'PUT' and re.fullmatch(r'/operacoes/\d+/(arquivar|restaurar)', path):
+        return False
+    return True
+
 
 class Guard(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
