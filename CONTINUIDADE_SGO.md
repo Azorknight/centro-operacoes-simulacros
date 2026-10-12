@@ -907,3 +907,37 @@ Operacao 11 tem agora ocorrencia TESTE INICIO TIMELINE em curso,
 viatura BASE 01 chegada e ELEMENTO TESTE EMBARCADO mobilizado.
 Servidor piloto continua sem atualizacao.
 Manual visual ainda por consolidar com os procedimentos validados.
+---
+
+## Atualização do servidor piloto — 12/10/2026
+Esta secção substitui as indicações anteriores de servidor não atualizado.
+
+- Código e frontend do WPSPIAGHCM777 atualizados para 5b77c22.
+- Autenticação integrada no Git; ligações SQLite fechadas após cada contexto.
+- Compilação e testes isolados de autenticação passaram no Martinex.
+- Configuração .env, contas, certificado, tarefas e dados anteriores preservados.
+- Cópia anterior: C:\SGO_Copias\Antes_5b77c22_20261012_093747.
+- Cópia inclui código/configuração, contas, CA e sgo.dump.
+- Índice do dump verificado; teste de restauro ainda pendente.
+- API em 127.0.0.1:8000 exige autenticação; HTTPS retomado.
+- Migração criou operacao_bases e base_inicial_id nas duas participações.
+- Entrada, saída e nova entrada com responsavel1 verificadas no servidor.
+
+### Teste no servidor
+- Operação anterior TESTE PILOTO SGO — 09-10-2026 mantida.
+- Nova operação: TESTE ATUALIZAÇÃO SGO — 12-10-2026.
+- Base: BASE TESTE ATUALIZAÇÃO.
+- Viatura: VIATURA TESTE 01; indicativo ATUALIZAÇÃO 01.
+- Validado: criação da base, atribuição inicial e meio visível no mapa.
+- Timeline vazia antes da chamada; primeira chamada registada às 09:56.
+- Deslocação e chegada às 09:58; ocorrência Em curso e ordem concluída.
+- Informação do local às 10:00; registos mantidos após sair e voltar a entrar.
+- Ainda falta validar operador, cliente após atualização, concorrência,
+  arranque após reinício e restauro da cópia.
+
+### Manual e próximo trabalho
+- Manual visual atualizado e aceite em 11/10/2026.
+- Imagens nos capítulos correspondentes; capítulo 16 apenas roteiro.
+- Melhorias visuais acordadas: login com contraste e campos alinhados,
+  cabeçalho sem sobreposição e conta/perfil/Sair integrados no cabeçalho.
+- Desenvolver e validar no Martinex antes de nova atualização do servidor.
