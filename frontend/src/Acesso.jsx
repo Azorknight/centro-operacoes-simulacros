@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import './Acesso.css'
 import { apiUrl } from './services/apiUrl'
 
@@ -26,15 +26,8 @@ export function ContaSessao() {
 
 export default function Acesso({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(!import.meta.env.DEV)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  useEffect(() => {
-    if (import.meta.env.DEV) return
-    fetch(apiUrl('/auth/me')).then(r => r.ok ? r.json() : null)
-      .then(setUser).catch(() => setError('Não foi possível contactar o servidor.'))
-      .finally(() => setLoading(false))
-  }, [])
   async function login(event) {
     event.preventDefault(); setBusy(true); setError('')
     const data = new FormData(event.currentTarget)
@@ -58,9 +51,6 @@ export default function Acesso({ children }) {
   const mostrarLogin = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('visual') === 'login'
     : !user
-  if (loading) return (
-    <main className="sgo-acesso"><p className="sgo-acesso-estado" role="status">A verificar sessão…</p></main>
-  )
   if (mostrarLogin) return (
     <main className="sgo-acesso">
       <section className="sgo-acesso-cartao" aria-labelledby="sgo-acesso-titulo">
