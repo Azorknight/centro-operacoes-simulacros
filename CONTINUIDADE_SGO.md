@@ -994,3 +994,17 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Revisao dos setores continua pendente.
 - Alteracoes de interface por perfil ainda nao instaladas no piloto.
 - Proximo passo: atualizar frontend e validar com operador1 e responsavel1.
+## Definicao atual dos perfis — substitui as anteriores
+- Responsavel: acesso a todas as funcionalidades.
+- Operador: nao pode criar operacoes, arquivar/restaurar operacoes,
+  executar Replay, gerir backups nem exportar PDF.
+- Operador pode preparar operacoes e executar todas as restantes acoes,
+  incluindo emitir ordens, gerir missoes, reposicionar meios,
+  trocar, encerrar e reabrir operacoes.
+- a2d0688 corrige interface e permissoes do backend para esta definicao.
+- Corrigida a deslocacao vertical da lista de operacoes/arquivo.
+- Sintaxe Python, compilacao frontend e verificacoes Git passaram.
+- Arquivo e botoes Restaurar acessiveis no navegador do Martinex.
+- Ainda falta instalar e validar frontend e sgo_auth.py no servidor.
+- Nao utilizar o pacote Frontend_8624488 para concluir esta atualizacao.
+- Revisao dos setores e consolidacao do manual continuam pendentes.
