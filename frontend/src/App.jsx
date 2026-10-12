@@ -1,3 +1,4 @@
+import './Cabecalho.css'
 import { ContaSessao } from './Acesso'
 import { apiUrl } from './services/apiUrl'
 import AgrupamentoMeios from './components/AgrupamentoMeios'
@@ -88,7 +89,7 @@ function nomeComPosto(elemento) {
     : nome
 }
 
-function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null }) {
+function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoReplay = false, replayEventoAtual = null, acoesOperacao = null }) {
   const [recursos, setRecursos] = useState([])
   const [resumoRecursosOperacionais, setResumoRecursosOperacionais] = useState([])
   const [resumoElementosOperacionais, setResumoElementosOperacionais] = useState([])
@@ -2513,10 +2514,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     : null
 
   return (
-    <div style={styles.appShell}>
+    <div className="sgo-centro" style={styles.appShell}>
       <div className="sgo-topo-conta" style={styles.topBar}>
         <div style={styles.topBarTitle}>Centro de Operações e Simulacros</div>
-        <div style={styles.kpiRow}>
+        <div className="sgo-indicadores" style={styles.kpiRow}>
           <div style={styles.kpiBox}>
             <div style={styles.kpiLabel}>Disponíveis</div>
             <div style={styles.kpiValue}>
@@ -2551,14 +2552,18 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         <ContaSessao />
       </div>
 
-      <div style={styles.commandStrip}>
-        <div><span style={styles.commandLabel}>OPERAÇÃO</span><strong>{operacaoAtiva?.nome || 'Operação ativa'}</strong></div>
+      <div className="sgo-contexto" style={styles.commandStrip}>
+        <div className="sgo-nome-operacao" title={operacaoAtiva?.nome}>
+          <span style={styles.commandLabel}>OPERAÇÃO</span>
+          <strong>{operacaoAtiva?.nome || 'Operação ativa'}</strong>
+        </div>
         <div><span style={styles.commandLabel}>HORA AÇORES</span><strong><RelogioOperacional /></strong></div>
         <div><span style={styles.commandLabel}>ESTADO</span><strong>{modoReplay ? 'REPLAY' : (modoConsulta ? 'ENCERRADA' : 'ATIVA')}</strong></div>
-        <div style={styles.globalSearchWrap}>
+        <div className="sgo-pesquisa" style={styles.globalSearchWrap}>
           <input
             value={pesquisaGlobal}
             onChange={(e) => setPesquisaGlobal(e.target.value)}
+            aria-label="Pesquisar recurso, ocorrência ou elemento"
             placeholder="Pesquisar recurso, ocorrência ou elemento..."
             style={styles.globalSearch}
           />
@@ -2573,6 +2578,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           )}
         </div>
       </div>
+      <nav className="sgo-barra-acoes" aria-label="Comandos da operação">
+        {acoesOperacao}
+      </nav>
 
       {mostrarAlertas && alertasRecentes.length > 0 && (
         <div style={styles.alertPanel}>
@@ -4339,7 +4347,7 @@ const styles = {
     top: 0,
     left: 0,
     right: 0,
-    height: '56px',
+    height: 'var(--sgo-topo-altura)',
     zIndex: 1200,
     background: 'rgba(15, 23, 42, 0.92)',
     color: 'white',
@@ -4377,7 +4385,7 @@ const styles = {
     fontWeight: 'bold',
   },
   commandStrip: {
-    position: 'absolute', top: '56px', left: 0, right: 0, height: '52px', zIndex: 1190,
+    position: 'absolute', top: 'var(--sgo-topo-altura)', left: 0, right: 0, height: 'var(--sgo-contexto-altura)', zIndex: 1190,
     background: 'rgba(30,41,59,.96)', color: 'white', display: 'flex', alignItems: 'center', gap: '22px',
     padding: '7px 16px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,.1)', fontSize: '13px'
   },
@@ -4386,14 +4394,14 @@ const styles = {
   globalSearch: { width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: '8px', border: '1px solid #64748b', background: '#f8fafc', color: '#0f172a' },
   searchResults: { position: 'absolute', top: '42px', left: 0, right: 0, background: 'white', borderRadius: '8px', boxShadow: '0 10px 28px rgba(0,0,0,.35)', overflow: 'hidden', zIndex: 4000 },
   searchResult: { width: '100%', border: 0, borderBottom: '1px solid #e2e8f0', background: 'white', padding: '9px 11px', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column' },
-  alertPanel: { position: 'absolute', top: '116px', right: '282px', width: '310px', maxHeight: '240px', overflowY: 'auto', zIndex: 1180, background: 'rgba(255,255,255,.96)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.28)', padding: '9px' },
+  alertPanel: { position: 'absolute', top: 'calc(var(--sgo-cabecalho-altura) + 8px)', right: '282px', width: '310px', maxHeight: '240px', overflowY: 'auto', zIndex: 1180, background: 'rgba(255,255,255,.96)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.28)', padding: '9px' },
   alertHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 3px 8px' },
   alertClose: { border: 0, background: 'transparent', fontSize: '20px', cursor: 'pointer' },
   alertItem: { display: 'flex', gap: '8px', padding: '8px 4px', borderTop: '1px solid #e2e8f0', fontSize: '12px' },
-  showAlertsButton: { position: 'absolute', top: '116px', right: '282px', zIndex: 1180, border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', padding: '8px 10px', cursor: 'pointer' },
+  showAlertsButton: { position: 'absolute', top: 'calc(var(--sgo-cabecalho-altura) + 8px)', right: '282px', zIndex: 1180, border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', padding: '8px 10px', cursor: 'pointer' },
   leftPanel: {
     position: 'absolute',
-    top: '116px',
+    top: 'calc(var(--sgo-cabecalho-altura) + 8px)',
     left: '10px',
     bottom: '10px',
     width: '220px',
@@ -4407,7 +4415,7 @@ const styles = {
   },
   rightPanel: {
     position: 'absolute',
-    top: '116px',
+    top: 'calc(var(--sgo-cabecalho-altura) + 8px)',
     right: '10px',
     bottom: '10px',
     width: '260px',
@@ -4696,14 +4704,14 @@ const styles = {
   replayTimelineLabels: { display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' },
   replayRange: { width: '100%', margin: '9px 0' },
   replayStatus: { textAlign: 'center', fontSize: '13px', fontWeight: 'bold', color: '#334155' },
-  modoMapaAviso: { position: 'fixed', top: '112px', left: '50%', transform: 'translateX(-50%)', zIndex: 3200, maxWidth: 'min(820px, calc(100vw - 40px))', padding: '9px 14px', borderRadius: '999px', fontFamily: 'Arial, sans-serif', fontSize: '12px', boxShadow: '0 5px 16px rgba(0,0,0,.22)', display: 'flex', alignItems: 'center', gap: 12 },
+  modoMapaAviso: { position: 'fixed', top: 'calc(var(--sgo-cabecalho-altura) + 8px)', left: '50%', transform: 'translateX(-50%)', zIndex: 3200, maxWidth: 'min(820px, calc(100vw - 40px))', padding: '9px 14px', borderRadius: '999px', fontFamily: 'Arial, sans-serif', fontSize: '12px', boxShadow: '0 5px 16px rgba(0,0,0,.22)', display: 'flex', alignItems: 'center', gap: 12 },
   modoMapaNormal: { background: '#ecfdf5', color: '#166534', border: '1px solid #86efac' },
   modoMapaAtivo: { background: '#fff7ed', color: '#9a3412', border: '1px solid #fb923c' },
   cancelarModoButton: { border: '1px solid currentColor', borderRadius: 999, background: 'rgba(255,255,255,.78)', color: 'inherit', padding: '4px 9px', cursor: 'pointer', fontWeight: 700 },
-  mapaToolbar: { position: 'fixed', top: '158px', left: '50%', transform: 'translateX(-50%)', zIndex: 3150, display: 'flex', gap: 7, padding: 7, borderRadius: 12, background: 'rgba(15,23,42,.92)', boxShadow: '0 6px 18px rgba(0,0,0,.26)' },
+  mapaToolbar: { position: 'fixed', top: 'calc(var(--sgo-cabecalho-altura) + 54px)', left: '50%', transform: 'translateX(-50%)', zIndex: 3150, display: 'flex', gap: 7, padding: 7, borderRadius: 12, background: 'rgba(15,23,42,.92)', boxShadow: '0 6px 18px rgba(0,0,0,.26)' },
   mapaToolButton: { border: '1px solid #475569', borderRadius: 8, background: '#1e293b', color: '#f8fafc', padding: '7px 10px', cursor: 'pointer', fontWeight: 700, fontSize: 12 },
   mapaToolButtonActive: { background: '#ea580c', borderColor: '#fb923c' },
-  modoReplayAviso: { position: 'fixed', top: '112px', left: '50%', transform: 'translateX(-50%)', zIndex: 3100, maxWidth: 'min(760px, calc(100vw - 40px))', padding: '9px 18px', borderRadius: '999px', background: '#312e81', color: '#ffffff', border: '1px solid #818cf8', fontFamily: 'Arial, sans-serif', fontWeight: 'bold', fontSize: '12px', boxShadow: '0 5px 16px rgba(0,0,0,.28)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  modoReplayAviso: { position: 'fixed', top: 'calc(var(--sgo-cabecalho-altura) + 8px)', left: '50%', transform: 'translateX(-50%)', zIndex: 3100, maxWidth: 'min(760px, calc(100vw - 40px))', padding: '9px 18px', borderRadius: '999px', background: '#312e81', color: '#ffffff', border: '1px solid #818cf8', fontFamily: 'Arial, sans-serif', fontWeight: 'bold', fontSize: '12px', boxShadow: '0 5px 16px rgba(0,0,0,.28)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   replayEventCard: { marginTop: '16px', padding: '14px', borderRadius: '11px', background: '#0f172a', color: '#ffffff' },
   replayEventMeta: { fontSize: '11px', color: '#bfdbfe', fontWeight: 'bold', letterSpacing: '.04em' },
   replayEventDescription: { marginTop: '7px', fontSize: '15px', lineHeight: 1.4, fontWeight: 'bold' },
@@ -4723,7 +4731,7 @@ const styles = {
   },
   encerrarOperacaoButton: { border: '1px solid #b91c1c', borderRadius: '7px', padding: '7px 9px', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontWeight: 'bold' },
   reabrirOperacaoButton: { border: '1px solid #15803d', borderRadius: '7px', padding: '7px 9px', background: '#dcfce7', color: '#166534', cursor: 'pointer', fontWeight: 'bold' },
-  modoConsultaAviso: { position: 'fixed', top: '112px', left: '50%', transform: 'translateX(-50%)', zIndex: 2900, padding: '8px 16px', borderRadius: '999px', background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', fontFamily: 'Arial, sans-serif', fontWeight: 'bold', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,.2)' },
+  modoConsultaAviso: { position: 'fixed', top: 'calc(var(--sgo-cabecalho-altura) + 8px)', left: '50%', transform: 'translateX(-50%)', zIndex: 2900, padding: '8px 16px', borderRadius: '999px', background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', fontFamily: 'Arial, sans-serif', fontWeight: 'bold', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,.2)' },
 }
 
 function App() {
@@ -4950,12 +4958,10 @@ function App() {
 
   return (
     <>
-      <CentroOperacoes modoConsulta={operacaoAtiva.estado === 'concluida'} modoReplay={mostrarReplay} replayEventoAtual={eventoReplayAtual} operacaoAtiva={operacaoAtiva} />
-      <div style={styles.operacaoAtiva}>
-        <div>
-          <span style={styles.operacaoAtivaLabel}>OPERAÇÃO ATIVA</span>
-          <strong>{operacaoAtiva.nome}</strong>
-        </div>
+      <CentroOperacoes modoConsulta={operacaoAtiva.estado === 'concluida'}
+        modoReplay={mostrarReplay} replayEventoAtual={eventoReplayAtual}
+        operacaoAtiva={operacaoAtiva} acoesOperacao={
+          <div className="sgo-comandos-operacao">
         {operacaoAtiva.estado === 'concluida' ? (
           <button style={styles.reabrirOperacaoButton} onClick={reabrirAtual}>Reabrir operação</button>
         ) : (
@@ -4973,7 +4979,10 @@ function App() {
         <button style={styles.trocarOperacaoButton} onClick={voltarAoGestor}>
           Trocar operação
         </button>
-      </div>
+
+          </div>
+        } />
+
 
       {mostrarBackups && (
         <div style={styles.systemOverlay} onMouseDown={(e) => { if (e.target === e.currentTarget && !backupEmCurso) setMostrarBackups(false) }}>
