@@ -959,3 +959,27 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Cópia anterior: C:\SGO_Copias\Frontend_antes_9596c50_20261012_115048.
 - Ainda pendentes: operador, cliente após atualização, concorrência,
   arranque após reinício e teste de restauro.
+## Perfis e permissoes — 12/10/2026
+- Cliente WPSPIAGHFOR15 validado apos atualizacao: login, cabecalho e registos.
+- Conta operador1 criada no servidor; entrada e consulta confirmadas.
+- Backups bloqueados ao operador: HTTP 403, exige responsavel.
+- Encerramento bloqueado: PUT /operacoes/0/encerrar devolveu 403,
+  sem alterar qualquer operacao.
+- Bloqueio da emissao de ordens ainda pendente de teste no piloto.
+- Minimo das palavras-passe reduzido para 8 caracteres nos dois perfis.
+- Servidor: sgo_auth.py e deployment/contas.py adaptados.
+- Copia: C:\SGO_Copias\Password_minimo_antes_20261012_134721.
+- Git: 6dc85a8 regista o minimo de 8 em sgo_auth.py.
+- deployment/contas.py continua apenas no pacote do servidor.
+
+## Interface por perfil — ainda nao instalada no servidor
+- 7ff95b2: cabecalho e emissoes de ordens na ficha da ocorrencia.
+- b2e0906: comandos de recursos e Novo recurso no mapa.
+- b40735c: libertacao de elementos e comandos de missoes.
+- Compilacoes e verificacoes Git passaram.
+- Comandos do responsavel preservados no desenvolvimento.
+- Ocultacao ao operador ainda pendente de validacao com autenticacao real.
+- Adaptacao ainda parcial: rever restantes comandos antes de concluir.
+- Setores podem pertencer ao fluxo antigo: rever antes de os incluir no manual.
+- Manual sera consolidado depois da validacao do bloco.
+- Piloto: frontend 9596c50; backend 5b77c22 com alteracao local do minimo.
