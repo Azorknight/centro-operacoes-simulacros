@@ -2968,7 +2968,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     {estados.map(([id, rotulo], indice) => (
                       <button
                         key={id}
-                        disabled={modoBloqueado || indice < indiceAtual || ocorrenciaAtual.estado === 'arquivada'}
+                        disabled={!responsavel || modoBloqueado || indice < indiceAtual || ocorrenciaAtual.estado === 'arquivada'}
                         onClick={async () => {
                           await alterarEstadoOcorrencia(ocorrenciaAtual.id, id)
                           await atualizarDados()
@@ -4117,7 +4117,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               <Marker
                 key={r.id}
                 position={[r.latitude, r.longitude]}
-                draggable={!modoBloqueado}
+                draggable={responsavel && !modoBloqueado}
                 icon={L.divIcon({
                   className: '',
                   html: `<div style="
@@ -4980,9 +4980,9 @@ function App() {
         <button style={styles.replayButton} onClick={abrirReplay}>
           ▶ Replay
         </button>
-        <button style={styles.trocarOperacaoButton} onClick={voltarAoGestor}>
+        {responsavel && (<button style={styles.trocarOperacaoButton} onClick={voltarAoGestor}>
           Trocar operação
-        </button>
+        </button>)}
 
           </div>
         } />

@@ -1,3 +1,4 @@
+import { useResponsavel } from '../Acesso'
 import { useMemo, useState } from 'react'
 import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
@@ -5,6 +6,7 @@ import L from 'leaflet'
 export default function AgrupamentoMeios({
   recursos, elementos, onSelecionar, onReposicionar, modoConsulta, children
 }) {
+  const responsavel = useResponsavel()
   const mapa = useMap()
   const [zoom, setZoom] = useState(mapa.getZoom())
 
@@ -108,7 +110,7 @@ export default function AgrupamentoMeios({
                   {tipo === 'recurso' ? 'Recurso' : 'Elemento'}
                   {' / '}{dados.nome}
                 </button>
-                {!modoConsulta && onReposicionar && (
+                {responsavel && !modoConsulta && onReposicionar && (
                   <button type="button"
                     disabled={tipo === 'elemento' && dados.recurso_id != null}
                     title={tipo === 'elemento' && dados.recurso_id != null
