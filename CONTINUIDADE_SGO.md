@@ -983,3 +983,14 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Setores podem pertencer ao fluxo antigo: rever antes de os incluir no manual.
 - Manual sera consolidado depois da validacao do bloco.
 - Piloto: frontend 9596c50; backend 5b77c22 com alteracao local do minimo.
+## Revisao complementar dos perfis — 12/10/2026
+- 8624488: gestao/troca de operacoes reservadas ao responsavel.
+- Etapas da ocorrencia visiveis ao operador, sem alteracao manual.
+- Reposicionamento de grupos e arrastamento de viaturas reservados ao responsavel.
+- Compilacao e verificacao Git passaram; comandos do responsavel preservados.
+- Confirmado pelo utilizador: operador pode executar, concluir e anular ordens.
+- Emissao de novas ordens permanece reservada ao responsavel.
+- Historico antigo e apenas de consulta.
+- Revisao dos setores continua pendente.
+- Alteracoes de interface por perfil ainda nao instaladas no piloto.
+- Proximo passo: atualizar frontend e validar com operador1 e responsavel1.
