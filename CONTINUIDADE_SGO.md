@@ -1067,3 +1067,18 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - TESTE SIMULTANEO 01 e 02 mantidos.
 - Continuam pendentes concorrencia sobre o mesmo registo,
   teste de restauro da copia, revisao dos setores e consolidacao do manual.
+## Restauro PostgreSQL — validado em 13/10/2026
+- Copia testada: C:\SGO_Copias\Antes_5b77c22_20261012_093747\sgo.dump.
+- Restauro na base separada sgo_teste_restauro_20261013.
+- pg_restore terminou sem erros, numa unica transacao.
+- PostGIS 3.6 ativo; 23 tabelas public recuperadas.
+- Dados recuperados: 1 operacao, 1 recurso, 1 elemento,
+  1 ocorrencia, 1 ordem e 8 eventos.
+- Copia anterior a atualizacao: contem o piloto de 09/10/2026.
+- Base de teste mantida para documentar a verificacao.
+- Piloto atual verificado no WPSPIAGHFOR15:
+  4 ordens e TESTE SIMULTANEO 01 e 02 preservados.
+- Teste valida o restauro PostgreSQL, nao a recuperacao completa
+  da aplicacao, contas, configuracao e certificado.
+- Continuam pendentes concorrencia sobre o mesmo registo,
+  recuperacao completa, revisao dos setores e consolidacao do manual.
