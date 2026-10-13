@@ -1008,3 +1008,16 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Ainda falta instalar e validar frontend e sgo_auth.py no servidor.
 - Nao utilizar o pacote Frontend_8624488 para concluir esta atualizacao.
 - Revisao dos setores e consolidacao do manual continuam pendentes.
+## Atualizacao dos perfis no piloto — validacao em 13/10/2026
+- Frontend e sgo_auth.py atualizados para a2d0688 no WPSPIAGHCM777.
+- Copia anterior: C:\SGO_Copias\Antes_perfis_a2d0688_20261012_163347.
+- Tarefas SGO-API e SGO-HTTPS retomadas; portas 8000 local e 443 confirmadas.
+- Operador1: Backups, Replay e Exportar PDF ocultos.
+- Encerrar, Trocar operacao, Novo recurso e emissoes de ordens visiveis.
+- Lista: Nova operacao, Arquivar e Restaurar ocultos ao operador.
+- Preparar e Abrir operacao acessiveis ao operador sem erro de permissao.
+- Responsavel1: comandos reservados visiveis, incluindo PDF e gestao de operacoes.
+- Ainda falta testar emissao de ordens pelo operador e bloqueios HTTP
+  de criacao, arquivo e restauro de operacoes.
+- Continuam pendentes concorrencia, reinicio, restauro da copia,
+  revisao dos setores e consolidacao do manual.
