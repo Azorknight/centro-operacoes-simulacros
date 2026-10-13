@@ -1082,3 +1082,12 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
   da aplicacao, contas, configuracao e certificado.
 - Continuam pendentes concorrencia sobre o mesmo registo,
   recuperacao completa, revisao dos setores e consolidacao do manual.
+## Setores antigos — revisao concluida em 13/10/2026
+- 1009b76 retira o botao Setor da lista atual de missoes.
+- Compilacao, verificacao Git e teste no navegador passaram.
+- Editar, Atribuir e Concluir mantidos.
+- Dados, associacoes e historico antigos dos setores preservados.
+- Setores nao serao acrescentados ao manual do fluxo atual.
+- Alteracao ainda nao transferida para o servidor piloto.
+- Pendentes: concorrencia sobre o mesmo registo, recuperacao completa
+  e consolidacao do manual.
