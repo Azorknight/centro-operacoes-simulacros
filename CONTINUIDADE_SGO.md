@@ -1126,3 +1126,19 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Acesso recusado nos dois casos: Esta acao exige perfil de administrador.
 - Consulta da gestao de contas reservada ao administrador confirmada no piloto.
 - Pedidos de teste sem alteracao de contas.
+## Ajuste de posicao e deslocacao operacional — 13/10/2026
+- ba83592 separa ajuste de posicao de deslocacao operacional.
+- Arrastar ou Ajustar posicao guarda apenas a localizacao, sem Timeline.
+- Registar deslocacao pede descricao e cria um evento na Timeline.
+- Estado e associacao a ocorrencia mantidos.
+- Desembarque por clique no mapa mantido como acao operacional.
+- Validado no Martinex: elementos, meios e ajuste a partir de grupo.
+- main.py e frontend atualizados no WPSPIAGHCM777.
+- Copia anterior: C:\SGO_Copias\Antes_posicoes_ba83592_20261013_150540.
+- Tarefas e portas 443 e 127.0.0.1:8000 confirmadas.
+- Validado no piloto com operador1: ajuste sem evento e deslocacao
+  com um unico evento, tanto em elementos como em meios.
+- Confirmada a preservacao do estado e associacao a ocorrencia.
+- Acordado substituir Recursos por Meios na interface;
+  alteracao geral da designacao ainda pendente.
+- Por decisao do utilizador, nao atualizar o manual com administracao.
