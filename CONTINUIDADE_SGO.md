@@ -1045,3 +1045,14 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
   alem da ocultacao dos respetivos comandos na interface.
 - Continuam pendentes concorrencia, reinicio, teste de restauro
   da copia, revisao dos setores e consolidacao do manual.
+## Duas sessoes simultaneas — validado em 13/10/2026
+- Responsavel1 no WPSPIAGHCM777 e operador1 no WPSPIAGHFOR15.
+- Mesma operacao de teste, ocorrencia xx e viatura ATUALIZACAO 01.
+- TESTE SIMULTANEO 01 registado pelo operador apareceu automaticamente
+  na sessao do responsavel, sem atualizar a pagina.
+- TESTE SIMULTANEO 02 registado pelo responsavel apareceu automaticamente
+  na sessao do operador, sem atualizar a pagina.
+- Validada a atualizacao partilhada nos dois sentidos com sessoes distintas.
+- Este teste nao valida alteracoes concorrentes ao mesmo registo.
+- Continuam pendentes concorrencia sobre o mesmo registo, reinicio,
+  restauro da copia, revisao dos setores e consolidacao do manual.
