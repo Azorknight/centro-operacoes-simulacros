@@ -14,7 +14,7 @@ export default function GestorCliquesMapa({ modoMapa, refresh, modoConsulta, con
         try {
           await reposicionarMeioMapa(
             operacaoId, modoMapa.tipoMeio, modoMapa.alvo.id,
-            e.latlng.lat, e.latlng.lng
+            e.latlng.lat, e.latlng.lng, modoMapa.descricaoDeslocacao ?? null
           )
           concluirModo?.()
           await refresh()

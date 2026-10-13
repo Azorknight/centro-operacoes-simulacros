@@ -522,10 +522,10 @@ export function editarPreparacaoElemento(operacaoId, catalogoId, dados) {
   })
 }
 
-export function reposicionarMeioMapa(operacaoId, tipo, meioId, latitude, longitude) {
+export function reposicionarMeioMapa(operacaoId, tipo, meioId, latitude, longitude, deslocacao = null) {
   return request(`/operacoes/${operacaoId}/meios/${tipo}/${meioId}/posicao`, {
     method: 'PUT',
-    body: JSON.stringify({ latitude, longitude })
+    body: JSON.stringify({ latitude, longitude, registar_deslocacao: deslocacao !== null, descricao: deslocacao })
   })
 }
 

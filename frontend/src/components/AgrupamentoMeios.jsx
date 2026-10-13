@@ -105,7 +105,7 @@ export default function AgrupamentoMeios({
                   }}>
                   <strong>{dados.indicativo_radio || dados.nome}</strong>
                   <br />
-                  {tipo === 'recurso' ? 'Recurso' : 'Elemento'}
+                  {tipo === 'recurso' ? 'Meio' : 'Elemento'}
                   {' / '}{dados.nome}
                 </button>
                 {!modoConsulta && onReposicionar && (
@@ -118,7 +118,15 @@ export default function AgrupamentoMeios({
                       mapa.closePopup()
                       onReposicionar(tipo, dados)
                     }}>
-                    Reposicionar no mapa
+                    Ajustar posição
+                  </button>
+                )}
+                {!modoConsulta && onReposicionar && (
+                  <button type="button"
+                    disabled={tipo === 'elemento' && dados.recurso_id != null}
+                    style={{ padding: 6, marginLeft: 6, cursor: 'pointer' }}
+                    onClick={() => { mapa.closePopup(); onReposicionar(tipo, dados, true) }}>
+                    Registar deslocação
                   </button>
                 )}
                 </div>

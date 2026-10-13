@@ -1634,6 +1634,8 @@ def editar_preparacao_elemento(
 
 
 class PosicaoMeioMapa(BaseModel):
+    registar_deslocacao: bool = False
+    descricao: str | None = Field(default=None, max_length=500)
     latitude: float = Field(ge=-90, le=90, allow_inf_nan=False)
     longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
 
@@ -1646,6 +1648,9 @@ def reposicionar_meio_no_mapa(
     if tipo not in tabelas:
         raise HTTPException(status_code=404, detail="Tipo de meio inexistente")
     tabela = tabelas[tipo]
+    descricao = (dados.descricao or '').strip()
+    if dados.registar_deslocacao and not descricao:
+        raise HTTPException(status_code=422, detail="Descreva a deslocacao operacional")
     parametros = {
         "operacao_id": operacao_id, "meio_id": meio_id,
         "latitude": dados.latitude, "longitude": dados.longitude
@@ -1679,19 +1684,20 @@ def reposicionar_meio_no_mapa(
             SET localizacao=ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
             WHERE id=:meio_id AND operacao_id=:operacao_id
         """), parametros)
-        registar_evento_operacional(conn, text("""
-            INSERT INTO timeline_eventos
-                (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
-            VALUES (:tipo_evento, :descricao, :recurso_id, :elemento_id,
-                    :ocorrencia_id, :operacao_id)
-        """), {
-            "tipo_evento": tipo,
-            "descricao": f"Posicao atualizada no mapa: {meio['nome']}",
-            "recurso_id": meio_id if tipo == "recurso" else None,
-            "elemento_id": meio_id if tipo == "elemento" else None,
-            "ocorrencia_id": meio["ocorrencia_id"],
-            "operacao_id": operacao_id
-        })
+        if dados.registar_deslocacao:
+            registar_evento_operacional(conn, text("""
+                INSERT INTO timeline_eventos
+                    (tipo, descricao, recurso_id, elemento_id, ocorrencia_id, operacao_id)
+                VALUES (:tipo_evento, :descricao, :recurso_id, :elemento_id,
+                        :ocorrencia_id, :operacao_id)
+            """), {
+                "tipo_evento": tipo,
+                "descricao": f"Deslocação de {meio['indicativo_radio'] or meio['nome']}: {descricao}",
+                "recurso_id": meio_id if tipo == "recurso" else None,
+                "elemento_id": meio_id if tipo == "elemento" else None,
+                "ocorrencia_id": meio["ocorrencia_id"],
+                "operacao_id": operacao_id
+            })
     return {"ok": True, "latitude": dados.latitude, "longitude": dados.longitude}
 
 

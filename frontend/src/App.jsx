@@ -60,8 +60,7 @@ import {
   obterEstatisticasOcorrencia,
   alterarEstadoRecurso,
   alterarEstadoOrdem,
-  atualizarPosicaoRecurso,
-  atualizarPosicaoElemento,
+  reposicionarMeioMapa,
   reembarcarElemento,
   concluirMissao,
   obterObjetivos,
@@ -182,6 +181,21 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [aGuardarElemento, setAGuardarElemento] = useState(false)
   const criarElementoEmCursoRef = useRef(false)
   const [modoMapa, setModoMapa] = useState({ tipo: 'normal', alvo: null })
+  function iniciarPosicaoMapa(tipo, dados, registar = false) {
+    let descricao = null
+    if (registar) {
+      descricao = window.prompt('Descreva a deslocação operacional (máximo 500 caracteres):')
+      if (descricao === null) return
+      descricao = descricao.trim()
+      if (!descricao || descricao.length > 500) {
+        alert('Introduza uma descrição entre 1 e 500 caracteres.')
+        return
+      }
+    }
+    setDetalhe(null)
+    setModoMapa({ tipo: 'reposicionar_meio', tipoMeio: tipo, alvo: dados, descricaoDeslocacao: descricao })
+  }
+
   const [elementoParaReembarcar, setElementoParaReembarcar] = useState(null)
   const [historicoRecurso, setHistoricoRecurso] = useState(null)
   const [estatisticasOcorrencia, setEstatisticasOcorrencia] = useState(null)
@@ -3261,6 +3275,20 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </>
             )}
 
+            {!modoBloqueado && ['recurso', 'elemento'].includes(detalhe.tipo) && (
+              <>
+                <button style={styles.mainButton}
+                  disabled={detalhe.tipo === 'elemento' && detalhe.dados.recurso_id != null}
+                  onClick={() => iniciarPosicaoMapa(detalhe.tipo, detalhe.dados)}>
+                  Ajustar posição
+                </button>
+                <button style={styles.mainButton}
+                  disabled={detalhe.tipo === 'elemento' && detalhe.dados.recurso_id != null}
+                  onClick={() => iniciarPosicaoMapa(detalhe.tipo, detalhe.dados, true)}>
+                  Registar deslocação
+                </button>
+              </>
+            )}
             <button
               style={styles.mainButton}
               onClick={() => {
@@ -4029,7 +4057,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               modoMapa.tipo === 'nova_ocorrencia' ? '📍 Modo: Nova ocorrência — clique no local' :
               modoMapa.tipo === 'novo_recurso' ? '🚓 Modo: Novo recurso — clique no local' :
               modoMapa.tipo === 'apear_elemento' ? `👤 Modo: Apear ${modoMapa.alvo?.nome || 'elemento'} — clique no destino` :
-              modoMapa.tipo === 'reposicionar_meio' ? `Reposicionar ${modoMapa.alvo?.indicativo_radio || modoMapa.alvo?.nome || 'meio'} \u2014 clique no destino` :
+              modoMapa.tipo === 'reposicionar_meio' ? ` ${modoMapa.descricaoDeslocacao != null ? 'Registar deslocação de' : 'Ajustar posição de'} ${modoMapa.alvo?.indicativo_radio || modoMapa.alvo?.nome || 'meio'} \u2014 clique no destino` :
               'Modo operacional'}</strong>
             {modoMapa.tipo !== 'normal' && (
               <button type="button" onClick={() => setModoMapa({ tipo: 'normal', alvo: null })} style={styles.cancelarModoButton}>
@@ -4088,10 +4116,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             recursos={recursosFiltrados}
             elementos={elementos}
             modoConsulta={modoBloqueado}
-            onReposicionar={(tipo, dados) => {
-              setDetalhe(null)
-              setModoMapa({ tipo: 'reposicionar_meio', tipoMeio: tipo, alvo: dados })
-            }}
+            onReposicionar={iniciarPosicaoMapa}
             onSelecionar={(tipo, dados) => setDetalhe({ tipo, dados })}
           >
             {({ recursosVisiveis, elementosVisiveis }) => (
@@ -4153,7 +4178,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     const { lat, lng } = e.target.getLatLng()
 
                     try {
-                      await atualizarPosicaoRecurso(r.id, lat, lng)
+                      await reposicionarMeioMapa(operacaoAtiva.id, 'recurso', r.id, lat, lng)
                       setRecursos((atuais) =>
                         atuais.map((item) =>
                           item.id === r.id ? { ...item, latitude: lat, longitude: lng } : item
@@ -4253,7 +4278,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     const { lat, lng } = e.target.getLatLng()
 
                     try {
-                      await atualizarPosicaoElemento(el.id, lat, lng)
+                      await reposicionarMeioMapa(operacaoAtiva.id, 'elemento', el.id, lat, lng)
                       setElementos((atuais) =>
                         atuais.map((item) =>
                           item.id === el.id ? { ...item, latitude: lat, longitude: lng } : item
