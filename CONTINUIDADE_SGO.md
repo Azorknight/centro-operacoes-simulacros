@@ -1021,3 +1021,16 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
   de criacao, arquivo e restauro de operacoes.
 - Continuam pendentes concorrencia, reinicio, restauro da copia,
   revisao dos setores e consolidacao do manual.
+## Ordens pelo operador — validado em 13/10/2026
+- Teste no cliente WPSPIAGHFOR15, com operador1.
+- Operacao: TESTE ATUALIZACAO SGO — 12-10-2026; ocorrencia: xx.
+- Ordem TESTE PERFIL OPERADOR — confirmar comunicacoes:
+  emitida as 09:13, executada as 09:15 e concluida as 09:16.
+- Ordem TESTE PERFIL OPERADOR — anulacao:
+  emitida e anulada as 09:18; estado cancelada, registo preservado.
+- Emissao, execucao, conclusao e anulacao sem erros de permissao.
+- Viatura ATUALIZACAO 01 atualmente associada a xx.
+- A chegada anterior noutra ocorrencia permanece no historico;
+  a selecao para novas ordens mostra os meios atualmente associados e chegados.
+- Ainda pendentes os testes HTTP dos bloqueios de criacao,
+  arquivo e restauro de operacoes pelo operador.
