@@ -1,15 +1,17 @@
 import { createContext, useContext, useState } from 'react'
 import './Acesso.css'
+import Utilizadores from './Utilizadores'
 import { apiUrl } from './services/apiUrl'
 
 const SessaoContext = createContext(null)
 
 export function useResponsavel() {
-  return useContext(SessaoContext)?.user?.role === 'responsavel'
+  return ['responsavel', 'administrador'].includes(useContext(SessaoContext)?.user?.role)
 }
 
 export function ContaSessao() {
   const sessao = useContext(SessaoContext)
+  const [gestao, setGestao] = useState(false)
   if (!sessao?.user) return null
   return (
     <div className="sgo-conta">
@@ -17,12 +19,14 @@ export function ContaSessao() {
         <strong title={sessao.user.username || sessao.user.name}>
           {sessao.user.username || sessao.user.name}
         </strong>
-        <span>{sessao.user.role === 'responsavel' ? 'Responsável' : 'Operador'}</span>
+        <span>{sessao.user.role === 'administrador' ? 'Administrador' : sessao.user.role === 'responsavel' ? 'Responsável' : 'Operador'}</span>
       </div>
       <button type="button" onClick={sessao.logout}
         disabled={sessao.busy || sessao.desenvolvimento}>
         {sessao.busy ? 'A sair…' : 'Sair'}
       </button>
+      {sessao.user.role === 'administrador' && <button type="button" onClick={() => setGestao(true)}>Utilizadores</button>}
+      {gestao && <Utilizadores onFechar={() => setGestao(false)} />}
       {sessao.error && <span className="sgo-conta-erro" role="alert">{sessao.error}</span>}
     </div>
   )

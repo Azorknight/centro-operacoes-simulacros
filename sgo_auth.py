@@ -1,7 +1,8 @@
 """Contas locais do SGO. Nunca aceita o perfil enviado pelo navegador."""
-import hashlib, hmac, json, os, secrets, sqlite3, time
+import hashlib, hmac, json, os, re, secrets, sqlite3, time
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel, Field
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -34,9 +35,9 @@ def digest(password, salt):
     return hashlib.pbkdf2_hmac('sha256', password.encode(), bytes.fromhex(salt), 600000).hex()
 
 def set_user(name, password, role):
-    if role not in ('operador', 'responsavel'): raise ValueError('Perfil inválido')
+    if role not in ('operador', 'responsavel', 'administrador'): raise ValueError('Perfil inválido')
     name = name.strip().lower()
-    if not name or len(password) < 8: raise ValueError('Nome obrigatório; palavra-passe com pelo menos 8 caracteres')
+    if not name or len(name) > 100 or not 8 <= len(password) <= 256: raise ValueError('Nome obrigatório; palavra-passe com pelo menos 8 caracteres')
     salt = secrets.token_hex(16)
     with connect() as c:
         c.execute('INSERT INTO users VALUES (?,?,?,?,1) ON CONFLICT(name) DO UPDATE SET salt=excluded.salt,digest=excluded.digest,role=excluded.role,enabled=1', (name,salt,digest(password,salt),role))
@@ -44,7 +45,9 @@ def set_user(name, password, role):
 
 def permitted(role, method, path):
     if path in ('/auth/me', '/auth/logout'): return True
-    if role == 'responsavel': return True
+    if path == '/auth/users' or path.startswith('/auth/users/'):
+        return role == 'administrador'
+    if role in ('responsavel', 'administrador'): return True
     if role != 'operador': return False
     import re
     if path.startswith(('/backups', '/auth/users', '/docs', '/openapi.json', '/redoc', '/replay')):
@@ -67,11 +70,23 @@ class Guard(BaseHTTPMiddleware):
             row=c.execute('SELECT u.name,u.role FROM sessions s JOIN users u ON u.name=s.name WHERE s.token=? AND s.expires>? AND u.enabled=1',(hashlib.sha256(token.encode()).hexdigest(),time.time())).fetchone()
         if not row: return JSONResponse({'detail':'Autenticação necessária'},401)
         request.state.user=dict(row)
-        if not permitted(row['role'],request.method,path): return JSONResponse({'detail':'Esta ação exige perfil de responsável'},403)
+        if not permitted(row['role'],request.method,path):
+            detail = 'Esta ação exige perfil de administrador' if path.startswith('/auth/users') else 'Esta ação exige perfil de responsável'
+            return JSONResponse({'detail':detail},403)
         response=await call_next(request)
         if request.method not in ('GET','HEAD','OPTIONS'):
             with connect() as c: c.execute('INSERT INTO audit(at,name,method,path,status) VALUES (?,?,?,?,?)',(time.time(),row['name'],request.method,path,response.status_code))
         return response
+
+class NovaConta(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=8, max_length=256)
+    role: str
+
+class AlterarConta(BaseModel):
+    password: str | None = Field(default=None, min_length=8, max_length=256)
+    role: str
+    enabled: bool
 
 def install(app):
     if not os.environ.get('SGO_AUTH_DB') or not os.environ.get('SGO_PUBLIC_ORIGIN','').startswith('https://'):
@@ -110,3 +125,42 @@ def install(app):
     async def logout(request: Request):
         with connect() as c:c.execute('DELETE FROM sessions WHERE token=?',(hashlib.sha256(request.cookies.get(COOKIE,'').encode()).hexdigest(),))
         response=JSONResponse({'ok':True});response.delete_cookie(COOKIE,path='/api',secure=True,httponly=True,samesite='strict');return response
+
+    @app.get('/auth/users')
+    async def users():
+        with connect() as c:
+            return [dict(r) for r in c.execute('SELECT name,role,enabled FROM users ORDER BY name')]
+
+    @app.post('/auth/users', status_code=201)
+    async def create_user(data: NovaConta):
+        name = data.name.strip().lower()
+        if not re.fullmatch(r'[a-z0-9][a-z0-9._-]{0,99}', name) or data.role not in ('operador', 'responsavel'):
+            raise HTTPException(422, 'Nome: letras sem acentos, números, ponto, hífen ou sublinhado; perfil operador ou responsável')
+        salt = secrets.token_hex(16)
+        hashed = digest(data.password, salt)
+        with connect() as c:
+            try:
+                c.execute('INSERT INTO users VALUES (?,?,?,?,1)', (name,salt,hashed,data.role))
+            except sqlite3.IntegrityError:
+                raise HTTPException(409, 'Já existe uma conta com este nome')
+        return {'name':name, 'role':data.role, 'enabled':True}
+
+    @app.put('/auth/users/{name}')
+    async def update_user(name: str, data: AlterarConta, request: Request):
+        name = name.strip().lower()
+        if data.role not in ('operador', 'responsavel', 'administrador'):
+            raise HTTPException(422, 'Perfil inválido')
+        salt = secrets.token_hex(16) if data.password is not None else None
+        hashed = digest(data.password, salt) if salt else None
+        with connect() as c:
+            c.execute('BEGIN IMMEDIATE')
+            row = c.execute('SELECT role FROM users WHERE name=?', (name,)).fetchone()
+            if row is None:
+                raise HTTPException(404, 'Conta inexistente')
+            if row['role'] == 'administrador' or data.role == 'administrador':
+                raise HTTPException(409, 'Contas de administrador são geridas no servidor')
+            c.execute('UPDATE users SET role=?,enabled=? WHERE name=?', (data.role,int(data.enabled),name))
+            if salt:
+                c.execute('UPDATE users SET salt=?,digest=? WHERE name=?', (salt,hashed,name))
+            c.execute('DELETE FROM sessions WHERE name=?', (name,))
+        return {'name':name, 'role':data.role, 'enabled':data.enabled}
