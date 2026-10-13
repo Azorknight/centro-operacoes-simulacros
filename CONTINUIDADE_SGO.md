@@ -1091,3 +1091,12 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Alteracao ainda nao transferida para o servidor piloto.
 - Pendentes: concorrencia sobre o mesmo registo, recuperacao completa
   e consolidacao do manual.
+## Retirada de Setor instalada no piloto — 13/10/2026
+- Frontend do WPSPIAGHCM777 atualizado para 1009b76.
+- Compilacao instalada: index-BEGV1K7X.js.
+- Confirmado no navegador: Setor ausente; Editar, Atribuir e Concluir mantidos.
+- Copia anterior: C:\SGO_Copias\Frontend_antes_1009b76_20261013_111142.
+- Backend e dados mantidos; historico antigo dos setores preservado.
+- Esta secao substitui a indicacao anterior de alteracao nao transferida.
+- Pendentes: concorrencia sobre o mesmo registo, recuperacao completa
+  e consolidacao do manual.
