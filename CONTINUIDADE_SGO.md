@@ -1100,3 +1100,24 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Esta secao substitui a indicacao anterior de alteracao nao transferida.
 - Pendentes: concorrencia sobre o mesmo registo, recuperacao completa
   e consolidacao do manual.
+## Administrador e gestao de utilizadores — 13/10/2026
+- 7bb6a23 acrescenta o perfil Administrador, com acesso completo.
+- Gestao de utilizadores reservada ao administrador.
+- Permite criar responsaveis e operadores, alterar perfil e palavra-passe,
+  desativar e reativar contas.
+- Alteracoes de contas terminam as respetivas sessoes anteriores.
+- Contas de administrador geridas no servidor por criar_administrador.py.
+- Testes isolados de permissoes, criacao, edicao, origem,
+  invalidacao de sessoes e auditoria passaram; frontend compilado.
+- Frontend e sgo_auth.py instalados no WPSPIAGHCM777.
+- Compilacao instalada: index-DbgqGRfs.js.
+- Copia anterior: C:\SGO_Copias\Antes_admin_7bb6a23_20261013_121839.
+- Conta admin1 criada no servidor; perfil e botao Utilizadores confirmados.
+- Validado no navegador: criacao de operador_teste_admin,
+  alteracao para Responsavel e entrada com nova palavra-passe.
+- Conta de teste desativada; tentativa de entrada recusada.
+- Bloqueios da gestao de contas para responsavel e operador
+  validados nos testes isolados; verificacao no piloto ainda pendente.
+- Manual de 13/10/2026 ainda nao inclui esta nova funcionalidade.
+- Pendentes: concorrencia sobre o mesmo registo, recuperacao completa
+  e atualizacao do manual com administracao de utilizadores.
