@@ -1034,3 +1034,14 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
   a selecao para novas ordens mostra os meios atualmente associados e chegados.
 - Ainda pendentes os testes HTTP dos bloqueios de criacao,
   arquivo e restauro de operacoes pelo operador.
+## Bloqueios HTTP do operador — validados em 13/10/2026
+- Cliente WPSPIAGHFOR15, sessao operador1.
+- PUT /operacoes/0/arquivar: HTTP 403.
+- PUT /operacoes/0/restaurar: HTTP 403.
+- POST /operacoes com corpo vazio: HTTP 403.
+- Resposta nos tres casos: Esta acao exige perfil de responsavel.
+- Pedidos de teste sem alteracao dos dados do piloto.
+- Criacao, arquivo e restauro bloqueados no servidor,
+  alem da ocultacao dos respetivos comandos na interface.
+- Continuam pendentes concorrencia, reinicio, teste de restauro
+  da copia, revisao dos setores e consolidacao do manual.
