@@ -1121,3 +1121,8 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Manual de 13/10/2026 ainda nao inclui esta nova funcionalidade.
 - Pendentes: concorrencia sobre o mesmo registo, recuperacao completa
   e atualizacao do manual com administracao de utilizadores.
+## Acesso a gestao de contas — validado no piloto em 13/10/2026
+- GET /api/auth/users testado com responsavel1 e operador1.
+- Acesso recusado nos dois casos: Esta acao exige perfil de administrador.
+- Consulta da gestao de contas reservada ao administrador confirmada no piloto.
+- Pedidos de teste sem alteracao de contas.
