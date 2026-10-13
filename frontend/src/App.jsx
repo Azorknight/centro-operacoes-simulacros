@@ -2356,16 +2356,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     Atribuir
                   </button>
 
-                  <button
-                    style={styles.smallButton}
-                    disabled={modoBloqueado}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      escolherSetorMissao(m)
-                    }}
-                  >
-                    Setor
-                  </button>
+
 
                   <button
                     style={styles.smallButton}
