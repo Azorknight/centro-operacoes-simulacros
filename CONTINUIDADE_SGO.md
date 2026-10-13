@@ -1056,3 +1056,14 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Este teste nao valida alteracoes concorrentes ao mesmo registo.
 - Continuam pendentes concorrencia sobre o mesmo registo, reinicio,
   restauro da copia, revisao dos setores e consolidacao do manual.
+## Reinicio do servidor — validado em 13/10/2026
+- WPSPIAGHCM777 reiniciado sem iniciar tarefas manualmente.
+- SGO-API e SGO-HTTPS arrancaram automaticamente.
+- HTTPS em 443; API em 127.0.0.1:8000.
+- PostgreSQL apenas em 127.0.0.1 e ::1, porta 5432.
+- Entrada com operador1 no WPSPIAGHFOR15 confirmada apos reinicio.
+- Operacao, ocorrencias, base e registos preservados.
+- Ordem de comunicacoes continua concluida; ordem de anulacao cancelada.
+- TESTE SIMULTANEO 01 e 02 mantidos.
+- Continuam pendentes concorrencia sobre o mesmo registo,
+  teste de restauro da copia, revisao dos setores e consolidacao do manual.
