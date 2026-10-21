@@ -165,6 +165,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
   const [mostrarFormOrdem, setMostrarFormOrdem] = useState(false)
   const [recursoParaAtribuirOcorrencia, setRecursoParaAtribuirOcorrencia] = useState(null)
+  const [erroAtribuicaoOcorrencia, setErroAtribuicaoOcorrencia] = useState('')
+  const [atribuicaoOcorrenciaOcupada, setAtribuicaoOcorrenciaOcupada] = useState(false)
+  const atribuicaoOcorrenciaRef = useRef(false)
   const [elementos, setElementos] = useState([])
   const [formElemento, setFormElemento] = useState({
     nome: '',
@@ -3160,18 +3163,19 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 style={{ ...styles.mainButton, background: '#dc2626' }}
                 disabled={modoBloqueado}
                 onClick={async () => {
-                  const confirmar = window.confirm('Libertar este recurso da ocorrência e da missão atual?')
+                  const confirmar = window.confirm('Libertar este meio da ocorrência e da missão atual?')
                   if (!confirmar) return
                   await libertarRecurso(detalhe.dados.id)
                   await refresh()
                 }}
               >
-                Libertar recurso
+                Libertar meio
               </button>
 
               <button
                 style={styles.mainButton}
                 onClick={() => {
+                  setErroAtribuicaoOcorrencia('')
                   setRecursoParaAtribuirOcorrencia(detalhe.dados)
                 }}
               >
@@ -3865,42 +3869,54 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       )}
 
       {recursoParaAtribuirOcorrencia && (
-        <div style={styles.detailPanel}>
-          <div style={styles.panelTitle}>
-            Atribuir ocorrência ao recurso
+        <div style={{ position: 'fixed', inset: 0, zIndex: 5100, background: 'rgba(15,23,42,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="titulo-atribuir-ocorrencia" aria-busy={atribuicaoOcorrenciaOcupada}
+            style={{ ...styles.detailPanel, position: 'relative', bottom: 'auto', left: 'auto', transform: 'none', width: 'min(420px, 100%)', maxHeight: '80vh', background: '#fff' }}>
+            <div id="titulo-atribuir-ocorrencia" style={styles.panelTitle}>
+              Ordenar deslocação para ocorrência
+            </div>
+            <p><strong>Meio:</strong> {recursoParaAtribuirOcorrencia.indicativo_radio || recursoParaAtribuirOcorrencia.nome}</p>
+            <p>Selecione a ocorrência para emitir a ordem de deslocação.</p>
+            {erroAtribuicaoOcorrencia && <p role="alert" style={{ padding: 10, background: '#fee2e2', color: '#991b1b', borderRadius: 6 }}>{erroAtribuicaoOcorrencia}</p>}
+            {atribuicaoOcorrenciaOcupada && <p role="status">A emitir ordem de deslocação...</p>}
+            {ocorrencias
+              .filter(o => !['fechada', 'encerrada', 'arquivada'].includes(o.estado))
+              .map(o => (
+                <button type="button" key={o.id}
+                  disabled={modoBloqueado || atribuicaoOcorrenciaOcupada}
+                  style={{ ...styles.itemCard, width: '100%', textAlign: 'left', font: 'inherit', cursor: atribuicaoOcorrenciaOcupada ? 'wait' : 'pointer' }}
+                  onClick={async () => {
+                    if (atribuicaoOcorrenciaRef.current || modoBloqueado) return
+                    atribuicaoOcorrenciaRef.current = true
+                    setAtribuicaoOcorrenciaOcupada(true)
+                    setErroAtribuicaoOcorrencia('')
+                    let ordemCriada = false
+                    try {
+                      await atribuirOcorrencia(recursoParaAtribuirOcorrencia.id, o.id)
+                      ordemCriada = true
+                      setRecursoParaAtribuirOcorrencia(null)
+                      await refresh()
+                    } catch (e) {
+                      if (ordemCriada) {
+                        window.alert('A ordem foi criada, mas não foi possível atualizar o painel. Atualize a página antes de emitir outra ordem.')
+                      } else {
+                        setErroAtribuicaoOcorrencia(e.message || 'Não foi possível emitir a ordem de deslocação.')
+                      }
+                    } finally {
+                      atribuicaoOcorrenciaRef.current = false
+                      setAtribuicaoOcorrenciaOcupada(false)
+                    }
+                  }}>
+                  <strong>{o.titulo}</strong>
+                  <div>{o.tipo} · {o.estado}</div>
+                </button>
+              ))}
+            {!ocorrencias.some(o => !['fechada', 'encerrada', 'arquivada'].includes(o.estado)) && <p>Não existem ocorrências abertas nesta operação.</p>}
+            <button type="button" style={styles.mainButton} disabled={atribuicaoOcorrenciaOcupada}
+              onClick={() => setRecursoParaAtribuirOcorrencia(null)}>
+              Cancelar
+            </button>
           </div>
-
-          <div>
-            <strong>Recurso:</strong> {recursoParaAtribuirOcorrencia.nome}
-          </div>
-
-          <br />
-
-          {ocorrencias
-            .filter(o => !['fechada', 'encerrada', 'arquivada'].includes(o.estado))
-            .map(o => (
-              <div
-                key={o.id}
-                style={{ ...styles.itemCard, cursor: 'pointer' }}
-               onClick={async () => {
-                 await atribuirOcorrencia(recursoParaAtribuirOcorrencia.id, o.id)
-
-                setRecursoParaAtribuirOcorrencia(null)
-
-                await refresh()
-              }}
-              >
-                <strong>{o.titulo}</strong>
-                <div>{o.tipo} · {o.estado}</div>
-              </div>
-            ))}
-
-          <button
-            style={styles.mainButton}
-            onClick={() => setRecursoParaAtribuirOcorrencia(null)}
-          >
-            Cancelar
-          </button>
         </div>
       )}
 
