@@ -2953,6 +2953,15 @@ def confirmar_chegada_elemento(elemento_id: int):
         existe = chegada_elemento_na_ocorrencia(conn, operacao_id, elemento_id, ocorrencia_id)
         if existe:
             return {"mensagem": "Chegada já registada"}
+        conn.execute(text("""
+            UPDATE elementos e
+            SET localizacao = o.localizacao
+            FROM ocorrencias o
+            WHERE e.id = :elemento_id AND e.operacao_id = :operacao_id
+              AND e.recurso_id IS NULL
+              AND o.id = :ocorrencia_id AND o.operacao_id = e.operacao_id
+        """), {"elemento_id": elemento_id, "ocorrencia_id": ocorrencia_id,
+               "operacao_id": operacao_id})
         registar_evento_operacional(conn, text("""
             INSERT INTO timeline_eventos (tipo, descricao, elemento_id, ocorrencia_id, operacao_id)
             VALUES ('chegada', :descricao, :elemento_id, :ocorrencia_id, :operacao_id)

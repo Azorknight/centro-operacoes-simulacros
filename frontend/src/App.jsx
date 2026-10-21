@@ -4344,6 +4344,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             ) : null
           )}
 
+          {elementos.filter(el => !el.recurso_id && el.ocorrencia_id && !el.chegada_em).map(el => {
+            const ocorrencia = ocorrencias.find(o => Number(o.id) === Number(el.ocorrencia_id))
+            if (!ocorrencia || ![el.latitude, el.longitude, ocorrencia.latitude, ocorrencia.longitude].every(Number.isFinite)) return null
+            return <Polyline key={`linha-elemento-${el.id}`}
+              positions={[[el.latitude, el.longitude], [ocorrencia.latitude, ocorrencia.longitude]]}
+              pathOptions={{ color: '#7c3aed', dashArray: '6 6' }} />
+          })}
+
           {recursos.map((r) => {
             if (!r.ocorrencia_id) return null
 
