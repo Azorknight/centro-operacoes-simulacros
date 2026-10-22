@@ -1142,3 +1142,31 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
 - Acordado substituir Recursos por Meios na interface;
   alteracao geral da designacao ainda pendente.
 - Por decisao do utilizador, nao atualizar o manual com administracao.
+## Continuidade atual - 22/10/2026
+- Branch develop; ultimo commit funcional: 64c1d24, enviado ao GitHub.
+- 07cf0b0: janela de deslocacao sem sobreposicao, erro da API visivel
+  e protecao contra cliques repetidos.
+- Validado: deslocacao de viatura, chegada, conclusao da ordem,
+  persistencia apos F5 e erro 409 sem duplicar ordens.
+- e3235d7: elementos sem viatura mostram linha durante a deslocacao;
+  confirmar chegada atualiza a posicao para a ocorrencia.
+- Validado com Chefe Valadao / TESTE ELEMENTO 02:
+  linha visivel, chegada, linha removida e posicao mantida apos F5.
+- Agente Testes chegou antes da correcao; posicao corrigida
+  por Ajustar posicao, sem repetir a chegada.
+- 64c1d24: adicionar meios e elementos durante a operacao,
+  reutilizando a preparacao; designacao Meios nos textos alterados.
+- Validados: abertura nos separadores certos, adicao de participantes,
+  base inicial, atualizacao do painel e persistencia apos F5.
+- Operacao de teste: TESTE - RECURSOS SEM POSICAO.
+- Estado confirmado: 3 meios, 2 elementos, 1 ocorrencia e 4 ordens.
+- TESTE MEIO 04: Patrulha PSP 02, tipo Policia, disponivel em Divisao Angra.
+- TESTE MEIO 03: registo com tipo PSP retirado desta operacao;
+  catalogo preservado. Rever esse registo permanente posteriormente.
+- Testes realizados no ambiente de desenvolvimento localhost:5173.
+- Nao foi realizada neste bloco atualizacao do servidor piloto.
+- Manual ainda nao consolidado com estes testes.
+- Proximo passo: corrigir sobreposicao de Editar meio com o Painel
+  de Comando. Inspecionar o codigo atual antes de alterar.
+- Rever tambem os campos livres de tipo e os textos ainda com Recursos.
+- Preservar ficheiros locais nao rastreados; nunca usar git add .
