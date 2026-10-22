@@ -3337,13 +3337,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       )}
 
       {recursoEmEdicao && (
-        <div style={styles.detailPanel}>
-          <div style={styles.panelTitle}>Editar meio</div>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 5100, background: 'rgba(15,23,42,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="titulo-editar-meio" aria-busy={aGuardarRecurso}
+          style={{ ...styles.detailPanel, position: 'relative', bottom: 'auto', left: 'auto', transform: 'none', width: 'min(480px, 100%)', maxHeight: '80vh', boxSizing: 'border-box', background: '#fff' }}>
+          <div id="titulo-editar-meio" style={styles.panelTitle}>Editar meio</div>
           {[['nome', 'Nome *'], ['tipo', 'Tipo *'], ['indicativo_operacional', 'Indicativo rádio'],
             ['funcao', 'Função nesta operação'], ['ilha', 'Ilha'], ['marca', 'Marca'], ['matricula', 'Matrícula']].map(([campo, rotulo]) => (
             <label key={campo} style={styles.itemSubtle}>
               {rotulo}
-              <input style={styles.input} value={recursoEmEdicao[campo] || ''}
+              <input disabled={aGuardarRecurso} style={{ ...styles.input, boxSizing: 'border-box' }} value={recursoEmEdicao[campo] || ''}
                 onChange={(e) => setRecursoEmEdicao({ ...recursoEmEdicao, [campo]: e.target.value })} />
             </label>
           ))}
@@ -3360,7 +3362,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 window.alert(erro.message || 'Não foi possível editar o meio.')
               } finally { setAGuardarRecurso(false) }
             }}>Guardar alterações</button>
-          <button style={styles.mainButton} onClick={() => setRecursoEmEdicao(null)}>Cancelar</button>
+          <button style={styles.mainButton} disabled={aGuardarRecurso} onClick={() => setRecursoEmEdicao(null)}>Cancelar</button>
+        </div>
         </div>
       )}
 
