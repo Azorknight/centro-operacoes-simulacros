@@ -1,4 +1,5 @@
 import './Cabecalho.css'
+import TipoMeioSelect from './components/TipoMeioSelect'
 import { ContaSessao, useResponsavel } from './Acesso'
 import { apiUrl } from './services/apiUrl'
 import AgrupamentoMeios from './components/AgrupamentoMeios'
@@ -2658,7 +2659,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
           <div>🚑 Ambulância</div>
           <div>🚒 Bombeiros</div>
-          <div>🚓 Polícia</div>
+          <div>🚓 PSP / GNR</div>
           <div>🏍️ Moto</div>
           <div>🚁 Drone / Aéreo</div>
 
@@ -3345,8 +3346,14 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             ['funcao', 'Função nesta operação'], ['ilha', 'Ilha'], ['marca', 'Marca'], ['matricula', 'Matrícula']].map(([campo, rotulo]) => (
             <label key={campo} style={styles.itemSubtle}>
               {rotulo}
+              {campo === 'tipo' ? (
+                <TipoMeioSelect required disabled={aGuardarRecurso} style={{ ...styles.input, boxSizing: 'border-box' }}
+                  value={recursoEmEdicao.tipo || ''}
+                  onChange={(e) => setRecursoEmEdicao({ ...recursoEmEdicao, tipo: e.target.value })} />
+              ) : (
               <input disabled={aGuardarRecurso} style={{ ...styles.input, boxSizing: 'border-box' }} value={recursoEmEdicao[campo] || ''}
                 onChange={(e) => setRecursoEmEdicao({ ...recursoEmEdicao, [campo]: e.target.value })} />
+              )}
             </label>
           ))}
           <button style={styles.mainButton} disabled={aGuardarRecurso || !recursoEmEdicao.nome.trim() || !recursoEmEdicao.tipo.trim()}
@@ -3380,9 +3387,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             }
           />
 
-          <input
+          <TipoMeioSelect required aria-label="Tipo de meio"
             style={styles.input}
-            placeholder="Tipo"
             value={formRecurso.tipo}
             onChange={(e) =>
               setFormRecurso({ ...formRecurso, tipo: e.target.value })

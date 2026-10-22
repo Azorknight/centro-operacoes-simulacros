@@ -1,9 +1,9 @@
 ﻿export function obterIconeRecurso(tipo) {
-  const tipoLower = tipo?.toLowerCase() || ''
+  const tipoLower = tipo?.trim().toLowerCase() || ''
 
   if (tipoLower.includes('ambul')) return '🚑'
   if (tipoLower.includes('bombe')) return '🚒'
-  if (tipoLower.includes('pol')) return '🚓'
+  if (tipoLower.includes('pol') || tipoLower === 'psp' || tipoLower === 'gnr') return '🚓'
   if (tipoLower.includes('moto')) return '🏍️'
   if (tipoLower.includes('drone')) return '🚁'
 

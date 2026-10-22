@@ -1,3 +1,4 @@
+import TipoMeioSelect from '../components/TipoMeioSelect'
 import BaseInicialParticipante from './BaseInicialParticipante'
 import BasesOperacao from './BasesOperacao'
 import { useEffect, useMemo, useState } from 'react'
@@ -259,7 +260,7 @@ function PrepararOperacao({ operacao, onFechar, separadorInicial = 'bases', dura
               <>
                 <div className="campos-duplos">
                   <div><label>Nome *</label><input value={novoRecurso.nome} onChange={(e) => setNovoRecurso({ ...novoRecurso, nome: e.target.value })} required /></div>
-                  <div><label>Tipo *</label><input value={novoRecurso.tipo} onChange={(e) => setNovoRecurso({ ...novoRecurso, tipo: e.target.value })} required /></div>
+                  <div><label>Tipo *</label><TipoMeioSelect aria-label="Tipo de meio" value={novoRecurso.tipo} onChange={(e) => setNovoRecurso({ ...novoRecurso, tipo: e.target.value })} required /></div>
                 </div>
                 <label>Ilha</label><input value={novoRecurso.ilha} onChange={(e) => setNovoRecurso({ ...novoRecurso, ilha: e.target.value })} />
                 <div className="campos-duplos">
@@ -321,8 +322,13 @@ function PrepararOperacao({ operacao, onFechar, separadorInicial = 'bases', dura
                         ['matricula', 'Matrícula'], ['indicativo_operacional', 'Indicativo nesta operação'],
                         ['funcao', 'Função operacional']].map(([campo, rotulo]) => (
                         <div key={campo}><label>{rotulo}</label>
+                          {campo === 'tipo' ? (
+                            <TipoMeioSelect required value={edicaoRecurso.tipo}
+                              onChange={(e) => setEdicaoRecurso({ ...edicaoRecurso, tipo: e.target.value })} />
+                          ) : (
                           <input value={edicaoRecurso[campo]} required={campo === 'nome' || campo === 'tipo'}
-                            onChange={(e) => setEdicaoRecurso({ ...edicaoRecurso, [campo]: e.target.value })} /></div>
+                            onChange={(e) => setEdicaoRecurso({ ...edicaoRecurso, [campo]: e.target.value })} />
+                          )}</div>
                       ))}
                       <div className="modal-acoes">
                         <button type="button" className="botao-secundario" onClick={() => setEdicaoRecurso(null)}>Cancelar</button>
