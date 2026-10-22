@@ -282,7 +282,7 @@ function Operacoes({ onAbrir }) {
               <strong>Esta ação não pode ser anulada.</strong>
               <p>Serão apagados todos os dados associados à operação:</p>
               <p className="nome-operacao-eliminar">{operacaoAEliminar.nome}</p>
-              <p>Inclui ocorrências, recursos, elementos, missões, ordens e timeline.</p>
+              <p>Inclui ocorrências, meios, elementos, missões, ordens e timeline.</p>
             </div>
 
             <label>Para confirmar, escreva ELIMINAR</label>

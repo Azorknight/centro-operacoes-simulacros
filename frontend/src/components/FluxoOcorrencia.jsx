@@ -85,7 +85,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
     {!apenasConsulta && <>
     <div style={card}>
       <strong>1. Ordenar deslocação</strong>
-      <select aria-label="Recurso a deslocar" style={field} value={recursoDespacho} onChange={e => setRecursoDespacho(e.target.value)} disabled={inativo}>
+      <select aria-label="Meio a deslocar" style={field} value={recursoDespacho} onChange={e => setRecursoDespacho(e.target.value)} disabled={inativo}>
         <option value="">Selecionar equipa ou elemento</option>
         {disponiveis.map(r => <option key={r.id} value={`r:${r.id}`}>Equipa {nome(r)}{r.estado === 'em_missao' ? ' · Em missão' : ' · Livre'}</option>)}
         {elementosDisponiveis.map(e => <option key={`e:${e.id}`} value={`e:${e.id}`}>Elemento {e.nome}</option>)}
@@ -112,8 +112,8 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
     </div>
 
     <div style={card}>
-      <strong>3. Informação do recurso no local</strong>
-      <select aria-label="Recurso que informa" style={field} value={recursoSituacao} onChange={e => setRecursoSituacao(e.target.value)} disabled={inativo}>
+      <strong>3. Informação do meio no local</strong>
+      <select aria-label="Meio que informa" style={field} value={recursoSituacao} onChange={e => setRecursoSituacao(e.target.value)} disabled={inativo}>
         <option value="">Selecionar equipa ou elemento chegado</option>
         {noLocal.map(r => <option key={r.id} value={`r:${r.id}`}>{nome(r)}</option>)}
         {elementosNoLocal.map(e => <option key={`e:${e.id}`} value={`e:${e.id}`}>{e.nome}</option>)}
@@ -151,7 +151,7 @@ export default function FluxoOcorrencia({ ocorrencia, recursos, elementos = [], 
         const elemento = elementos.find(e => Number(e.id) === Number(o.elemento_id))
         const destinatarioAfeto = Number((elemento || recurso)?.ocorrencia_id) === Number(ocorrencia.id)
         return <div key={o.id} style={{ borderTop: '1px solid #dbe4f2', marginTop: 7, paddingTop: 7 }}>
-          <b>{o.titulo}</b> · {o.elemento_id ? (elemento?.nome || `Elemento ${o.elemento_id}`) : (recurso ? nome(recurso) : `Recurso ${o.recurso_id}`)}<br />
+          <b>{o.titulo}</b> · {o.elemento_id ? (elemento?.nome || `Elemento ${o.elemento_id}`) : (recurso ? nome(recurso) : `Meio ${o.recurso_id}`)}<br />
           {o.descricao && <span>{o.descricao}<br /></span>}
           <small>{o.estado} · {formatarDataHora(o.criado_em)}</small>
           {!inativo && o.estado === 'emitida' && destinatarioAfeto && o.titulo !== 'Deslocação para ocorrência' && <button type="button" style={{ ...button, marginLeft: 5 }} onClick={() => guardar(() => alterarEstadoOrdem(o.id, 'executada'))}>Executada</button>}

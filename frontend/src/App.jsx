@@ -22,6 +22,7 @@ import CronometroOcorrencia from './components/CronometroOcorrencia'
 import GestorCliquesMapa from './components/GestorCliquesMapa'
 import { obterIconeRecurso, obterCorOcorrencia, formatarDuracao, formatarDataHora } from './utils/formatacao'
 import Operacoes from './pages/Operacoes'
+import PrepararOperacao from './pages/PrepararOperacao'
 import { desativarOperacao, encerrarOperacao, obterOperacaoAtiva, reabrirOperacao, obterDiagnostico, obterBackups, criarBackup, restaurarBackup, eliminarBackup } from './services/api'
 import {
   obterRecursos,
@@ -183,6 +184,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
   const [aGuardarRecurso, setAGuardarRecurso] = useState(false)
   const [aGuardarElemento, setAGuardarElemento] = useState(false)
   const criarElementoEmCursoRef = useRef(false)
+  const [registoParticipantes, setRegistoParticipantes] = useState(null)
   const [modoMapa, setModoMapa] = useState({ tipo: 'normal', alvo: null })
   function iniciarPosicaoMapa(tipo, dados, registar = false) {
     let descricao = null
@@ -408,7 +410,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     let ativo = true
     obterHistoricoRecurso(recursoSelecionadoId)
       .then(historico => { if (ativo) setHistoricoRecurso(historico) })
-      .catch(erro => { if (ativo) console.error('Erro ao carregar histórico do recurso:', erro) })
+      .catch(erro => { if (ativo) console.error('Erro ao carregar histórico do meio:', erro) })
     return () => { ativo = false }
   }, [recursoSelecionadoId])
 
@@ -656,7 +658,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         const rotuloDuracao = missao.estado === 'em_execucao' && !fimRegistado
           ? 'Tempo decorrido' : 'Duração'
         const informacoes = [
-          `Estado: ${textoEstado(missao.estado)} | Recurso: ${nomesRecursos}`,
+          `Estado: ${textoEstado(missao.estado)} | Meio: ${nomesRecursos}`,
           missao.zona ? `Zona / percurso: ${missao.zona}` : null,
           ocorrencia ? `Ocorrência: ${ocorrencia.titulo}` : null,
           `Início: ${horaRelatorio(missao.iniciada_em)}`,
@@ -755,7 +757,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
     // Recursos Operacionais
     y = garantirEspaco(y, 53)
-    y = tituloSecao(numeroSecao++, 'Recursos Operacionais', y)
+    y = tituloSecao(numeroSecao++, 'Meios Operacionais', y)
 
     const formatarTempoRelatorio = (segundos = 0) => {
       const total = Math.max(0, Math.floor(Number(segundos) || 0))
@@ -771,7 +773,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     }
 
     if (resumoRecursosOperacionais.length === 0) {
-      y = escreverTexto('Não existem recursos operacionais registados nesta operação.', margem, y)
+      y = escreverTexto('Não existem meios operacionais registados nesta operação.', margem, y)
     } else {
       const totalRecursos = resumoRecursosOperacionais.length
       const totalDisponiveis = resumoRecursosOperacionais.filter(
@@ -796,10 +798,10 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       y += 19
 
       y = garantirEspaco(y, 18)
-      y = escreverTexto('Os tempos dos recursos e elementos abaixo referem-se apenas a ocorrências. A duração das missões consta da secção Missões.', margem, y, larguraTexto, 8.2) + 6
+      y = escreverTexto('Os tempos dos meios e elementos abaixo referem-se apenas a ocorrências. A duração das missões consta da secção Missões.', margem, y, larguraTexto, 8.2) + 6
 
       resumoRecursosOperacionais.forEach((recurso) => {
-        const nomeRecurso = recurso.indicativo_radio || recurso.nome || `Recurso ${recurso.recurso_id}`
+        const nomeRecurso = recurso.indicativo_radio || recurso.nome || `Meio ${recurso.recurso_id}`
         const identificacao = recurso.indicativo_radio && recurso.nome
           ? `${recurso.indicativo_radio} — ${recurso.nome}`
           : nomeRecurso
@@ -935,7 +937,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           ? nomeComPosto(elemento) || `Elemento ${ordem.elemento_id}`
           : recurso
             ? [recurso.indicativo_radio, recurso.nome].filter(Boolean).join(' — ')
-            : ordem.elemento_id ? `Elemento ${ordem.elemento_id}` : `Recurso ${ordem.recurso_id}`
+            : ordem.elemento_id ? `Elemento ${ordem.elemento_id}` : `Meio ${ordem.recurso_id}`
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(9.2)
         const linhasTitulo = doc.splitTextToSize(`${indice + 1}. ${ordem.titulo || 'Ordem sem título'}`, larguraTexto - 10)
@@ -1022,7 +1024,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         // Resolve apenas o número de catálogo de eventos de preparação conhecidos.
         descricaoEvento = descricaoEvento.replace(/^Recurso (\d+) preparado(?= —|$)/, (texto, id) => {
           const recurso = recursos.find((item) => Number(item.recurso_catalogo_id) === Number(id))
-          return recurso ? `Recurso ${recurso.nome || recurso.indicativo_radio} preparado` : texto
+          return recurso ? `Meio ${recurso.nome || recurso.indicativo_radio} preparado` : texto
         }).replace(/(:\s*)concluida\b/g, '$1concluída')
         const linhasDescricao = doc.splitTextToSize(descricaoEvento, larguraTexto - 10)
         const alturaBloco = 15 + (linhasDescricao.length * 4.1)
@@ -1096,7 +1098,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       y + 23
     )
     doc.text(
-      `Recursos: ${resumoRecursosOperacionais.length} (${recursosEmMissaoRelatorio} em missão)   |   ` +
+      `Meios: ${resumoRecursosOperacionais.length} (${recursosEmMissaoRelatorio} em missão)   |   ` +
       `Elementos: ${resumoElementosOperacionais.length}`,
       margem + 5,
       y + 29
@@ -1397,7 +1399,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
       const historico = await obterHistoricoRecurso(recurso.recurso_id)
       setDetalheRecursoOperacional(historico)
     } catch (erro) {
-      console.error('Erro ao carregar detalhe operacional do recurso:', erro)
+      console.error('Erro ao carregar detalhe operacional do meio:', erro)
     }
   }
 
@@ -1419,7 +1421,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
       return (
         <>
-          <strong style={styles.sectionTitle}>📊 Recursos Operacionais</strong>
+          <strong style={styles.sectionTitle}>📊 Meios Operacionais</strong>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8, marginBottom:10 }}>
             {[
               ['Total', resumoRecursosOperacionais.length],
@@ -1433,7 +1435,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             ))}
           </div>
           {resumoRecursosOperacionais.length === 0 ? (
-            <div style={styles.itemSubtle}>Sem recursos na operação ativa.</div>
+            <div style={styles.itemSubtle}>Sem meios na operação ativa.</div>
           ) : resumoRecursosOperacionais.map(r => {
             const expandido = Number(recursoOperacionalExpandido) === Number(r.recurso_id)
             const periodosFechados = expandido ? (detalheRecursoOperacional?.ocorrencias_empenho || []) : []
@@ -2027,8 +2029,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                               const ids=(m.recurso_ids||[]).map(Number)
                               const rs=recursos.filter(r=>ids.includes(Number(r.id))||Number(r.missao_id)===Number(m.id))
                               return <div style={{marginTop:7}}>
-                                <div style={{...styles.itemMeta,marginBottom:4}}>Recursos atribuídos</div>
-                                {rs.length===0 ? <div style={styles.itemSubtle}>Sem recursos atribuídos.</div> :
+                                <div style={{...styles.itemMeta,marginBottom:4}}>Meios atribuídos</div>
+                                {rs.length===0 ? <div style={styles.itemSubtle}>Sem meios atribuídos.</div> :
                                   rs.map(r=><div key={r.id} style={styles.itemSubtle}>{obterIconeRecurso(r.tipo)} {r.indicativo_radio||r.nome} · {r.estado}</div>)}
                               </div>
                             })()}
@@ -2175,7 +2177,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
     if (abaAtiva === 'recursos') {
       return (
         <>
-          <strong style={styles.sectionTitle}>Recursos</strong>
+          <strong style={styles.sectionTitle}>Meios</strong>
+          {!modoBloqueado && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              <button style={styles.smallButton} onClick={() => setRegistoParticipantes('recursos')}>＋ Adicionar meio</button>
+              <button style={styles.smallButton} onClick={() => setRegistoParticipantes('elementos')}>＋ Adicionar elemento</button>
+            </div>
+          )}
           {recursosFiltrados.map((r) => (
             <div key={r.id} style={{ ...styles.itemCard, cursor: 'pointer' }} onClick={() => {
               setDetalhe({ tipo: 'recurso', dados: r })
@@ -2249,7 +2257,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   .filter(Boolean)
                   .filter((valor, indice, lista) => lista.indexOf(valor) === indice)
                   .join(' — ')
-              : (o.recurso_id ? `Recurso ${o.recurso_id}` : 'Sem recurso associado')
+              : (o.recurso_id ? `Meio ${o.recurso_id}` : 'Sem meio associado')
             const destinatarioAfeto = Number((elementoOrdem || recursoOrdem)?.ocorrencia_id) === Number(o.ocorrencia_id)
 
             return (
@@ -2352,8 +2360,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 )}
                 <div style={styles.itemSubtle}>
                   {recursosMissao.length === 0
-                    ? 'Sem recursos atribuídos'
-                    : `${recursosMissao.length} recurso${recursosMissao.length === 1 ? '' : 's'} atribuído${recursosMissao.length === 1 ? '' : 's'}`}
+                    ? 'Sem meios atribuídos'
+                    : `${recursosMissao.length} meio${recursosMissao.length === 1 ? '' : 's'} atribuído${recursosMissao.length === 1 ? '' : 's'}`}
                 </div>
 
                 <div style={{ ...styles.buttonRow, flexWrap: 'wrap' }}>
@@ -2524,6 +2532,12 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
   return (
     <div className="sgo-centro" style={styles.appShell}>
+      {registoParticipantes && !modoBloqueado && operacaoAtiva && (
+        <PrepararOperacao key={`${operacaoAtiva.id}:${registoParticipantes}`}
+          operacao={operacaoAtiva} separadorInicial={registoParticipantes}
+          duranteOperacao onAtualizada={atualizarDados}
+          onFechar={() => { setRegistoParticipantes(null); atualizarDados() }} />
+      )}
       <div className="sgo-topo-conta" style={styles.topBar}>
         <div style={styles.topBarTitle}>Centro de Operações e Simulacros</div>
         <div className="sgo-indicadores" style={styles.kpiRow}>
@@ -2572,8 +2586,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           <input
             value={pesquisaGlobal}
             onChange={(e) => setPesquisaGlobal(e.target.value)}
-            aria-label="Pesquisar recurso, ocorrência ou elemento"
-            placeholder="Pesquisar recurso, ocorrência ou elemento..."
+            aria-label="Pesquisar meio, ocorrência ou elemento"
+            placeholder="Pesquisar meio, ocorrência ou elemento..."
             style={styles.globalSearch}
           />
           {resultadosPesquisa.length > 0 && (
@@ -2623,7 +2637,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           <div style={styles.sectionTitle}>Resumo</div>
           {relatorio && (
             <div style={styles.reportText}>
-              <div>Recursos: {relatorio.recursos}</div>
+              <div>Meios: {relatorio.recursos}</div>
               <div>Elementos: {relatorio.elementos ?? elementos.length}</div>
               <div>Ocorrências: {relatorio.ocorrencias}</div>
               <details><summary>Registos antigos</summary>
@@ -2679,7 +2693,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               }}
               onClick={() => setAbaAtiva(aba)}
             >
-              {aba === 'historico' ? 'Histórico antigo' : aba === 'recursos_operacionais' ? 'Equipas' : aba}
+              {aba === 'historico' ? 'Histórico antigo' : aba === 'recursos_operacionais' ? 'Equipas' : aba === 'recursos' ? 'Meios' : aba}
             </button>
           ))}
         </div>
@@ -2806,7 +2820,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     })
                   }
                 >
-                  <strong>Recurso atribuído:</strong>{' '}
+                  <strong>Meio atribuído:</strong>{' '}
                   {recursos.find(r => r.id === detalhe.dados.recurso_id)?.nome}
                 </div>
               )}
@@ -2850,11 +2864,11 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                       disabled={modoBloqueado || ['concluida', 'cancelada'].includes(missaoAtual.estado)}
                       onClick={() => setMissaoParaAtribuir(missaoAtual)}
                     >
-                      Gerir recursos
+                      Gerir meios
                     </button>
                   </div>
                   {recursosMissao.length === 0 ? (
-                    <div style={{ color: '#64748b', marginTop: 8 }}>Ainda não existem recursos atribuídos.</div>
+                    <div style={{ color: '#64748b', marginTop: 8 }}>Ainda não existem meios atribuídos.</div>
                   ) : (
                     recursosMissao.map((recurso) => (
                       <div key={recurso.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 }}>
@@ -3011,15 +3025,15 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   <div>Encerramento: {formatarDataHora(estatisticasOcorrencia?.encerrada_em)}</div>
                   <div>Tempo de resposta: {formatarDuracao(estatisticasOcorrencia?.tempo_resposta_segundos)}</div>
                   <div>Duração total: {formatarDuracao(estatisticasOcorrencia?.tempo_total_segundos)}</div>
-                  <div style={{ marginTop: 7 }}>Recursos envolvidos: {estatisticasOcorrencia?.recursos_envolvidos ?? 0}</div>
-                  <div>Recursos atuais: {estatisticasOcorrencia?.recursos_atuais ?? 0}</div>
+                  <div style={{ marginTop: 7 }}>Meios envolvidos: {estatisticasOcorrencia?.recursos_envolvidos ?? 0}</div>
+                  <div>Meios atuais: {estatisticasOcorrencia?.recursos_atuais ?? 0}</div>
                   <div>Elementos atuais: {estatisticasOcorrencia?.elementos_atuais ?? 0}</div>
                   <div>Ordens emitidas: {estatisticasOcorrencia?.ordens_emitidas ?? 0}</div>
                 </div>
 
                 <div style={styles.itemCard}>
-                  <strong>🚓 Recursos no terreno</strong>
-                  {recursos.filter(r => r.ocorrencia_id === ocorrenciaAtual.id).length === 0 && <div>Nenhum recurso atribuído.</div>}
+                  <strong>🚓 Meios no terreno</strong>
+                  {recursos.filter(r => r.ocorrencia_id === ocorrenciaAtual.id).length === 0 && <div>Nenhum meio atribuído.</div>}
                   {recursos.filter(r => r.ocorrencia_id === ocorrenciaAtual.id).map(r => (
                     <div key={r.id} style={{ cursor: 'pointer', color: '#2563eb', marginTop: 5 }} onClick={() => setDetalhe({ tipo: 'recurso', dados: r })}>
                       {r.indicativo_radio || r.nome} — {r.estado}
@@ -3088,7 +3102,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               latitude: 'Latitude',
               longitude: 'Longitude',
               ocorrencia_id: 'Ocorrência associada',
-              recurso_id: 'Recurso associado',
+              recurso_id: 'Meio associado',
               criado_em: 'Criado em',
             }
 
@@ -3143,7 +3157,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                   funcao: recursoDetalheAtual.funcao_operacional || ''
                 })}
               >
-                Editar recurso
+                Editar meio
               </button>
               <button
                 style={styles.mainButton}
@@ -3250,7 +3264,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                     setMissaoParaAtribuir(detalhe.dados)
                   }}
                 >
-                  Atribuir recurso
+                  Atribuir meio
                 </button>
 
                 <button
@@ -3324,7 +3338,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
       {recursoEmEdicao && (
         <div style={styles.detailPanel}>
-          <div style={styles.panelTitle}>Editar recurso</div>
+          <div style={styles.panelTitle}>Editar meio</div>
           {[['nome', 'Nome *'], ['tipo', 'Tipo *'], ['indicativo_operacional', 'Indicativo rádio'],
             ['funcao', 'Função nesta operação'], ['ilha', 'Ilha'], ['marca', 'Marca'], ['matricula', 'Matrícula']].map(([campo, rotulo]) => (
             <label key={campo} style={styles.itemSubtle}>
@@ -3343,7 +3357,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 await refresh()
                 setRecursoEmEdicao(null)
               } catch (erro) {
-                window.alert(erro.message || 'Não foi possível editar o recurso.')
+                window.alert(erro.message || 'Não foi possível editar o meio.')
               } finally { setAGuardarRecurso(false) }
             }}>Guardar alterações</button>
           <button style={styles.mainButton} onClick={() => setRecursoEmEdicao(null)}>Cancelar</button>
@@ -3352,7 +3366,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
       {posicaoNovoRecurso && (
         <div style={styles.detailPanel}>
-          <div style={styles.panelTitle}>Novo recurso</div>
+          <div style={styles.panelTitle}>Novo meio</div>
 
           <input
             style={styles.input}
@@ -3407,7 +3421,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               setPosicaoNovoRecurso(null)
             }}
           >
-            Criar recurso
+            Criar meio
           </button>
           <button
             style={styles.mainButton}
@@ -3650,7 +3664,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             }
           />
 
-          <label style={styles.itemSubtle} htmlFor="recurso-previsto-missao">Responsável (recurso previsto)</label>
+          <label style={styles.itemSubtle} htmlFor="recurso-previsto-missao">Responsável (meio previsto)</label>
           <select
             id="recurso-previsto-missao"
             style={styles.input}
@@ -3658,13 +3672,13 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
             disabled={missaoEmEdicao && (missaoEmEdicao.recurso_ids || []).length > 1}
             onChange={(e) => setFormMissao({ ...formMissao, recurso_id: e.target.value })}
           >
-            <option value="">Sem recurso previsto</option>
+            <option value="">Sem meio previsto</option>
             {recursos.map((r) => (
               <option key={r.id} value={r.id}>{r.indicativo_radio || r.nome}{r.indicativo_radio && r.nome ? ` — ${r.nome}` : ''}</option>
             ))}
           </select>
           {missaoEmEdicao && (missaoEmEdicao.recurso_ids || []).length > 1 && (
-            <div style={styles.itemSubtle}>Esta missão tem vários recursos. Use «Atribuir» para alterar a equipa.</div>
+            <div style={styles.itemSubtle}>Esta missão tem vários meios. Use «Atribuir» para alterar a equipa.</div>
           )}
 
           <input style={styles.input} placeholder="Zona ou percurso atribuído (ex.: Posto A — Ponto de Encontro)" value={formMissao.zona || ''} onChange={e => setFormMissao({ ...formMissao, zona: e.target.value })} />
@@ -3733,7 +3747,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
         return (
           <div style={styles.detailPanel}>
             <div style={styles.panelTitle}>
-              Recursos da missão
+              Meios da missão
             </div>
             <div style={{ marginBottom: 12, color: '#64748b' }}>
               {missaoParaAtribuir.titulo}
@@ -3741,7 +3755,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
 
             <strong>Já atribuídos ({recursosAtribuidos.length})</strong>
             {recursosAtribuidos.length === 0 ? (
-              <div style={{ ...styles.itemCard, color: '#64748b' }}>Nenhum recurso atribuído.</div>
+              <div style={{ ...styles.itemCard, color: '#64748b' }}>Nenhum meio atribuído.</div>
             ) : recursosAtribuidos.map(r => (
               <div key={r.id} style={{ ...styles.itemCard, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <div>
@@ -3771,9 +3785,9 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               </div>
             ))}
 
-            <strong style={{ display: 'block', marginTop: 14 }}>Adicionar recurso</strong>
+            <strong style={{ display: 'block', marginTop: 14 }}>Adicionar meio</strong>
             {recursosDisponiveis.length === 0 ? (
-              <div style={{ ...styles.itemCard, color: '#64748b' }}>Todos os recursos já estão atribuídos.</div>
+              <div style={{ ...styles.itemCard, color: '#64748b' }}>Todos os meios já estão atribuídos.</div>
             ) : recursosDisponiveis.map(r => (
               <div
                 key={r.id}
@@ -3977,7 +3991,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                 try {
                   const recurso = recursos.find((r) => r.id === formElemento.recurso_id)
                   if (!recurso?.recurso_catalogo_id || !operacaoAtiva?.id) {
-                    throw new Error('Recurso não encontrado nesta operação.')
+                    throw new Error('Meio não encontrado nesta operação.')
                   }
                   if (elementos.some((e) => e.nome?.trim().toLowerCase() === formElemento.nome.trim().toLowerCase()
                     && (e.entidade || '').trim().toLowerCase() === formElemento.entidade.trim().toLowerCase()
@@ -4071,7 +4085,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
           }}>
             <strong>{modoMapa.tipo === 'normal' ? '🟢 Modo: Normal' :
               modoMapa.tipo === 'nova_ocorrencia' ? '📍 Modo: Nova ocorrência — clique no local' :
-              modoMapa.tipo === 'novo_recurso' ? '🚓 Modo: Novo recurso — clique no local' :
+              modoMapa.tipo === 'novo_recurso' ? '🚓 Modo: Novo meio — clique no local' :
               modoMapa.tipo === 'apear_elemento' ? `👤 Modo: Apear ${modoMapa.alvo?.nome || 'elemento'} — clique no destino` :
               modoMapa.tipo === 'reposicionar_meio' ? ` ${modoMapa.descricaoDeslocacao != null ? 'Registar deslocação de' : 'Ajustar posição de'} ${modoMapa.alvo?.indicativo_radio || modoMapa.alvo?.nome || 'meio'} \u2014 clique no destino` :
               'Modo operacional'}</strong>
@@ -4094,7 +4108,7 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
               style={{ ...styles.mapaToolButton, ...(modoMapa.tipo === 'novo_recurso' ? styles.mapaToolButtonActive : {}) }}
               onClick={() => setModoMapa({ tipo: 'novo_recurso', alvo: null })}
             >
-              🚓 Novo recurso
+              🚓 Novo meio
             </button>
             <button
               type="button"
@@ -4201,8 +4215,8 @@ function CentroOperacoes({ modoConsulta = false, operacaoAtiva = null, modoRepla
                         )
                       )
                     } catch (erro) {
-                      console.error('Erro ao guardar a posição do recurso:', erro)
-                      alert('Não foi possível guardar a nova posição do recurso.')
+                      console.error('Erro ao guardar a posição do meio:', erro)
+                      alert('Não foi possível guardar a nova posição do meio.')
                       await atualizarDados()
                     } finally {
                       arrastoMapaRef.current = false

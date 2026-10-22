@@ -21,8 +21,8 @@ import {
 const novoRecursoInicial = { nome: '', tipo: '', ilha: '', marca: '', matricula: '', entidade_id: null, estado: 'ativo' }
 const novoElementoInicial = { nome: '', entidade: '', posto: '', estado: 'ativo' }
 
-function PrepararOperacao({ operacao, onFechar }) {
-  const [separador, setSeparador] = useState('bases')
+function PrepararOperacao({ operacao, onFechar, separadorInicial = 'bases', duranteOperacao = false, onAtualizada }) {
+  const [separador, setSeparador] = useState(separadorInicial)
   const [catalogoRecursos, setCatalogoRecursos] = useState([])
   const [recursos, setRecursos] = useState([])
   const [bases, setBases] = useState([])
@@ -56,6 +56,7 @@ function PrepararOperacao({ operacao, onFechar }) {
       setCatalogoElementos(catE)
       setElementos(partE)
       setBases(listaBases)
+      await onAtualizada?.()
     } catch {
       setErro('Não foi possível carregar a preparação da operação.')
     } finally {
@@ -152,7 +153,7 @@ function PrepararOperacao({ operacao, onFechar }) {
       await carregar()
       setEdicaoRecurso(null)
     } catch (e) {
-      setErro(e.message || 'Não foi possível editar o recurso.')
+      setErro(e.message || 'Não foi possível editar o meio.')
     } finally { setAGuardar(false) }
   }
 
@@ -203,19 +204,19 @@ function PrepararOperacao({ operacao, onFechar }) {
   }
 
   return (
-    <div className="modal-fundo" onMouseDown={onFechar}>
+    <div className="modal-fundo" onMouseDown={() => { if (!aGuardar) onFechar() }}>
       <section className="modal-operacao modal-preparacao" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-topo">
-          <div><h2>Preparar operação</h2><p className="preparacao-subtitulo">{operacao.nome}</p></div>
-          <button type="button" className="botao-fechar" onClick={onFechar}>×</button>
+          <div><h2>{duranteOperacao ? 'Meios e elementos da operação' : 'Preparar operação'}</h2><p className="preparacao-subtitulo">{operacao.nome}</p></div>
+          <button type="button" className="botao-fechar" onClick={onFechar} disabled={aGuardar}>×</button>
         </div>
 
         <div className="preparacao-tabs">
-          <button type="button" className={separador === 'bases' ? 'ativo' : ''} onClick={() => setSeparador('bases')}>Bases</button>
-          <button className={separador === 'recursos' ? 'ativo' : ''} onClick={() => setSeparador('recursos')}>
-            Recursos ({recursos.length})
+          <button type="button" className={separador === 'bases' ? 'ativo' : ''} disabled={aGuardar} onClick={() => setSeparador('bases')}>Bases</button>
+          <button className={separador === 'recursos' ? 'ativo' : ''} disabled={aGuardar} onClick={() => setSeparador('recursos')}>
+            Meios ({recursos.length})
           </button>
-          <button className={separador === 'elementos' ? 'ativo' : ''} onClick={() => setSeparador('elementos')}>
+          <button className={separador === 'elementos' ? 'ativo' : ''} disabled={aGuardar} onClick={() => setSeparador('elementos')}>
             Elementos ({elementos.length})
           </button>
         </div>
@@ -225,12 +226,12 @@ function PrepararOperacao({ operacao, onFechar }) {
         {separador === 'bases' ? <BasesOperacao operacaoId={operacao.id} /> : <>
         <div className="preparacao-resumo">
           <strong>{participantes.length}</strong>
-          <span>{separador === 'recursos' ? 'recursos participantes' : 'elementos participantes'}</span>
+          <span>{separador === 'recursos' ? 'meios participantes' : 'elementos participantes'}</span>
         </div>
 
         <form className="adicionar-participante" onSubmit={adicionar}>
           <div className="campo-recurso">
-            <label>{separador === 'recursos' ? 'Recurso permanente' : 'Elemento permanente'}</label>
+            <label>{separador === 'recursos' ? 'Meio permanente' : 'Elemento permanente'}</label>
             <select value={selecionado} onChange={(e) => setSelecionado(e.target.value)} required>
               <option value="">Selecionar...</option>
               {disponiveis.map((item) => (
@@ -278,7 +279,7 @@ function PrepararOperacao({ operacao, onFechar }) {
         )}
 
         <div className="participantes-titulo">
-          <h3>{separador === 'recursos' ? 'Recursos selecionados' : 'Elementos selecionados'}</h3>
+          <h3>{separador === 'recursos' ? 'Meios selecionados' : 'Elementos selecionados'}</h3>
           <span>O indicativo e a função são válidos apenas nesta operação.</span>
         </div>
 
@@ -309,13 +310,13 @@ function PrepararOperacao({ operacao, onFechar }) {
                                                 setEdicaoRecurso({ id: item.recurso_catalogo_id, nome: item.nome || '', tipo: item.tipo || '',
                             ilha: item.ilha || '', marca: item.marca || '', matricula: item.matricula || '',
                             indicativo_operacional: item.indicativo_operacional || '', funcao: item.funcao || '' })
-                        }}>Editar recurso</button>
+                        }}>Editar meio</button>
                       </div>
                     </div>
                   )}
                   {separador === 'recursos' && edicaoRecurso?.id === item.recurso_catalogo_id && (
                     <form className="novo-recurso-caixa" onSubmit={guardarEdicaoRecurso}>
-                      <h4>Editar recurso</h4>
+                      <h4>Editar meio</h4>
                       {[['nome', 'Nome *'], ['tipo', 'Tipo *'], ['ilha', 'Ilha'], ['marca', 'Marca'],
                         ['matricula', 'Matrícula'], ['indicativo_operacional', 'Indicativo nesta operação'],
                         ['funcao', 'Função operacional']].map(([campo, rotulo]) => (
@@ -362,7 +363,7 @@ function PrepararOperacao({ operacao, onFechar }) {
 
         </>}
 
-        <div className="modal-acoes preparacao-rodape"><button type="button" className="botao-abrir" onClick={onFechar}>Concluir preparação</button></div>
+        <div className="modal-acoes preparacao-rodape"><button type="button" className="botao-abrir" onClick={onFechar} disabled={aGuardar}>{duranteOperacao ? 'Voltar à operação' : 'Concluir preparação'}</button></div>
       </section>
     </div>
   )
