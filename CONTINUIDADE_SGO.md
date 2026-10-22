@@ -1170,3 +1170,14 @@ Esta secção substitui as indicações anteriores de servidor não atualizado.
   de Comando. Inspecionar o codigo atual antes de alterar.
 - Rever tambem os campos livres de tipo e os textos ainda com Recursos.
 - Preservar ficheiros locais nao rastreados; nunca usar git add .
+
+## Edicao e tipos de meios - 22/10/2026
+- 4842ab2: janela Editar meio centrada, sem sobreposicao;
+  campos e Cancelar bloqueados durante a gravacao.
+- Validado: funcao Patrulhamento guardada no TESTE MEIO 04 e mantida apos F5.
+- dad819d: lista comum de tipos nos quatro formularios:
+  Ambulancia, Bombeiros, PSP, GNR, Moto, Drone e Outro.
+- PSP e GNR usam icone policial; tipos antigos preservados na edicao.
+- Compilacao passou; listas de criacao e edicao verificadas no navegador.
+- Ambos os commits enviados para develop.
+- Servidor piloto e manual nao atualizados neste bloco.
